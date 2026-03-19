@@ -373,6 +373,12 @@ cli
 
       const figmaToken = options.token ?? process.env["FIGMA_TOKEN"];
 
+      // Warn if no node-id
+      if (isFigmaUrl(input) && !parseFigmaUrl(input).nodeId) {
+        console.warn("\nWarning: No node-id specified. Calibrating entire file may produce noisy results.");
+        console.warn("Tip: Add ?node-id=XXX to target a specific section.\n");
+      }
+
       console.log("Running calibration pipeline...");
       console.log(`  Input: ${input}`);
       console.log(`  Max nodes: ${options.maxNodes ?? 5}`);
@@ -454,6 +460,11 @@ cli
   .example("  drc save-fixture https://www.figma.com/design/ABC123/MyDesign --output fixtures/my-design.json")
   .action(async (input: string, options: SaveFixtureOptions) => {
     try {
+      if (isFigmaUrl(input) && !parseFigmaUrl(input).nodeId) {
+        console.warn("\nWarning: No node-id specified. Saving entire file as fixture.");
+        console.warn("Tip: Add ?node-id=XXX to save a specific section.\n");
+      }
+
       const { file } = await loadFile(input, options.token, options.mcp);
 
       const outputPath = resolve(
