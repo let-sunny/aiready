@@ -37,10 +37,15 @@ function isJsonFile(input: string): boolean {
   return input.endsWith(".json");
 }
 
+interface LoadResult {
+  file: AnalysisFile;
+  nodeId?: string | undefined;
+}
+
 async function loadFile(
   input: string,
   token?: string
-): Promise<AnalysisFile> {
+): Promise<LoadResult> {
   if (isJsonFile(input)) {
     // Load from JSON fixture
     const filePath = resolve(input);
@@ -48,13 +53,16 @@ async function loadFile(
       throw new Error(`File not found: ${filePath}`);
     }
     console.log(`Loading from JSON: ${filePath}`);
-    return loadFigmaFileFromJson(filePath);
+    return { file: await loadFigmaFileFromJson(filePath) };
   }
 
   if (isFigmaUrl(input)) {
     // Fetch from Figma API
-    const { fileKey } = parseFigmaUrl(input);
+    const { fileKey, nodeId } = parseFigmaUrl(input);
     console.log(`Fetching from Figma API: ${fileKey}`);
+    if (nodeId) {
+      console.log(`Target node: ${nodeId}`);
+    }
 
     const figmaToken = token ?? process.env["FIGMA_TOKEN"];
     if (!figmaToken) {
@@ -65,7 +73,10 @@ async function loadFile(
 
     const client = new FigmaClient({ token: figmaToken });
     const response = await client.getFile(fileKey);
-    return transformFigmaResponse(fileKey, response);
+    return {
+      file: transformFigmaResponse(fileKey, response),
+      nodeId,
+    };
   }
 
   throw new Error(
@@ -84,14 +95,18 @@ cli
   .action(async (input: string, options: AnalyzeOptions) => {
     try {
       // Load file
-      const file = await loadFile(input, options.token);
+      const { file, nodeId } = await loadFile(input, options.token);
       console.log(`\nAnalyzing: ${file.name}`);
       console.log(`Nodes: analyzing...`);
 
-      // Run analysis with preset if specified
-      const result = options.preset
-        ? analyzeFile(file, { configs: getConfigsWithPreset(options.preset) })
-        : analyzeFile(file);
+      // Build analysis options
+      const analyzeOptions = {
+        ...(options.preset && { configs: getConfigsWithPreset(options.preset) }),
+        ...(nodeId && { targetNodeId: nodeId }),
+      };
+
+      // Run analysis
+      const result = analyzeFile(file, analyzeOptions);
       console.log(`Nodes: ${result.nodeCount} (max depth: ${result.maxDepth})`);
 
       // Calculate scores

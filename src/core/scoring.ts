@@ -57,19 +57,51 @@ function calculateGrade(percentage: number): Grade {
 }
 
 /**
+ * Maximum multiplier for repeated rule deductions
+ * Same rule can deduct at most: baseScore * MAX_RULE_REPEAT_MULTIPLIER
+ */
+const MAX_RULE_REPEAT_MULTIPLIER = 10;
+
+/**
  * Calculate scores from analysis result
  */
 export function calculateScores(result: AnalysisResult): ScoreReport {
   const categoryScores = initializeCategoryScores();
 
-  // Accumulate scores from issues
+  // Track deductions per rule per category to apply cap
+  const ruleDeductions = new Map<string, Map<string, number>>();
+
+  // Accumulate scores from issues with per-rule cap
   for (const issue of result.issues) {
     const category = issue.rule.definition.category;
     const severity = issue.config.severity;
+    const ruleId = issue.rule.definition.id;
 
     categoryScores[category].issueCount++;
-    categoryScores[category].score += issue.calculatedScore;
     categoryScores[category].bySeverity[severity]++;
+
+    // Get or create category map for rule deductions
+    if (!ruleDeductions.has(category)) {
+      ruleDeductions.set(category, new Map());
+    }
+    const categoryRuleMap = ruleDeductions.get(category)!;
+
+    // Calculate max deduction for this rule (baseScore * 10, both are negative)
+    const maxDeduction = issue.config.score * MAX_RULE_REPEAT_MULTIPLIER;
+    const currentDeduction = categoryRuleMap.get(ruleId) ?? 0;
+
+    // Only add to score if we haven't hit the cap (scores are negative)
+    if (currentDeduction <= maxDeduction) {
+      // Already at max deduction for this rule, skip
+      continue;
+    }
+
+    // Calculate how much more we can deduct
+    const remainingCapacity = maxDeduction - currentDeduction; // negative value
+    const actualDeduction = Math.max(remainingCapacity, issue.calculatedScore);
+
+    categoryScores[category].score += actualDeduction;
+    categoryRuleMap.set(ruleId, currentDeduction + actualDeduction);
   }
 
   // Calculate percentages for each category

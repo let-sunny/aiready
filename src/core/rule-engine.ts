@@ -40,6 +40,7 @@ export interface RuleEngineOptions {
   configs?: Record<RuleId, RuleConfig>;
   enabledRules?: RuleId[];
   disabledRules?: RuleId[];
+  targetNodeId?: string;
 }
 
 /**
@@ -75,6 +76,27 @@ function countNodes(node: AnalysisNode): number {
 }
 
 /**
+ * Find a node by ID in the tree
+ */
+function findNodeById(node: AnalysisNode, nodeId: string): AnalysisNode | null {
+  // Figma node IDs use ":" separator, URL uses "-"
+  const normalizedId = nodeId.replace(/-/g, ":");
+
+  if (node.id === normalizedId) {
+    return node;
+  }
+
+  if (node.children) {
+    for (const child of node.children) {
+      const found = findNodeById(child, nodeId);
+      if (found) return found;
+    }
+  }
+
+  return null;
+}
+
+/**
  * Calculate depth weight multiplier for a rule
  * Higher values (closer to 1.5x) at root level, 1.0x at leaf level
  */
@@ -98,6 +120,7 @@ export class RuleEngine {
   private configs: Record<RuleId, RuleConfig>;
   private enabledRuleIds: Set<RuleId> | null;
   private disabledRuleIds: Set<RuleId>;
+  private targetNodeId: string | undefined;
 
   constructor(options: RuleEngineOptions = {}) {
     this.configs = options.configs ?? RULE_CONFIGS;
@@ -105,22 +128,33 @@ export class RuleEngine {
       ? new Set(options.enabledRules)
       : null;
     this.disabledRuleIds = new Set(options.disabledRules ?? []);
+    this.targetNodeId = options.targetNodeId;
   }
 
   /**
    * Analyze a Figma file and return issues
    */
   analyze(file: AnalysisFile): AnalysisResult {
+    // Find target node if specified
+    let rootNode = file.document;
+    if (this.targetNodeId) {
+      const targetNode = findNodeById(file.document, this.targetNodeId);
+      if (!targetNode) {
+        throw new Error(`Node not found: ${this.targetNodeId}`);
+      }
+      rootNode = targetNode;
+    }
+
     // Calculate max depth before analysis
-    const maxDepth = calculateMaxDepth(file.document);
-    const nodeCount = countNodes(file.document);
+    const maxDepth = calculateMaxDepth(rootNode);
+    const nodeCount = countNodes(rootNode);
 
     const issues: AnalysisIssue[] = [];
     const enabledRules = this.getEnabledRules();
 
     // Traverse the tree and run rules on each node
     this.traverseAndCheck(
-      file.document,
+      rootNode,
       file,
       enabledRules,
       maxDepth,
