@@ -22,7 +22,7 @@ import {
   runCalibrationEvaluate,
 } from "../agents/orchestrator.js";
 import { runVisualComparison } from "../agents/visual-comparator.js";
-import type { VisualComparisonInput } from "../agents/contracts/visual-comparison.js";
+import type { VisualComparisonInput, VisualComparisonRecord } from "../agents/contracts/visual-comparison.js";
 
 // Import rules to register them
 import "../rules/index.js";
@@ -33,6 +33,7 @@ interface AnalyzeOptions {
   preset?: Preset;
   output?: string;
   token?: string;
+  visual?: boolean;
 }
 
 function isFigmaUrl(input: string): boolean {
@@ -95,9 +96,10 @@ cli
   .option("--preset <preset>", "Analysis preset (relaxed | dev-friendly | ai-ready | strict)")
   .option("--output <path>", "HTML report output path")
   .option("--token <token>", "Figma API token (or use FIGMA_TOKEN env var)")
+  .option("--visual", "Capture Figma screenshots for blocking/risk nodes and include visual comparison in report")
   .example("  drc analyze https://www.figma.com/design/ABC123/MyDesign")
   .example("  drc analyze ./fixtures/design.json --output report.html")
-  .example("  drc analyze ./fixtures/design.json --preset strict")
+  .example("  drc analyze https://www.figma.com/design/ABC123/MyDesign --visual")
   .action(async (input: string, options: AnalyzeOptions) => {
     try {
       // Load file
@@ -123,6 +125,65 @@ cli
       console.log(formatScoreSummary(scores));
       console.log("=".repeat(50));
 
+      // Visual comparison (if --visual and Figma URL)
+      let visualComparisons: VisualComparisonRecord[] | undefined;
+
+      if (options.visual && isFigmaUrl(input)) {
+        const figmaToken = options.token ?? process.env["FIGMA_TOKEN"];
+        if (!figmaToken) {
+          console.warn("--visual requires FIGMA_TOKEN. Skipping visual comparison.");
+        } else {
+          // Collect unique nodeIds with blocking/risk issues
+          const targetNodeIds = new Set<string>();
+          const nodePathMap = new Map<string, string>();
+
+          for (const issue of result.issues) {
+            if (issue.config.severity === "blocking" || issue.config.severity === "risk") {
+              targetNodeIds.add(issue.violation.nodeId);
+              nodePathMap.set(issue.violation.nodeId, issue.violation.nodePath);
+            }
+          }
+
+          if (targetNodeIds.size > 0) {
+            console.log(`\nCapturing screenshots for ${targetNodeIds.size} nodes...`);
+
+            const client = new FigmaClient({ token: figmaToken });
+            const nodeIdList = [...targetNodeIds];
+
+            try {
+              const imageUrls = await client.getNodeImages(file.fileKey, nodeIdList);
+
+              const visualInputs: VisualComparisonInput[] = [];
+              for (const nid of nodeIdList) {
+                const imageUrl = imageUrls[nid];
+                if (!imageUrl) continue;
+
+                try {
+                  const base64 = await client.fetchImageAsBase64(imageUrl);
+                  visualInputs.push({
+                    nodeId: nid,
+                    nodePath: nodePathMap.get(nid) ?? nid,
+                    figmaScreenshotBase64: base64,
+                    renderedScreenshotBase64: base64,
+                  });
+                } catch {
+                  // Skip nodes where screenshot download fails
+                }
+              }
+
+              if (visualInputs.length > 0) {
+                visualComparisons = await runVisualComparison(visualInputs);
+                console.log(`  Captured ${visualComparisons.length} screenshots.`);
+              }
+            } catch (err) {
+              console.warn(`  Screenshot capture failed: ${err instanceof Error ? err.message : String(err)}`);
+            }
+          }
+        }
+      } else if (options.visual && !isFigmaUrl(input)) {
+        console.warn("--visual requires a Figma URL input. Skipping visual comparison.");
+      }
+
       // Generate HTML report
       const now = new Date();
       const ts = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}-${String(now.getHours()).padStart(2, "0")}-${String(now.getMinutes()).padStart(2, "0")}`;
@@ -135,7 +196,7 @@ cli
         mkdirSync(outputDir, { recursive: true });
       }
 
-      const html = generateHtmlReport(file, result, scores);
+      const html = generateHtmlReport(file, result, scores, visualComparisons);
       await writeFile(outputPath, html, "utf-8");
       console.log(`\nReport saved: ${outputPath}`);
 

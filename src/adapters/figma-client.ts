@@ -43,6 +43,53 @@ export class FigmaClient {
     return response.json() as Promise<GetFileResponse>;
   }
 
+  /**
+   * Get rendered images for specific nodes
+   * Returns a map of nodeId → image URL
+   */
+  async getNodeImages(
+    fileKey: string,
+    nodeIds: string[],
+    options?: { format?: "png" | "svg" | "jpg"; scale?: number }
+  ): Promise<Record<string, string | null>> {
+    const ids = nodeIds.join(",");
+    const format = options?.format ?? "png";
+    const scale = options?.scale ?? 2;
+    const url = `${FIGMA_API_BASE}/images/${fileKey}?ids=${encodeURIComponent(ids)}&format=${format}&scale=${scale}`;
+    const response = await fetch(url, {
+      headers: {
+        "X-Figma-Token": this.token,
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new FigmaClientError(
+        `Failed to fetch images: ${response.status} ${response.statusText}`,
+        response.status,
+        error
+      );
+    }
+
+    const data = await response.json() as { images: Record<string, string | null> };
+    return data.images;
+  }
+
+  /**
+   * Download an image URL and return as base64
+   */
+  async fetchImageAsBase64(imageUrl: string): Promise<string> {
+    const response = await fetch(imageUrl);
+    if (!response.ok) {
+      throw new FigmaClientError(
+        `Failed to download image: ${response.status}`,
+        response.status
+      );
+    }
+    const buffer = await response.arrayBuffer();
+    return Buffer.from(buffer).toString("base64");
+  }
+
   async getFileNodes(
     fileKey: string,
     nodeIds: string[]
