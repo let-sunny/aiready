@@ -170,9 +170,9 @@ The script loops until scores stabilize (no changes) or max 5 cycles, with 30-mi
 
 4-agent calibration system, 3-step CLI workflow, markdown calibration reports, activity logging, `/calibrate-loop` autonomous tuning.
 
-### Phase 3 — Calibration Reports
+### Phase 3 — Calibration Reports (done)
 
-Export calibration results as user-facing HTML reports with Figma original screenshots and Claude implementation screenshots side by side.
+Calibration HTML reports with Figma original screenshots and Playwright-rendered Claude implementation screenshots side by side. Auto-generated after `drc calibrate-run`.
 
 ### Phase 4 — Ecosystem
 

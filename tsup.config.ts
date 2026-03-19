@@ -9,4 +9,5 @@ export default defineConfig({
   splitting: false,
   treeshake: true,
   target: "node18",
+  external: ["playwright"],
 });

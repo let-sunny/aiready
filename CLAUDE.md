@@ -46,7 +46,7 @@ src/
   4. Tuning Agent: propose score adjustments
 - Output: analysis results in `logs/calibration/`
 
-**`drc calibrate-run --export-report`** (planned, not yet implemented)
+**`drc calibrate-run`** (auto-generates HTML report)
 - Role: Export calibration results as a user-facing HTML report
 - Output: HTML report in `reports/`
 - Content: Figma original screenshot + Claude implementation screenshot side by side

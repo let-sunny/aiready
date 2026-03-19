@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
@@ -27,6 +27,11 @@ import { runEvaluationAgent } from "./evaluation-agent.js";
 import { runTuningAgent } from "./tuning-agent.js";
 import { generateCalibrationReport } from "./report-generator.js";
 import { ActivityLogger } from "./activity-logger.js";
+import { renderCodeBatch } from "./code-renderer.js";
+import {
+  generateCalibrationHtmlReport,
+  type CalibrationNodeVisual,
+} from "@/report-html/calibration-report.js";
 
 export interface CalibrationRunOptions {
   enableActivityLog?: boolean;
@@ -41,6 +46,7 @@ export interface CalibrationRunResult {
   adjustments: ScoreAdjustment[];
   newRuleProposals: NewRuleProposal[];
   reportPath: string;
+  htmlReportPath?: string | undefined;
   logPath?: string | undefined;
   error?: string;
 }
@@ -334,9 +340,113 @@ export async function runCalibration(
       newRuleProposals: tuningOutput.newRuleProposals,
     });
 
-    // Write report
+    // Write markdown report
     const reportPath = resolve(parsed.outputPath);
     await writeFile(reportPath, report, "utf-8");
+
+    // Generate HTML calibration report with screenshots
+    stepStart = Date.now();
+    let htmlReportPath: string | undefined;
+    try {
+      // Fetch Figma screenshots
+      const figmaToken = parsed.token ?? process.env["FIGMA_TOKEN"];
+      const figmaScreenshots = new Map<string, string>();
+
+      if (figmaToken) {
+        const client = new FigmaClient({ token: figmaToken });
+        const convertedNodeIds = conversionOutput.records.map((r) => r.nodeId);
+        if (convertedNodeIds.length > 0) {
+          const imageUrls = await client.getNodeImages(fileKey, convertedNodeIds);
+          for (const [nid, url] of Object.entries(imageUrls)) {
+            if (url) {
+              try {
+                const base64 = await client.fetchImageAsBase64(url);
+                figmaScreenshots.set(nid, base64);
+              } catch {
+                // Skip failed downloads
+              }
+            }
+          }
+        }
+      }
+
+      // Render generated code to screenshots via Playwright
+      const codeItems = conversionOutput.records.map((r) => ({
+        nodeId: r.nodeId,
+        generatedCode: r.generatedCode,
+      }));
+      const renderedScreenshots = await renderCodeBatch(codeItems);
+
+      // Build node visuals for HTML report
+      const issuesByNode = new Map<string, CalibrationNodeVisual["issues"]>();
+      for (const issue of analysisResult.issues) {
+        const nid = issue.violation.nodeId;
+        const list = issuesByNode.get(nid);
+        const entry = {
+          ruleId: issue.rule.definition.id,
+          severity: issue.config.severity,
+          message: issue.violation.message,
+          why: issue.rule.definition.why,
+          fix: issue.rule.definition.fix,
+        };
+        if (list) {
+          list.push(entry);
+        } else {
+          issuesByNode.set(nid, [entry]);
+        }
+      }
+
+      const nodeVisuals: CalibrationNodeVisual[] = [];
+      for (const record of conversionOutput.records) {
+        const figma = figmaScreenshots.get(record.nodeId);
+        const rendered = renderedScreenshots.get(record.nodeId);
+        if (figma && rendered) {
+          nodeVisuals.push({
+            nodeId: record.nodeId,
+            nodePath: record.nodePath,
+            figmaScreenshotBase64: figma,
+            renderedScreenshotBase64: rendered,
+            difficulty: record.difficulty,
+            issues: issuesByNode.get(record.nodeId) ?? [],
+          });
+        }
+      }
+
+      const calNow = new Date();
+      const calTs = `${calNow.getFullYear()}-${String(calNow.getMonth() + 1).padStart(2, "0")}-${String(calNow.getDate()).padStart(2, "0")}-${String(calNow.getHours()).padStart(2, "0")}-${String(calNow.getMinutes()).padStart(2, "0")}`;
+      const htmlPath = resolve(`reports/calibration-${calTs}.html`);
+      const htmlDir = resolve("reports");
+      if (!existsSync(htmlDir)) {
+        mkdirSync(htmlDir, { recursive: true });
+      }
+
+      const htmlReport = generateCalibrationHtmlReport({
+        fileName: file.name,
+        fileKey,
+        analyzedAt: startedAt,
+        scoreReport: analysisOutput.scoreReport,
+        nodeVisuals,
+        adjustments: tuningOutput.adjustments,
+        mismatches: evaluationOutput.mismatches,
+        validatedRules: evaluationOutput.validatedRules,
+      });
+
+      await writeFile(htmlPath, htmlReport, "utf-8");
+      htmlReportPath = htmlPath;
+
+      await logger?.logStep({
+        step: "HTML Report",
+        result: `${nodeVisuals.length} nodes with screenshots, saved to ${htmlPath}`,
+        durationMs: Date.now() - stepStart,
+      });
+    } catch {
+      // HTML report generation is non-fatal
+      await logger?.logStep({
+        step: "HTML Report",
+        result: "Skipped — screenshot capture or rendering failed",
+        durationMs: Date.now() - stepStart,
+      });
+    }
 
     await logger?.logSummary({
       totalDurationMs: Date.now() - pipelineStart,
@@ -356,6 +466,7 @@ export async function runCalibration(
       adjustments: tuningOutput.adjustments,
       newRuleProposals: tuningOutput.newRuleProposals,
       reportPath,
+      htmlReportPath,
       logPath: logger?.getLogPath(),
     };
   } catch (error) {

@@ -21,8 +21,12 @@ vi.mock("node:fs", async (importOriginal) => {
   return {
     ...original,
     existsSync: vi.fn().mockReturnValue(true),
+    mkdirSync: vi.fn(),
   };
 });
+vi.mock("./code-renderer.js", () => ({
+  renderCodeBatch: vi.fn().mockResolvedValue(new Map()),
+}));
 
 const mockFile: AnalysisFile = {
   fileKey: "test-key",
