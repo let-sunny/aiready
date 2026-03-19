@@ -52,12 +52,9 @@ Pass a Figma URL with a `node-id` parameter to analyze a specific frame or compo
 ## Installation
 
 ```bash
-# Clone and install
-git clone <repo-url>
+git clone https://github.com/let-sunny/design-readiness-checker.git
 cd design-readiness-checker
 pnpm install
-
-# Build
 pnpm build
 ```
 
@@ -108,11 +105,11 @@ logs/                                 # All logs and calibration data (gitignore
     calibration-YYYY-MM-DD-HH-mm.md  # Calibration report
 ```
 
-## Calibration Agent
+## Calibration
 
 Rule scores are initially intuition-based. The calibration pipeline validates and adjusts them by comparing analysis results against actual code conversion difficulty.
 
-### How calibration works
+### How it works
 
 1. **Analysis Agent** — Runs the standard analysis and groups issues by node
 2. **Conversion Agent** — Attempts to convert flagged nodes to code (via LLM + Figma MCP)
@@ -121,22 +118,35 @@ Rule scores are initially intuition-based. The calibration pipeline validates an
 
 If a rule flagged something as blocking but the conversion was easy, the rule is **overscored**. If conversion was hard but the rule gave a low score, it's **underscored**. Missing difficulties with no rule coverage become **new rule proposals**.
 
-### 3-step CLI workflow
+### Manual 3-step workflow
 
-Step 2 (conversion) requires a Claude Code session with Figma MCP access, so the pipeline is split:
+Step 2 (conversion) requires a Claude Code session with Figma MCP access, so the pipeline can be split:
 
 ```bash
-# Step 1: Analyze → logs/calibration/calibration-analysis.json
+# Step 1: Analyze
 drc calibrate-analyze ./fixtures/design.json
 
 # Step 2: Convert nodes in Claude Code session with Figma MCP
 # (produces calibration-conversion.json)
 
-# Step 3: Evaluate → logs/calibration/calibration-YYYY-MM-DD-HH-mm.md
+# Step 3: Evaluate + generate report
 drc calibrate-evaluate logs/calibration/calibration-analysis.json calibration-conversion.json
 ```
 
-The output goes to `logs/calibration/` — a human-reviewed report with proposed score changes. Final edits to `rule-config.ts` are always manual.
+### Automated calibration loop
+
+The `/calibrate-loop` Claude Code command runs a 3-agent debate for autonomous score tuning:
+
+1. **Runner** — Executes calibration, extracts score adjustment proposals
+2. **Critic** — Applies rejection heuristics (insufficient evidence, excessive change, severity jump)
+3. **Arbitrator** — Resolves disagreements, commits conservative changes
+
+```bash
+# Run nightly calibration (reads URLs from .env)
+./scripts/calibrate-night.sh
+```
+
+The script loops until scores stabilize (no changes) or max 5 cycles, with 30-minute waits between cycles.
 
 ## Tech Stack
 
@@ -158,15 +168,15 @@ The output goes to `logs/calibration/` — a human-reviewed report with proposed
 
 ### Phase 2 — Calibration Pipeline (done)
 
-4-agent calibration system, 3-step CLI workflow, markdown calibration reports, activity logging.
+4-agent calibration system, 3-step CLI workflow, markdown calibration reports, activity logging, `/calibrate-loop` autonomous tuning.
 
-### Phase 3 — Automated Calibration
+### Phase 3 — Calibration Reports
 
-Multi-agent architecture for fully automated calibration runs. Orchestrator coordinates analysis, conversion (via Figma MCP), evaluation, and tuning agents without manual intervention. CI integration for periodic score validation.
+Export calibration results as user-facing HTML reports with Figma original screenshots and Claude implementation screenshots side by side.
 
 ### Phase 4 — Ecosystem
 
-Plugin system for custom rules. Figma plugin for in-editor feedback. Integration with design system documentation tools. Public rule score dataset from community calibration runs.
+Plugin system for custom rules. Figma plugin for in-editor feedback. Integration with design system documentation tools.
 
 ## License
 
