@@ -1,0 +1,3558 @@
+{
+  "fileKey": "tBOmzlJ8q2jsAO7O3olMGT",
+  "name": "Simple-Design-System--Community-",
+  "lastModified": "2026-03-19T23:36:07.473Z",
+  "version": "mcp",
+  "document": {
+    "id": "522:12151",
+    "name": "Component Playground",
+    "type": "CANVAS",
+    "visible": true,
+    "absoluteBoundingBox": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0
+    },
+    "children": [
+      {
+        "id": "522:11564",
+        "name": "Component Sample -&gt; Light",
+        "type": "SECTION",
+        "visible": true,
+        "absoluteBoundingBox": {
+          "x": 0,
+          "y": 0,
+          "width": 3188,
+          "height": 960
+        },
+        "children": [
+          {
+            "id": "522:11565",
+            "name": " ",
+            "type": "FRAME",
+            "visible": true,
+            "absoluteBoundingBox": {
+              "x": 48,
+              "y": 48,
+              "width": 1064,
+              "height": 864
+            },
+            "children": [
+              {
+                "id": "522:11566",
+                "name": "Section",
+                "type": "FRAME",
+                "visible": true,
+                "absoluteBoundingBox": {
+                  "x": 0,
+                  "y": 0,
+                  "width": 1064,
+                  "height": 147
+                },
+                "children": [
+                  {
+                    "id": "522:11567",
+                    "name": "Header",
+                    "type": "INSTANCE",
+                    "visible": true,
+                    "absoluteBoundingBox": {
+                      "x": 24,
+                      "y": 24,
+                      "width": 1016,
+                      "height": 99
+                    },
+                    "children": [
+                      {
+                        "id": "0:551",
+                        "name": "Block",
+                        "type": "FRAME",
+                        "visible": true,
+                        "absoluteBoundingBox": {
+                          "x": 32,
+                          "y": 32,
+                          "width": 40,
+                          "height": 35
+                        },
+                        "children": [
+                          {
+                            "id": "0:552",
+                            "name": "Icon Button",
+                            "type": "INSTANCE",
+                            "visible": false,
+                            "absoluteBoundingBox": {
+                              "x": 0,
+                              "y": 0,
+                              "width": 44,
+                              "height": 44
+                            }
+                          },
+                          {
+                            "id": "0:553",
+                            "name": "Icon Button",
+                            "type": "INSTANCE",
+                            "visible": false,
+                            "absoluteBoundingBox": {
+                              "x": 0,
+                              "y": 0,
+                              "width": 44,
+                              "height": 44
+                            }
+                          },
+                          {
+                            "id": "0:554",
+                            "name": "Figma",
+                            "type": "FRAME",
+                            "visible": true,
+                            "absoluteBoundingBox": {
+                              "x": 0,
+                              "y": 0,
+                              "width": 40,
+                              "height": 35
+                            },
+                            "children": [
+                              {
+                                "id": "0:555",
+                                "name": "Icon",
+                                "type": "VECTOR",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 8.333333969116211,
+                                  "y": 0,
+                                  "width": 23.333332061767578,
+                                  "height": 35
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "id": "0:556",
+                        "name": "Navigation Pill List",
+                        "type": "INSTANCE",
+                        "visible": true,
+                        "absoluteBoundingBox": {
+                          "x": 96,
+                          "y": 33.5,
+                          "width": 686,
+                          "height": 32
+                        },
+                        "children": [
+                          {
+                            "id": "0:579",
+                            "name": "Slot",
+                            "type": "FRAME",
+                            "visible": true,
+                            "absoluteBoundingBox": {
+                              "x": 78,
+                              "y": 0,
+                              "width": 608,
+                              "height": 32
+                            },
+                            "children": [
+                              {
+                                "id": "0:580",
+                                "name": "Navigation Pill",
+                                "type": "INSTANCE",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 0,
+                                  "y": 0,
+                                  "width": 84,
+                                  "height": 32
+                                }
+                              },
+                              {
+                                "id": "0:582",
+                                "name": "Navigation Pill",
+                                "type": "INSTANCE",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 92,
+                                  "y": 0,
+                                  "width": 86,
+                                  "height": 32
+                                }
+                              },
+                              {
+                                "id": "0:584",
+                                "name": "Navigation Pill",
+                                "type": "INSTANCE",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 186,
+                                  "y": 0,
+                                  "width": 103,
+                                  "height": 32
+                                }
+                              },
+                              {
+                                "id": "0:586",
+                                "name": "Navigation Pill",
+                                "type": "INSTANCE",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 297,
+                                  "y": 0,
+                                  "width": 95,
+                                  "height": 32
+                                }
+                              },
+                              {
+                                "id": "0:588",
+                                "name": "Navigation Pill",
+                                "type": "INSTANCE",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 400,
+                                  "y": 0,
+                                  "width": 68,
+                                  "height": 32
+                                }
+                              },
+                              {
+                                "id": "0:590",
+                                "name": "Navigation Pill",
+                                "type": "INSTANCE",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 476,
+                                  "y": 0,
+                                  "width": 77,
+                                  "height": 32
+                                }
+                              },
+                              {
+                                "id": "0:592",
+                                "name": "Navigation Pill",
+                                "type": "INSTANCE",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 561,
+                                  "y": 0,
+                                  "width": 47,
+                                  "height": 32
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "id": "0:594",
+                        "name": "Header Auth",
+                        "type": "INSTANCE",
+                        "visible": true,
+                        "absoluteBoundingBox": {
+                          "x": 806,
+                          "y": 33.5,
+                          "width": 178,
+                          "height": 32
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "522:11568",
+                "name": "Section",
+                "type": "FRAME",
+                "visible": true,
+                "absoluteBoundingBox": {
+                  "x": 0,
+                  "y": 195,
+                  "width": 1064,
+                  "height": 516
+                },
+                "children": [
+                  {
+                    "id": "522:11569",
+                    "name": "Footer",
+                    "type": "INSTANCE",
+                    "visible": true,
+                    "absoluteBoundingBox": {
+                      "x": 24,
+                      "y": 24,
+                      "width": 1016,
+                      "height": 468
+                    },
+                    "children": [
+                      {
+                        "id": "0:499",
+                        "name": "Title",
+                        "type": "FRAME",
+                        "visible": true,
+                        "absoluteBoundingBox": {
+                          "x": 32,
+                          "y": 32,
+                          "width": 262,
+                          "height": 83
+                        },
+                        "children": [
+                          {
+                            "id": "0:500",
+                            "name": "Figma",
+                            "type": "FRAME",
+                            "visible": true,
+                            "absoluteBoundingBox": {
+                              "x": 0,
+                              "y": 0,
+                              "width": 23.333332061767578,
+                              "height": 35
+                            },
+                            "children": [
+                              {
+                                "id": "0:501",
+                                "name": "Icon",
+                                "type": "VECTOR",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 0,
+                                  "y": 0,
+                                  "width": 23.333332061767578,
+                                  "height": 35
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            "id": "0:502",
+                            "name": "Button List",
+                            "type": "FRAME",
+                            "visible": true,
+                            "absoluteBoundingBox": {
+                              "x": 0,
+                              "y": 59,
+                              "width": 143.98001098632812,
+                              "height": 24
+                            },
+                            "children": [
+                              {
+                                "id": "0:503",
+                                "name": "X Logo",
+                                "type": "FRAME",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 0,
+                                  "y": 0,
+                                  "width": 23.980016708374023,
+                                  "height": 24
+                                }
+                              },
+                              {
+                                "id": "0:505",
+                                "name": "Logo Instagram",
+                                "type": "FRAME",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 39.980018615722656,
+                                  "y": 0,
+                                  "width": 24,
+                                  "height": 24
+                                }
+                              },
+                              {
+                                "id": "0:507",
+                                "name": "Logo YouTube",
+                                "type": "FRAME",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 79.98001861572266,
+                                  "y": 0,
+                                  "width": 24,
+                                  "height": 24
+                                }
+                              },
+                              {
+                                "id": "0:509",
+                                "name": "LinkedIn",
+                                "type": "FRAME",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 119.98001861572266,
+                                  "y": 0,
+                                  "width": 24,
+                                  "height": 24
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "id": "0:511",
+                        "name": "Slot",
+                        "type": "FRAME",
+                        "visible": true,
+                        "absoluteBoundingBox": {
+                          "x": 310,
+                          "y": 32,
+                          "width": 540,
+                          "height": 276
+                        },
+                        "children": [
+                          {
+                            "id": "0:512",
+                            "name": "Text Link List",
+                            "type": "INSTANCE",
+                            "visible": true,
+                            "absoluteBoundingBox": {
+                              "x": 0,
+                              "y": 0,
+                              "width": 262,
+                              "height": 276
+                            },
+                            "children": [
+                              {
+                                "id": "0:513",
+                                "name": "Title",
+                                "type": "FRAME",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 0,
+                                  "y": 0,
+                                  "width": 262,
+                                  "height": 38
+                                },
+                                "children": [
+                                  {
+                                    "id": "0:514",
+                                    "name": "Text Strong",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 0,
+                                      "width": 80,
+                                      "height": 22
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "id": "0:516",
+                                "name": "Slot",
+                                "type": "FRAME",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 0,
+                                  "y": 50,
+                                  "width": 144,
+                                  "height": 226
+                                },
+                                "children": [
+                                  {
+                                    "id": "0:517",
+                                    "name": "Text Link List Item",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 0,
+                                      "width": 72,
+                                      "height": 22
+                                    }
+                                  },
+                                  {
+                                    "id": "0:519",
+                                    "name": "Text Link List Item",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 34,
+                                      "width": 78,
+                                      "height": 22
+                                    }
+                                  },
+                                  {
+                                    "id": "0:521",
+                                    "name": "Text Link List Item",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 68,
+                                      "width": 92,
+                                      "height": 22
+                                    }
+                                  },
+                                  {
+                                    "id": "0:523",
+                                    "name": "Text Link List Item",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 102,
+                                      "width": 100,
+                                      "height": 22
+                                    }
+                                  },
+                                  {
+                                    "id": "0:525",
+                                    "name": "Text Link List Item",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 136,
+                                      "width": 105,
+                                      "height": 22
+                                    }
+                                  },
+                                  {
+                                    "id": "0:527",
+                                    "name": "Text Link List Item",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 170,
+                                      "width": 138,
+                                      "height": 22
+                                    }
+                                  },
+                                  {
+                                    "id": "0:529",
+                                    "name": "Text Link List Item",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 204,
+                                      "width": 144,
+                                      "height": 22
+                                    }
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "id": "0:531",
+                            "name": "Text Link List",
+                            "type": "INSTANCE",
+                            "visible": true,
+                            "absoluteBoundingBox": {
+                              "x": 278,
+                              "y": 0,
+                              "width": 262,
+                              "height": 276
+                            },
+                            "children": [
+                              {
+                                "id": "0:532",
+                                "name": "Title",
+                                "type": "FRAME",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 0,
+                                  "y": 0,
+                                  "width": 262,
+                                  "height": 38
+                                },
+                                "children": [
+                                  {
+                                    "id": "0:533",
+                                    "name": "Text Strong",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 0,
+                                      "width": 59,
+                                      "height": 22
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "id": "0:535",
+                                "name": "Slot",
+                                "type": "FRAME",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 0,
+                                  "y": 50,
+                                  "width": 168,
+                                  "height": 226
+                                },
+                                "children": [
+                                  {
+                                    "id": "0:536",
+                                    "name": "Text Link List Item",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 0,
+                                      "width": 53,
+                                      "height": 22
+                                    }
+                                  },
+                                  {
+                                    "id": "0:538",
+                                    "name": "Text Link List Item",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 34,
+                                      "width": 89,
+                                      "height": 22
+                                    }
+                                  },
+                                  {
+                                    "id": "0:540",
+                                    "name": "Text Link List Item",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 68,
+                                      "width": 167,
+                                      "height": 22
+                                    }
+                                  },
+                                  {
+                                    "id": "0:542",
+                                    "name": "Text Link List Item",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 102,
+                                      "width": 120,
+                                      "height": 22
+                                    }
+                                  },
+                                  {
+                                    "id": "0:544",
+                                    "name": "Text Link List Item",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 136,
+                                      "width": 168,
+                                      "height": 22
+                                    }
+                                  },
+                                  {
+                                    "id": "0:546",
+                                    "name": "Text Link List Item",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 170,
+                                      "width": 117,
+                                      "height": 22
+                                    }
+                                  },
+                                  {
+                                    "id": "0:548",
+                                    "name": "Text Link List Item",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 204,
+                                      "width": 55,
+                                      "height": 22
+                                    }
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "id": "0:550",
+                            "name": "Text Link List",
+                            "type": "INSTANCE",
+                            "visible": false,
+                            "absoluteBoundingBox": {
+                              "x": 556,
+                              "y": 0,
+                              "width": 262,
+                              "height": 276
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "522:11570",
+                "name": "Row",
+                "type": "FRAME",
+                "visible": true,
+                "absoluteBoundingBox": {
+                  "x": 0,
+                  "y": 759,
+                  "width": 1064,
+                  "height": 105
+                },
+                "children": [
+                  {
+                    "id": "522:11571",
+                    "name": "Section",
+                    "type": "FRAME",
+                    "visible": true,
+                    "absoluteBoundingBox": {
+                      "x": 0,
+                      "y": 9.5,
+                      "width": 1064,
+                      "height": 86
+                    },
+                    "children": [
+                      {
+                        "id": "522:11572",
+                        "name": "Pagination",
+                        "type": "INSTANCE",
+                        "visible": true,
+                        "absoluteBoundingBox": {
+                          "x": 313.5,
+                          "y": 24,
+                          "width": 437,
+                          "height": 38
+                        },
+                        "children": [
+                          {
+                            "id": "0:478",
+                            "name": "Pagination Previous",
+                            "type": "INSTANCE",
+                            "visible": true,
+                            "absoluteBoundingBox": {
+                              "x": 0,
+                              "y": 3,
+                              "width": 113,
+                              "height": 32
+                            }
+                          },
+                          {
+                            "id": "0:482",
+                            "name": "Pagination List",
+                            "type": "INSTANCE",
+                            "visible": true,
+                            "absoluteBoundingBox": {
+                              "x": 121,
+                              "y": 0,
+                              "width": 224,
+                              "height": 38
+                            },
+                            "children": [
+                              {
+                                "id": "0:483",
+                                "name": "Slot",
+                                "type": "FRAME",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 0,
+                                  "y": 0,
+                                  "width": 224,
+                                  "height": 38
+                                },
+                                "children": [
+                                  {
+                                    "id": "0:484",
+                                    "name": "Pagination Page",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 3,
+                                      "width": 32,
+                                      "height": 32
+                                    }
+                                  },
+                                  {
+                                    "id": "0:486",
+                                    "name": "Pagination Page",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 40,
+                                      "y": 3,
+                                      "width": 34,
+                                      "height": 32
+                                    }
+                                  },
+                                  {
+                                    "id": "0:488",
+                                    "name": "Pagination Page",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 82,
+                                      "y": 3,
+                                      "width": 35,
+                                      "height": 32
+                                    }
+                                  },
+                                  {
+                                    "id": "0:490",
+                                    "name": "Pagination Gap",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 125,
+                                      "y": 0,
+                                      "width": 47,
+                                      "height": 38
+                                    }
+                                  },
+                                  {
+                                    "id": "0:492",
+                                    "name": "Pagination Page",
+                                    "type": "INSTANCE",
+                                    "visible": false,
+                                    "absoluteBoundingBox": {
+                                      "x": 180,
+                                      "y": 3,
+                                      "width": 44,
+                                      "height": 32
+                                    }
+                                  },
+                                  {
+                                    "id": "0:493",
+                                    "name": "Pagination Page",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 180,
+                                      "y": 3,
+                                      "width": 44,
+                                      "height": 32
+                                    }
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "id": "0:495",
+                            "name": "Pagination Next",
+                            "type": "INSTANCE",
+                            "visible": true,
+                            "absoluteBoundingBox": {
+                              "x": 353,
+                              "y": 3,
+                              "width": 84,
+                              "height": 32
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "522:11573",
+            "name": " ",
+            "type": "FRAME",
+            "visible": true,
+            "absoluteBoundingBox": {
+              "x": 1160,
+              "y": 48,
+              "width": 1244,
+              "height": 864
+            },
+            "children": [
+              {
+                "id": "522:11574",
+                "name": "Section",
+                "type": "FRAME",
+                "visible": true,
+                "absoluteBoundingBox": {
+                  "x": 0,
+                  "y": 0,
+                  "width": 1244,
+                  "height": 605
+                },
+                "children": [
+                  {
+                    "id": "522:11575",
+                    "name": "Column",
+                    "type": "FRAME",
+                    "visible": true,
+                    "absoluteBoundingBox": {
+                      "x": 0,
+                      "y": 0,
+                      "width": 688,
+                      "height": 605
+                    },
+                    "children": [
+                      {
+                        "id": "522:11576",
+                        "name": "Section",
+                        "type": "FRAME",
+                        "visible": true,
+                        "absoluteBoundingBox": {
+                          "x": 0,
+                          "y": 0,
+                          "width": 688,
+                          "height": 78
+                        },
+                        "children": [
+                          {
+                            "id": "522:11577",
+                            "name": "Tabs",
+                            "type": "INSTANCE",
+                            "visible": true,
+                            "absoluteBoundingBox": {
+                              "x": 157,
+                              "y": 24,
+                              "width": 374,
+                              "height": 30
+                            },
+                            "children": [
+                              {
+                                "id": "0:770",
+                                "name": "Slot",
+                                "type": "FRAME",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 0,
+                                  "y": 0,
+                                  "width": 374,
+                                  "height": 30
+                                },
+                                "children": [
+                                  {
+                                    "id": "0:771",
+                                    "name": "Tab",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 0,
+                                      "width": 54,
+                                      "height": 30
+                                    }
+                                  },
+                                  {
+                                    "id": "0:773",
+                                    "name": "Tab",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 54,
+                                      "y": 0,
+                                      "width": 57,
+                                      "height": 30
+                                    }
+                                  },
+                                  {
+                                    "id": "0:775",
+                                    "name": "Tab",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 111,
+                                      "y": 0,
+                                      "width": 70,
+                                      "height": 30
+                                    }
+                                  },
+                                  {
+                                    "id": "0:777",
+                                    "name": "Tab",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 181,
+                                      "y": 0,
+                                      "width": 73,
+                                      "height": 30
+                                    }
+                                  },
+                                  {
+                                    "id": "0:779",
+                                    "name": "Tab",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 254,
+                                      "y": 0,
+                                      "width": 57,
+                                      "height": 30
+                                    }
+                                  },
+                                  {
+                                    "id": "0:781",
+                                    "name": "Tab",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 311,
+                                      "y": 0,
+                                      "width": 63,
+                                      "height": 30
+                                    }
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "id": "522:11578",
+                        "name": "Section",
+                        "type": "FRAME",
+                        "visible": true,
+                        "absoluteBoundingBox": {
+                          "x": 0,
+                          "y": 126,
+                          "width": 688,
+                          "height": 479
+                        },
+                        "children": [
+                          {
+                            "id": "522:11579",
+                            "name": "Accordion",
+                            "type": "INSTANCE",
+                            "visible": true,
+                            "absoluteBoundingBox": {
+                              "x": 24,
+                              "y": 59.5,
+                              "width": 640,
+                              "height": 360
+                            },
+                            "children": [
+                              {
+                                "id": "0:451",
+                                "name": "Accordion Item",
+                                "type": "INSTANCE",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 0,
+                                  "y": 0,
+                                  "width": 640,
+                                  "height": 150
+                                }
+                              },
+                              {
+                                "id": "0:458",
+                                "name": "Items",
+                                "type": "FRAME",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 0,
+                                  "y": 166,
+                                  "width": 640,
+                                  "height": 194
+                                },
+                                "children": [
+                                  {
+                                    "id": "0:459",
+                                    "name": "Accordion Item",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 0,
+                                      "width": 640,
+                                      "height": 54
+                                    }
+                                  },
+                                  {
+                                    "id": "0:464",
+                                    "name": "Accordion Item",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 70,
+                                      "width": 640,
+                                      "height": 54
+                                    }
+                                  },
+                                  {
+                                    "id": "0:469",
+                                    "name": "Accordion Item",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 140,
+                                      "width": 640,
+                                      "height": 54
+                                    }
+                                  },
+                                  {
+                                    "id": "0:474",
+                                    "name": "Accordion Item",
+                                    "type": "INSTANCE",
+                                    "visible": false,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 210,
+                                      "width": 640,
+                                      "height": 54
+                                    }
+                                  },
+                                  {
+                                    "id": "0:475",
+                                    "name": "Accordion Item",
+                                    "type": "INSTANCE",
+                                    "visible": false,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 280,
+                                      "width": 640,
+                                      "height": 54
+                                    }
+                                  },
+                                  {
+                                    "id": "0:476",
+                                    "name": "Accordion Item",
+                                    "type": "INSTANCE",
+                                    "visible": false,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 350,
+                                      "width": 640,
+                                      "height": 54
+                                    }
+                                  },
+                                  {
+                                    "id": "0:477",
+                                    "name": "Accordion Item",
+                                    "type": "INSTANCE",
+                                    "visible": false,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 420,
+                                      "width": 640,
+                                      "height": 54
+                                    }
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "id": "522:11580",
+                            "name": "Dialog",
+                            "type": "INSTANCE",
+                            "visible": true,
+                            "absoluteBoundingBox": {
+                              "x": 24,
+                              "y": 60.5,
+                              "width": 640,
+                              "height": 360
+                            },
+                            "children": [
+                              {
+                                "id": "0:731",
+                                "name": "Dialog Body",
+                                "type": "INSTANCE",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 20,
+                                  "y": 40.5,
+                                  "width": 600,
+                                  "height": 279
+                                },
+                                "children": [
+                                  {
+                                    "id": "0:732",
+                                    "name": "Slot",
+                                    "type": "FRAME",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 32,
+                                      "y": 32,
+                                      "width": 536,
+                                      "height": 215
+                                    },
+                                    "children": [
+                                      {
+                                        "id": "0:733",
+                                        "name": "Text",
+                                        "type": "FRAME",
+                                        "visible": true,
+                                        "absoluteBoundingBox": {
+                                          "x": 0,
+                                          "y": 0,
+                                          "width": 536,
+                                          "height": 151
+                                        },
+                                        "children": [
+                                          {
+                                            "id": "0:734",
+                                            "name": "Text Heading",
+                                            "type": "TEXT",
+                                            "visible": true,
+                                            "absoluteBoundingBox": {
+                                              "x": 0,
+                                              "y": 0,
+                                              "width": 536,
+                                              "height": 29
+                                            }
+                                          },
+                                          {
+                                            "id": "0:735",
+                                            "name": "Body text",
+                                            "type": "TEXT",
+                                            "visible": true,
+                                            "absoluteBoundingBox": {
+                                              "x": 0,
+                                              "y": 41,
+                                              "width": 536,
+                                              "height": 110
+                                            }
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "id": "0:736",
+                                        "name": "Button Group",
+                                        "type": "INSTANCE",
+                                        "visible": true,
+                                        "absoluteBoundingBox": {
+                                          "x": 0,
+                                          "y": 175,
+                                          "width": 536,
+                                          "height": 40
+                                        }
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "id": "0:745",
+                                    "name": "Icon Button",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 556,
+                                      "y": 8,
+                                      "width": 36,
+                                      "height": 36
+                                    }
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "id": "522:11581",
+                    "name": "Section",
+                    "type": "FRAME",
+                    "visible": true,
+                    "absoluteBoundingBox": {
+                      "x": 736,
+                      "y": 0,
+                      "width": 508,
+                      "height": 605
+                    },
+                    "children": [
+                      {
+                        "id": "522:11582",
+                        "name": "Form Shipping",
+                        "type": "INSTANCE",
+                        "visible": true,
+                        "absoluteBoundingBox": {
+                          "x": 94,
+                          "y": 24,
+                          "width": 320,
+                          "height": 557
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "522:11583",
+                "name": "Row",
+                "type": "FRAME",
+                "visible": true,
+                "absoluteBoundingBox": {
+                  "x": 0,
+                  "y": 653,
+                  "width": 1244,
+                  "height": 211
+                },
+                "children": [
+                  {
+                    "id": "522:11584",
+                    "name": "Column",
+                    "type": "FRAME",
+                    "visible": true,
+                    "absoluteBoundingBox": {
+                      "x": 0,
+                      "y": 0,
+                      "width": 1244,
+                      "height": 211
+                    },
+                    "children": [
+                      {
+                        "id": "522:11585",
+                        "name": "Card List",
+                        "type": "FRAME",
+                        "visible": true,
+                        "absoluteBoundingBox": {
+                          "x": 0,
+                          "y": 0,
+                          "width": 1244,
+                          "height": 211
+                        },
+                        "children": [
+                          {
+                            "id": "522:11586",
+                            "name": "Card",
+                            "type": "INSTANCE",
+                            "visible": true,
+                            "absoluteBoundingBox": {
+                              "x": 24,
+                              "y": 24,
+                              "width": 1196,
+                              "height": 163
+                            },
+                            "children": [
+                              {
+                                "id": "0:359",
+                                "name": "Star",
+                                "type": "INSTANCE",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 24,
+                                  "y": 24,
+                                  "width": 32,
+                                  "height": 32
+                                }
+                              },
+                              {
+                                "id": "0:361",
+                                "name": "Body2",
+                                "type": "FRAME",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 80,
+                                  "y": 24,
+                                  "width": 1092,
+                                  "height": 115
+                                },
+                                "children": [
+                                  {
+                                    "id": "0:362",
+                                    "name": "Text",
+                                    "type": "FRAME",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 0,
+                                      "width": 1092,
+                                      "height": 59
+                                    },
+                                    "children": [
+                                      {
+                                        "id": "0:363",
+                                        "name": "Title",
+                                        "type": "TEXT",
+                                        "visible": true,
+                                        "absoluteBoundingBox": {
+                                          "x": 0,
+                                          "y": 0,
+                                          "width": 1092,
+                                          "height": 29
+                                        }
+                                      },
+                                      {
+                                        "id": "0:364",
+                                        "name": "Body text for whatever you'd like to say. Add main takeaway points, quotes, anecdotes, or even a very very short story.",
+                                        "type": "TEXT",
+                                        "visible": true,
+                                        "absoluteBoundingBox": {
+                                          "x": 0,
+                                          "y": 37,
+                                          "width": 1092,
+                                          "height": 22
+                                        }
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "id": "0:365",
+                                    "name": "Button Group",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 75,
+                                      "width": 1092,
+                                      "height": 40
+                                    }
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "522:11587",
+            "name": " ",
+            "type": "FRAME",
+            "visible": true,
+            "absoluteBoundingBox": {
+              "x": 2452,
+              "y": 48,
+              "width": 688,
+              "height": 864
+            },
+            "children": [
+              {
+                "id": "522:11588",
+                "name": "Column",
+                "type": "FRAME",
+                "visible": true,
+                "absoluteBoundingBox": {
+                  "x": 0,
+                  "y": 0,
+                  "width": 688,
+                  "height": 408
+                },
+                "children": [
+                  {
+                    "id": "522:11589",
+                    "name": "Section",
+                    "type": "FRAME",
+                    "visible": true,
+                    "absoluteBoundingBox": {
+                      "x": 0,
+                      "y": 0,
+                      "width": 688,
+                      "height": 264
+                    },
+                    "children": [
+                      {
+                        "id": "522:11590",
+                        "name": "Notification",
+                        "type": "INSTANCE",
+                        "visible": true,
+                        "absoluteBoundingBox": {
+                          "x": 24,
+                          "y": 24,
+                          "width": 640,
+                          "height": 216
+                        },
+                        "children": [
+                          {
+                            "id": "0:339",
+                            "name": "Title2",
+                            "type": "FRAME",
+                            "visible": true,
+                            "absoluteBoundingBox": {
+                              "x": 16,
+                              "y": 16,
+                              "width": 608,
+                              "height": 184
+                            },
+                            "children": [
+                              {
+                                "id": "0:340",
+                                "name": "Info",
+                                "type": "INSTANCE",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 0,
+                                  "y": 0,
+                                  "width": 20,
+                                  "height": 20
+                                }
+                              },
+                              {
+                                "id": "0:343",
+                                "name": "Stack",
+                                "type": "FRAME",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 32,
+                                  "y": 0,
+                                  "width": 576,
+                                  "height": 184
+                                },
+                                "children": [
+                                  {
+                                    "id": "0:344",
+                                    "name": "Content",
+                                    "type": "FRAME",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 0,
+                                      "width": 576,
+                                      "height": 136
+                                    },
+                                    "children": [
+                                      {
+                                        "id": "0:345",
+                                        "name": "Title",
+                                        "type": "TEXT",
+                                        "visible": true,
+                                        "absoluteBoundingBox": {
+                                          "x": 0,
+                                          "y": 0,
+                                          "width": 576,
+                                          "height": 22
+                                        }
+                                      },
+                                      {
+                                        "id": "0:346",
+                                        "name": "Body text.",
+                                        "type": "TEXT",
+                                        "visible": true,
+                                        "absoluteBoundingBox": {
+                                          "x": 0,
+                                          "y": 26,
+                                          "width": 576,
+                                          "height": 110
+                                        }
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "id": "0:347",
+                                    "name": "Button",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 152,
+                                      "width": 171,
+                                      "height": 32
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "id": "0:354",
+                                "name": "Icon Button Danger",
+                                "type": "INSTANCE",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 576,
+                                  "y": -8,
+                                  "width": 40,
+                                  "height": 40
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "id": "522:11591",
+                    "name": "Section",
+                    "type": "FRAME",
+                    "visible": true,
+                    "absoluteBoundingBox": {
+                      "x": 0,
+                      "y": 312,
+                      "width": 688,
+                      "height": 96
+                    },
+                    "children": [
+                      {
+                        "id": "522:11592",
+                        "name": "Tag",
+                        "type": "INSTANCE",
+                        "visible": true,
+                        "absoluteBoundingBox": {
+                          "x": 150,
+                          "y": 32,
+                          "width": 68,
+                          "height": 32
+                        }
+                      },
+                      {
+                        "id": "522:11593",
+                        "name": "Tag",
+                        "type": "INSTANCE",
+                        "visible": true,
+                        "absoluteBoundingBox": {
+                          "x": 230,
+                          "y": 32,
+                          "width": 68,
+                          "height": 32
+                        }
+                      },
+                      {
+                        "id": "522:11594",
+                        "name": "Tag",
+                        "type": "INSTANCE",
+                        "visible": true,
+                        "absoluteBoundingBox": {
+                          "x": 310,
+                          "y": 32,
+                          "width": 68,
+                          "height": 32
+                        }
+                      },
+                      {
+                        "id": "522:11595",
+                        "name": "Tag",
+                        "type": "INSTANCE",
+                        "visible": true,
+                        "absoluteBoundingBox": {
+                          "x": 390,
+                          "y": 32,
+                          "width": 68,
+                          "height": 32
+                        }
+                      },
+                      {
+                        "id": "522:11596",
+                        "name": "Tag",
+                        "type": "INSTANCE",
+                        "visible": true,
+                        "absoluteBoundingBox": {
+                          "x": 470,
+                          "y": 32,
+                          "width": 68,
+                          "height": 32
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "522:11597",
+                "name": "Section",
+                "type": "FRAME",
+                "visible": true,
+                "absoluteBoundingBox": {
+                  "x": 0,
+                  "y": 456,
+                  "width": 688,
+                  "height": 408
+                },
+                "children": [
+                  {
+                    "id": "522:11598",
+                    "name": "Accordion",
+                    "type": "INSTANCE",
+                    "visible": true,
+                    "absoluteBoundingBox": {
+                      "x": 24,
+                      "y": 24,
+                      "width": 640,
+                      "height": 360
+                    },
+                    "children": [
+                      {
+                        "id": "0:302",
+                        "name": "Accordion Item",
+                        "type": "INSTANCE",
+                        "visible": true,
+                        "absoluteBoundingBox": {
+                          "x": 0,
+                          "y": 0,
+                          "width": 640,
+                          "height": 150
+                        }
+                      },
+                      {
+                        "id": "0:309",
+                        "name": "Items",
+                        "type": "FRAME",
+                        "visible": true,
+                        "absoluteBoundingBox": {
+                          "x": 0,
+                          "y": 166,
+                          "width": 640,
+                          "height": 194
+                        },
+                        "children": [
+                          {
+                            "id": "0:310",
+                            "name": "Accordion Item",
+                            "type": "INSTANCE",
+                            "visible": true,
+                            "absoluteBoundingBox": {
+                              "x": 0,
+                              "y": 0,
+                              "width": 640,
+                              "height": 54
+                            }
+                          },
+                          {
+                            "id": "0:315",
+                            "name": "Accordion Item",
+                            "type": "INSTANCE",
+                            "visible": true,
+                            "absoluteBoundingBox": {
+                              "x": 0,
+                              "y": 70,
+                              "width": 640,
+                              "height": 54
+                            }
+                          },
+                          {
+                            "id": "0:320",
+                            "name": "Accordion Item",
+                            "type": "INSTANCE",
+                            "visible": true,
+                            "absoluteBoundingBox": {
+                              "x": 0,
+                              "y": 140,
+                              "width": 640,
+                              "height": 54
+                            }
+                          },
+                          {
+                            "id": "0:325",
+                            "name": "Accordion Item",
+                            "type": "INSTANCE",
+                            "visible": false,
+                            "absoluteBoundingBox": {
+                              "x": 0,
+                              "y": 210,
+                              "width": 640,
+                              "height": 54
+                            }
+                          },
+                          {
+                            "id": "0:326",
+                            "name": "Accordion Item",
+                            "type": "INSTANCE",
+                            "visible": false,
+                            "absoluteBoundingBox": {
+                              "x": 0,
+                              "y": 280,
+                              "width": 640,
+                              "height": 54
+                            }
+                          },
+                          {
+                            "id": "0:327",
+                            "name": "Accordion Item",
+                            "type": "INSTANCE",
+                            "visible": false,
+                            "absoluteBoundingBox": {
+                              "x": 0,
+                              "y": 350,
+                              "width": 640,
+                              "height": 54
+                            }
+                          },
+                          {
+                            "id": "0:328",
+                            "name": "Accordion Item",
+                            "type": "INSTANCE",
+                            "visible": false,
+                            "absoluteBoundingBox": {
+                              "x": 0,
+                              "y": 420,
+                              "width": 640,
+                              "height": 54
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "522:11599",
+        "name": "Component Sample -&gt; Dark",
+        "type": "SECTION",
+        "visible": true,
+        "absoluteBoundingBox": {
+          "x": 0,
+          "y": 1120,
+          "width": 3188,
+          "height": 960
+        },
+        "children": [
+          {
+            "id": "522:11600",
+            "name": " ",
+            "type": "FRAME",
+            "visible": true,
+            "absoluteBoundingBox": {
+              "x": 48,
+              "y": 48,
+              "width": 1064,
+              "height": 864
+            },
+            "children": [
+              {
+                "id": "522:11601",
+                "name": "Section",
+                "type": "FRAME",
+                "visible": true,
+                "absoluteBoundingBox": {
+                  "x": 0,
+                  "y": 0,
+                  "width": 1064,
+                  "height": 147
+                },
+                "children": [
+                  {
+                    "id": "522:11602",
+                    "name": "Header",
+                    "type": "INSTANCE",
+                    "visible": true,
+                    "absoluteBoundingBox": {
+                      "x": 24,
+                      "y": 24,
+                      "width": 1016,
+                      "height": 99
+                    },
+                    "children": [
+                      {
+                        "id": "0:631",
+                        "name": "Block",
+                        "type": "FRAME",
+                        "visible": true,
+                        "absoluteBoundingBox": {
+                          "x": 32,
+                          "y": 32,
+                          "width": 40,
+                          "height": 35
+                        },
+                        "children": [
+                          {
+                            "id": "0:632",
+                            "name": "Icon Button",
+                            "type": "INSTANCE",
+                            "visible": false,
+                            "absoluteBoundingBox": {
+                              "x": 0,
+                              "y": 0,
+                              "width": 44,
+                              "height": 44
+                            }
+                          },
+                          {
+                            "id": "0:633",
+                            "name": "Icon Button",
+                            "type": "INSTANCE",
+                            "visible": false,
+                            "absoluteBoundingBox": {
+                              "x": 0,
+                              "y": 0,
+                              "width": 44,
+                              "height": 44
+                            }
+                          },
+                          {
+                            "id": "0:634",
+                            "name": "Figma",
+                            "type": "FRAME",
+                            "visible": true,
+                            "absoluteBoundingBox": {
+                              "x": 0,
+                              "y": 0,
+                              "width": 40,
+                              "height": 35
+                            },
+                            "children": [
+                              {
+                                "id": "0:635",
+                                "name": "Icon",
+                                "type": "VECTOR",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 8.333333969116211,
+                                  "y": 0,
+                                  "width": 23.333332061767578,
+                                  "height": 35
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "id": "0:636",
+                        "name": "Navigation Pill List",
+                        "type": "INSTANCE",
+                        "visible": true,
+                        "absoluteBoundingBox": {
+                          "x": 96,
+                          "y": 33.5,
+                          "width": 686,
+                          "height": 32
+                        },
+                        "children": [
+                          {
+                            "id": "0:637",
+                            "name": "Slot",
+                            "type": "FRAME",
+                            "visible": true,
+                            "absoluteBoundingBox": {
+                              "x": 78,
+                              "y": 0,
+                              "width": 608,
+                              "height": 32
+                            },
+                            "children": [
+                              {
+                                "id": "0:638",
+                                "name": "Navigation Pill",
+                                "type": "INSTANCE",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 0,
+                                  "y": 0,
+                                  "width": 84,
+                                  "height": 32
+                                }
+                              },
+                              {
+                                "id": "0:640",
+                                "name": "Navigation Pill",
+                                "type": "INSTANCE",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 92,
+                                  "y": 0,
+                                  "width": 86,
+                                  "height": 32
+                                }
+                              },
+                              {
+                                "id": "0:642",
+                                "name": "Navigation Pill",
+                                "type": "INSTANCE",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 186,
+                                  "y": 0,
+                                  "width": 103,
+                                  "height": 32
+                                }
+                              },
+                              {
+                                "id": "0:644",
+                                "name": "Navigation Pill",
+                                "type": "INSTANCE",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 297,
+                                  "y": 0,
+                                  "width": 95,
+                                  "height": 32
+                                }
+                              },
+                              {
+                                "id": "0:646",
+                                "name": "Navigation Pill",
+                                "type": "INSTANCE",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 400,
+                                  "y": 0,
+                                  "width": 68,
+                                  "height": 32
+                                }
+                              },
+                              {
+                                "id": "0:648",
+                                "name": "Navigation Pill",
+                                "type": "INSTANCE",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 476,
+                                  "y": 0,
+                                  "width": 77,
+                                  "height": 32
+                                }
+                              },
+                              {
+                                "id": "0:650",
+                                "name": "Navigation Pill",
+                                "type": "INSTANCE",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 561,
+                                  "y": 0,
+                                  "width": 47,
+                                  "height": 32
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "id": "0:652",
+                        "name": "Header Auth",
+                        "type": "INSTANCE",
+                        "visible": true,
+                        "absoluteBoundingBox": {
+                          "x": 806,
+                          "y": 33.5,
+                          "width": 178,
+                          "height": 32
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "522:11603",
+                "name": "Section",
+                "type": "FRAME",
+                "visible": true,
+                "absoluteBoundingBox": {
+                  "x": 0,
+                  "y": 195,
+                  "width": 1064,
+                  "height": 516
+                },
+                "children": [
+                  {
+                    "id": "522:11604",
+                    "name": "Footer",
+                    "type": "INSTANCE",
+                    "visible": true,
+                    "absoluteBoundingBox": {
+                      "x": 24,
+                      "y": 24,
+                      "width": 1016,
+                      "height": 468
+                    },
+                    "children": [
+                      {
+                        "id": "0:188",
+                        "name": "Title",
+                        "type": "FRAME",
+                        "visible": true,
+                        "absoluteBoundingBox": {
+                          "x": 32,
+                          "y": 32,
+                          "width": 262,
+                          "height": 83
+                        },
+                        "children": [
+                          {
+                            "id": "0:189",
+                            "name": "Figma",
+                            "type": "FRAME",
+                            "visible": true,
+                            "absoluteBoundingBox": {
+                              "x": 0,
+                              "y": 0,
+                              "width": 23.333332061767578,
+                              "height": 35
+                            },
+                            "children": [
+                              {
+                                "id": "0:190",
+                                "name": "Icon",
+                                "type": "VECTOR",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 0,
+                                  "y": 0,
+                                  "width": 23.333332061767578,
+                                  "height": 35
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            "id": "0:191",
+                            "name": "Button List",
+                            "type": "FRAME",
+                            "visible": true,
+                            "absoluteBoundingBox": {
+                              "x": 0,
+                              "y": 59,
+                              "width": 143.98001098632812,
+                              "height": 24
+                            },
+                            "children": [
+                              {
+                                "id": "0:192",
+                                "name": "X Logo",
+                                "type": "FRAME",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 0,
+                                  "y": 0,
+                                  "width": 23.980016708374023,
+                                  "height": 24
+                                }
+                              },
+                              {
+                                "id": "0:194",
+                                "name": "Logo Instagram",
+                                "type": "FRAME",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 39.980018615722656,
+                                  "y": 0,
+                                  "width": 24,
+                                  "height": 24
+                                }
+                              },
+                              {
+                                "id": "0:196",
+                                "name": "Logo YouTube",
+                                "type": "FRAME",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 79.98001861572266,
+                                  "y": 0,
+                                  "width": 24,
+                                  "height": 24
+                                }
+                              },
+                              {
+                                "id": "0:198",
+                                "name": "LinkedIn",
+                                "type": "FRAME",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 119.98001861572266,
+                                  "y": 0,
+                                  "width": 24,
+                                  "height": 24
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "id": "0:200",
+                        "name": "Slot",
+                        "type": "FRAME",
+                        "visible": true,
+                        "absoluteBoundingBox": {
+                          "x": 310,
+                          "y": 32,
+                          "width": 540,
+                          "height": 276
+                        },
+                        "children": [
+                          {
+                            "id": "0:201",
+                            "name": "Text Link List",
+                            "type": "INSTANCE",
+                            "visible": true,
+                            "absoluteBoundingBox": {
+                              "x": 0,
+                              "y": 0,
+                              "width": 262,
+                              "height": 276
+                            },
+                            "children": [
+                              {
+                                "id": "0:228",
+                                "name": "Title",
+                                "type": "FRAME",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 0,
+                                  "y": 0,
+                                  "width": 262,
+                                  "height": 38
+                                },
+                                "children": [
+                                  {
+                                    "id": "0:229",
+                                    "name": "Text Strong",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 0,
+                                      "width": 80,
+                                      "height": 22
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "id": "0:231",
+                                "name": "Slot",
+                                "type": "FRAME",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 0,
+                                  "y": 50,
+                                  "width": 144,
+                                  "height": 226
+                                },
+                                "children": [
+                                  {
+                                    "id": "0:232",
+                                    "name": "Text Link List Item",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 0,
+                                      "width": 72,
+                                      "height": 22
+                                    }
+                                  },
+                                  {
+                                    "id": "0:234",
+                                    "name": "Text Link List Item",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 34,
+                                      "width": 78,
+                                      "height": 22
+                                    }
+                                  },
+                                  {
+                                    "id": "0:236",
+                                    "name": "Text Link List Item",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 68,
+                                      "width": 92,
+                                      "height": 22
+                                    }
+                                  },
+                                  {
+                                    "id": "0:238",
+                                    "name": "Text Link List Item",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 102,
+                                      "width": 100,
+                                      "height": 22
+                                    }
+                                  },
+                                  {
+                                    "id": "0:240",
+                                    "name": "Text Link List Item",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 136,
+                                      "width": 105,
+                                      "height": 22
+                                    }
+                                  },
+                                  {
+                                    "id": "0:242",
+                                    "name": "Text Link List Item",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 170,
+                                      "width": 138,
+                                      "height": 22
+                                    }
+                                  },
+                                  {
+                                    "id": "0:244",
+                                    "name": "Text Link List Item",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 204,
+                                      "width": 144,
+                                      "height": 22
+                                    }
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "id": "0:246",
+                            "name": "Text Link List",
+                            "type": "INSTANCE",
+                            "visible": true,
+                            "absoluteBoundingBox": {
+                              "x": 278,
+                              "y": 0,
+                              "width": 262,
+                              "height": 276
+                            },
+                            "children": [
+                              {
+                                "id": "0:265",
+                                "name": "Title",
+                                "type": "FRAME",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 0,
+                                  "y": 0,
+                                  "width": 262,
+                                  "height": 38
+                                },
+                                "children": [
+                                  {
+                                    "id": "0:266",
+                                    "name": "Text Strong",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 0,
+                                      "width": 59,
+                                      "height": 22
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "id": "0:268",
+                                "name": "Slot",
+                                "type": "FRAME",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 0,
+                                  "y": 50,
+                                  "width": 168,
+                                  "height": 226
+                                },
+                                "children": [
+                                  {
+                                    "id": "0:269",
+                                    "name": "Text Link List Item",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 0,
+                                      "width": 53,
+                                      "height": 22
+                                    }
+                                  },
+                                  {
+                                    "id": "0:271",
+                                    "name": "Text Link List Item",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 34,
+                                      "width": 89,
+                                      "height": 22
+                                    }
+                                  },
+                                  {
+                                    "id": "0:273",
+                                    "name": "Text Link List Item",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 68,
+                                      "width": 167,
+                                      "height": 22
+                                    }
+                                  },
+                                  {
+                                    "id": "0:275",
+                                    "name": "Text Link List Item",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 102,
+                                      "width": 120,
+                                      "height": 22
+                                    }
+                                  },
+                                  {
+                                    "id": "0:277",
+                                    "name": "Text Link List Item",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 136,
+                                      "width": 168,
+                                      "height": 22
+                                    }
+                                  },
+                                  {
+                                    "id": "0:279",
+                                    "name": "Text Link List Item",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 170,
+                                      "width": 117,
+                                      "height": 22
+                                    }
+                                  },
+                                  {
+                                    "id": "0:281",
+                                    "name": "Text Link List Item",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 204,
+                                      "width": 55,
+                                      "height": 22
+                                    }
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "id": "0:283",
+                            "name": "Text Link List",
+                            "type": "INSTANCE",
+                            "visible": false,
+                            "absoluteBoundingBox": {
+                              "x": 556,
+                              "y": 0,
+                              "width": 262,
+                              "height": 276
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "522:11605",
+                "name": "Row",
+                "type": "FRAME",
+                "visible": true,
+                "absoluteBoundingBox": {
+                  "x": 0,
+                  "y": 759,
+                  "width": 1064,
+                  "height": 105
+                },
+                "children": [
+                  {
+                    "id": "522:11606",
+                    "name": "Section",
+                    "type": "FRAME",
+                    "visible": true,
+                    "absoluteBoundingBox": {
+                      "x": 0,
+                      "y": 9.5,
+                      "width": 1064,
+                      "height": 86
+                    },
+                    "children": [
+                      {
+                        "id": "522:11607",
+                        "name": "Pagination",
+                        "type": "INSTANCE",
+                        "visible": true,
+                        "absoluteBoundingBox": {
+                          "x": 313.5,
+                          "y": 24,
+                          "width": 437,
+                          "height": 38
+                        },
+                        "children": [
+                          {
+                            "id": "0:140",
+                            "name": "Pagination Previous",
+                            "type": "INSTANCE",
+                            "visible": true,
+                            "absoluteBoundingBox": {
+                              "x": 0,
+                              "y": 3,
+                              "width": 113,
+                              "height": 32
+                            }
+                          },
+                          {
+                            "id": "0:148",
+                            "name": "Pagination List",
+                            "type": "INSTANCE",
+                            "visible": true,
+                            "absoluteBoundingBox": {
+                              "x": 121,
+                              "y": 0,
+                              "width": 224,
+                              "height": 38
+                            },
+                            "children": [
+                              {
+                                "id": "0:168",
+                                "name": "Slot",
+                                "type": "FRAME",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 0,
+                                  "y": 0,
+                                  "width": 224,
+                                  "height": 38
+                                },
+                                "children": [
+                                  {
+                                    "id": "0:169",
+                                    "name": "Pagination Page",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 3,
+                                      "width": 32,
+                                      "height": 32
+                                    }
+                                  },
+                                  {
+                                    "id": "0:171",
+                                    "name": "Pagination Page",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 40,
+                                      "y": 3,
+                                      "width": 34,
+                                      "height": 32
+                                    }
+                                  },
+                                  {
+                                    "id": "0:173",
+                                    "name": "Pagination Page",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 82,
+                                      "y": 3,
+                                      "width": 35,
+                                      "height": 32
+                                    }
+                                  },
+                                  {
+                                    "id": "0:175",
+                                    "name": "Pagination Gap",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 125,
+                                      "y": 0,
+                                      "width": 47,
+                                      "height": 38
+                                    }
+                                  },
+                                  {
+                                    "id": "0:177",
+                                    "name": "Pagination Page",
+                                    "type": "INSTANCE",
+                                    "visible": false,
+                                    "absoluteBoundingBox": {
+                                      "x": 180,
+                                      "y": 3,
+                                      "width": 44,
+                                      "height": 32
+                                    }
+                                  },
+                                  {
+                                    "id": "0:178",
+                                    "name": "Pagination Page",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 180,
+                                      "y": 3,
+                                      "width": 44,
+                                      "height": 32
+                                    }
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "id": "0:180",
+                            "name": "Pagination Next",
+                            "type": "INSTANCE",
+                            "visible": true,
+                            "absoluteBoundingBox": {
+                              "x": 353,
+                              "y": 3,
+                              "width": 84,
+                              "height": 32
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "522:11608",
+            "name": " ",
+            "type": "FRAME",
+            "visible": true,
+            "absoluteBoundingBox": {
+              "x": 1160,
+              "y": 48,
+              "width": 1244,
+              "height": 864
+            },
+            "children": [
+              {
+                "id": "522:11609",
+                "name": "Section",
+                "type": "FRAME",
+                "visible": true,
+                "absoluteBoundingBox": {
+                  "x": 0,
+                  "y": 0,
+                  "width": 1244,
+                  "height": 605
+                },
+                "children": [
+                  {
+                    "id": "522:11610",
+                    "name": "Column",
+                    "type": "FRAME",
+                    "visible": true,
+                    "absoluteBoundingBox": {
+                      "x": 0,
+                      "y": 0,
+                      "width": 688,
+                      "height": 605
+                    },
+                    "children": [
+                      {
+                        "id": "522:11611",
+                        "name": "Section",
+                        "type": "FRAME",
+                        "visible": true,
+                        "absoluteBoundingBox": {
+                          "x": 0,
+                          "y": 0,
+                          "width": 688,
+                          "height": 78
+                        },
+                        "children": [
+                          {
+                            "id": "522:11612",
+                            "name": "Tabs",
+                            "type": "INSTANCE",
+                            "visible": true,
+                            "absoluteBoundingBox": {
+                              "x": 157,
+                              "y": 24,
+                              "width": 374,
+                              "height": 30
+                            },
+                            "children": [
+                              {
+                                "id": "0:752",
+                                "name": "Slot",
+                                "type": "FRAME",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 0,
+                                  "y": 0,
+                                  "width": 374,
+                                  "height": 30
+                                },
+                                "children": [
+                                  {
+                                    "id": "0:753",
+                                    "name": "Tab",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 0,
+                                      "width": 54,
+                                      "height": 30
+                                    }
+                                  },
+                                  {
+                                    "id": "0:755",
+                                    "name": "Tab",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 54,
+                                      "y": 0,
+                                      "width": 57,
+                                      "height": 30
+                                    }
+                                  },
+                                  {
+                                    "id": "0:757",
+                                    "name": "Tab",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 111,
+                                      "y": 0,
+                                      "width": 70,
+                                      "height": 30
+                                    }
+                                  },
+                                  {
+                                    "id": "0:759",
+                                    "name": "Tab",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 181,
+                                      "y": 0,
+                                      "width": 73,
+                                      "height": 30
+                                    }
+                                  },
+                                  {
+                                    "id": "0:762",
+                                    "name": "Tab",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 254,
+                                      "y": 0,
+                                      "width": 57,
+                                      "height": 30
+                                    }
+                                  },
+                                  {
+                                    "id": "0:764",
+                                    "name": "Tab",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 311,
+                                      "y": 0,
+                                      "width": 63,
+                                      "height": 30
+                                    }
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "id": "522:11613",
+                        "name": "Section",
+                        "type": "FRAME",
+                        "visible": true,
+                        "absoluteBoundingBox": {
+                          "x": 0,
+                          "y": 126,
+                          "width": 688,
+                          "height": 479
+                        },
+                        "children": [
+                          {
+                            "id": "522:11614",
+                            "name": "Accordion",
+                            "type": "INSTANCE",
+                            "visible": true,
+                            "absoluteBoundingBox": {
+                              "x": 24,
+                              "y": 59.5,
+                              "width": 640,
+                              "height": 360
+                            },
+                            "children": [
+                              {
+                                "id": "0:661",
+                                "name": "Accordion Item",
+                                "type": "INSTANCE",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 0,
+                                  "y": 0,
+                                  "width": 640,
+                                  "height": 150
+                                }
+                              },
+                              {
+                                "id": "0:668",
+                                "name": "Items",
+                                "type": "FRAME",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 0,
+                                  "y": 166,
+                                  "width": 640,
+                                  "height": 194
+                                },
+                                "children": [
+                                  {
+                                    "id": "0:669",
+                                    "name": "Accordion Item",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 0,
+                                      "width": 640,
+                                      "height": 54
+                                    }
+                                  },
+                                  {
+                                    "id": "0:674",
+                                    "name": "Accordion Item",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 70,
+                                      "width": 640,
+                                      "height": 54
+                                    }
+                                  },
+                                  {
+                                    "id": "0:679",
+                                    "name": "Accordion Item",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 140,
+                                      "width": 640,
+                                      "height": 54
+                                    }
+                                  },
+                                  {
+                                    "id": "0:684",
+                                    "name": "Accordion Item",
+                                    "type": "INSTANCE",
+                                    "visible": false,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 210,
+                                      "width": 640,
+                                      "height": 54
+                                    }
+                                  },
+                                  {
+                                    "id": "0:685",
+                                    "name": "Accordion Item",
+                                    "type": "INSTANCE",
+                                    "visible": false,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 280,
+                                      "width": 640,
+                                      "height": 54
+                                    }
+                                  },
+                                  {
+                                    "id": "0:686",
+                                    "name": "Accordion Item",
+                                    "type": "INSTANCE",
+                                    "visible": false,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 350,
+                                      "width": 640,
+                                      "height": 54
+                                    }
+                                  },
+                                  {
+                                    "id": "0:687",
+                                    "name": "Accordion Item",
+                                    "type": "INSTANCE",
+                                    "visible": false,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 420,
+                                      "width": 640,
+                                      "height": 54
+                                    }
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "id": "522:11615",
+                            "name": "Dialog",
+                            "type": "INSTANCE",
+                            "visible": true,
+                            "absoluteBoundingBox": {
+                              "x": 24,
+                              "y": 60.5,
+                              "width": 640,
+                              "height": 360
+                            },
+                            "children": [
+                              {
+                                "id": "0:90",
+                                "name": "Dialog Body",
+                                "type": "INSTANCE",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 20,
+                                  "y": 40.5,
+                                  "width": 600,
+                                  "height": 279
+                                },
+                                "children": [
+                                  {
+                                    "id": "0:124",
+                                    "name": "Slot",
+                                    "type": "FRAME",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 32,
+                                      "y": 32,
+                                      "width": 536,
+                                      "height": 215
+                                    },
+                                    "children": [
+                                      {
+                                        "id": "0:125",
+                                        "name": "Text",
+                                        "type": "FRAME",
+                                        "visible": true,
+                                        "absoluteBoundingBox": {
+                                          "x": 0,
+                                          "y": 0,
+                                          "width": 536,
+                                          "height": 151
+                                        },
+                                        "children": [
+                                          {
+                                            "id": "0:126",
+                                            "name": "Text Heading",
+                                            "type": "TEXT",
+                                            "visible": true,
+                                            "absoluteBoundingBox": {
+                                              "x": 0,
+                                              "y": 0,
+                                              "width": 536,
+                                              "height": 29
+                                            }
+                                          },
+                                          {
+                                            "id": "0:127",
+                                            "name": "Body text",
+                                            "type": "TEXT",
+                                            "visible": true,
+                                            "absoluteBoundingBox": {
+                                              "x": 0,
+                                              "y": 41,
+                                              "width": 536,
+                                              "height": 110
+                                            }
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "id": "0:128",
+                                        "name": "Button Group",
+                                        "type": "INSTANCE",
+                                        "visible": true,
+                                        "absoluteBoundingBox": {
+                                          "x": 0,
+                                          "y": 175,
+                                          "width": 536,
+                                          "height": 40
+                                        }
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "id": "0:137",
+                                    "name": "Icon Button",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 556,
+                                      "y": 8,
+                                      "width": 36,
+                                      "height": 36
+                                    }
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "id": "522:11616",
+                    "name": "Section",
+                    "type": "FRAME",
+                    "visible": true,
+                    "absoluteBoundingBox": {
+                      "x": 736,
+                      "y": 0,
+                      "width": 508,
+                      "height": 605
+                    },
+                    "children": [
+                      {
+                        "id": "522:11617",
+                        "name": "Form Shipping",
+                        "type": "INSTANCE",
+                        "visible": true,
+                        "absoluteBoundingBox": {
+                          "x": 94,
+                          "y": 24,
+                          "width": 320,
+                          "height": 557
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "522:11618",
+                "name": "Row",
+                "type": "FRAME",
+                "visible": true,
+                "absoluteBoundingBox": {
+                  "x": 0,
+                  "y": 653,
+                  "width": 1244,
+                  "height": 211
+                },
+                "children": [
+                  {
+                    "id": "522:11619",
+                    "name": "Column",
+                    "type": "FRAME",
+                    "visible": true,
+                    "absoluteBoundingBox": {
+                      "x": 0,
+                      "y": 0,
+                      "width": 1244,
+                      "height": 211
+                    },
+                    "children": [
+                      {
+                        "id": "522:11620",
+                        "name": "Card List",
+                        "type": "FRAME",
+                        "visible": true,
+                        "absoluteBoundingBox": {
+                          "x": 0,
+                          "y": 0,
+                          "width": 1244,
+                          "height": 211
+                        },
+                        "children": [
+                          {
+                            "id": "522:11621",
+                            "name": "Card",
+                            "type": "INSTANCE",
+                            "visible": true,
+                            "absoluteBoundingBox": {
+                              "x": 24,
+                              "y": 24,
+                              "width": 1196,
+                              "height": 163
+                            },
+                            "children": [
+                              {
+                                "id": "0:66",
+                                "name": "Star",
+                                "type": "INSTANCE",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 24,
+                                  "y": 24,
+                                  "width": 32,
+                                  "height": 32
+                                }
+                              },
+                              {
+                                "id": "0:69",
+                                "name": "Body2",
+                                "type": "FRAME",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 80,
+                                  "y": 24,
+                                  "width": 1092,
+                                  "height": 115
+                                },
+                                "children": [
+                                  {
+                                    "id": "0:70",
+                                    "name": "Text",
+                                    "type": "FRAME",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 0,
+                                      "width": 1092,
+                                      "height": 59
+                                    },
+                                    "children": [
+                                      {
+                                        "id": "0:71",
+                                        "name": "Title",
+                                        "type": "TEXT",
+                                        "visible": true,
+                                        "absoluteBoundingBox": {
+                                          "x": 0,
+                                          "y": 0,
+                                          "width": 1092,
+                                          "height": 29
+                                        }
+                                      },
+                                      {
+                                        "id": "0:72",
+                                        "name": "Body text for whatever you'd like to say. Add main takeaway points, quotes, anecdotes, or even a very very short story.",
+                                        "type": "TEXT",
+                                        "visible": true,
+                                        "absoluteBoundingBox": {
+                                          "x": 0,
+                                          "y": 37,
+                                          "width": 1092,
+                                          "height": 22
+                                        }
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "id": "0:73",
+                                    "name": "Button Group",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 75,
+                                      "width": 1092,
+                                      "height": 40
+                                    }
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "522:11622",
+            "name": " ",
+            "type": "FRAME",
+            "visible": true,
+            "absoluteBoundingBox": {
+              "x": 2452,
+              "y": 48,
+              "width": 688,
+              "height": 864
+            },
+            "children": [
+              {
+                "id": "522:11623",
+                "name": "Column",
+                "type": "FRAME",
+                "visible": true,
+                "absoluteBoundingBox": {
+                  "x": 0,
+                  "y": 0,
+                  "width": 688,
+                  "height": 408
+                },
+                "children": [
+                  {
+                    "id": "522:11624",
+                    "name": "Section",
+                    "type": "FRAME",
+                    "visible": true,
+                    "absoluteBoundingBox": {
+                      "x": 0,
+                      "y": 0,
+                      "width": 688,
+                      "height": 264
+                    },
+                    "children": [
+                      {
+                        "id": "522:11625",
+                        "name": "Notification",
+                        "type": "INSTANCE",
+                        "visible": true,
+                        "absoluteBoundingBox": {
+                          "x": 24,
+                          "y": 24,
+                          "width": 640,
+                          "height": 216
+                        },
+                        "children": [
+                          {
+                            "id": "0:617",
+                            "name": "Title2",
+                            "type": "FRAME",
+                            "visible": true,
+                            "absoluteBoundingBox": {
+                              "x": 16,
+                              "y": 16,
+                              "width": 608,
+                              "height": 184
+                            },
+                            "children": [
+                              {
+                                "id": "0:618",
+                                "name": "Info",
+                                "type": "INSTANCE",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 0,
+                                  "y": 0,
+                                  "width": 20,
+                                  "height": 20
+                                }
+                              },
+                              {
+                                "id": "0:620",
+                                "name": "Stack",
+                                "type": "FRAME",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 32,
+                                  "y": 0,
+                                  "width": 576,
+                                  "height": 184
+                                },
+                                "children": [
+                                  {
+                                    "id": "0:621",
+                                    "name": "Content",
+                                    "type": "FRAME",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 0,
+                                      "width": 576,
+                                      "height": 136
+                                    },
+                                    "children": [
+                                      {
+                                        "id": "0:622",
+                                        "name": "Title",
+                                        "type": "TEXT",
+                                        "visible": true,
+                                        "absoluteBoundingBox": {
+                                          "x": 0,
+                                          "y": 0,
+                                          "width": 576,
+                                          "height": 22
+                                        }
+                                      },
+                                      {
+                                        "id": "0:623",
+                                        "name": "Body text.",
+                                        "type": "TEXT",
+                                        "visible": true,
+                                        "absoluteBoundingBox": {
+                                          "x": 0,
+                                          "y": 26,
+                                          "width": 576,
+                                          "height": 110
+                                        }
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "id": "0:624",
+                                    "name": "Button",
+                                    "type": "INSTANCE",
+                                    "visible": true,
+                                    "absoluteBoundingBox": {
+                                      "x": 0,
+                                      "y": 152,
+                                      "width": 171,
+                                      "height": 32
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "id": "0:628",
+                                "name": "Icon Button Danger",
+                                "type": "INSTANCE",
+                                "visible": true,
+                                "absoluteBoundingBox": {
+                                  "x": 576,
+                                  "y": -8,
+                                  "width": 40,
+                                  "height": 40
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "id": "522:11626",
+                    "name": "Section",
+                    "type": "FRAME",
+                    "visible": true,
+                    "absoluteBoundingBox": {
+                      "x": 0,
+                      "y": 312,
+                      "width": 688,
+                      "height": 96
+                    },
+                    "children": [
+                      {
+                        "id": "522:11627",
+                        "name": "Tag",
+                        "type": "INSTANCE",
+                        "visible": true,
+                        "absoluteBoundingBox": {
+                          "x": 150,
+                          "y": 32,
+                          "width": 68,
+                          "height": 32
+                        }
+                      },
+                      {
+                        "id": "522:11628",
+                        "name": "Tag",
+                        "type": "INSTANCE",
+                        "visible": true,
+                        "absoluteBoundingBox": {
+                          "x": 230,
+                          "y": 32,
+                          "width": 68,
+                          "height": 32
+                        }
+                      },
+                      {
+                        "id": "522:11629",
+                        "name": "Tag",
+                        "type": "INSTANCE",
+                        "visible": true,
+                        "absoluteBoundingBox": {
+                          "x": 310,
+                          "y": 32,
+                          "width": 68,
+                          "height": 32
+                        }
+                      },
+                      {
+                        "id": "522:11630",
+                        "name": "Tag",
+                        "type": "INSTANCE",
+                        "visible": true,
+                        "absoluteBoundingBox": {
+                          "x": 390,
+                          "y": 32,
+                          "width": 68,
+                          "height": 32
+                        }
+                      },
+                      {
+                        "id": "522:11631",
+                        "name": "Tag",
+                        "type": "INSTANCE",
+                        "visible": true,
+                        "absoluteBoundingBox": {
+                          "x": 470,
+                          "y": 32,
+                          "width": 68,
+                          "height": 32
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "522:11632",
+                "name": "Section",
+                "type": "FRAME",
+                "visible": true,
+                "absoluteBoundingBox": {
+                  "x": 0,
+                  "y": 456,
+                  "width": 688,
+                  "height": 408
+                },
+                "children": [
+                  {
+                    "id": "522:11633",
+                    "name": "Accordion",
+                    "type": "INSTANCE",
+                    "visible": true,
+                    "absoluteBoundingBox": {
+                      "x": 24,
+                      "y": 24,
+                      "width": 640,
+                      "height": 360
+                    },
+                    "children": [
+                      {
+                        "id": "0:3",
+                        "name": "Accordion Item",
+                        "type": "INSTANCE",
+                        "visible": true,
+                        "absoluteBoundingBox": {
+                          "x": 0,
+                          "y": 0,
+                          "width": 640,
+                          "height": 150
+                        }
+                      },
+                      {
+                        "id": "0:17",
+                        "name": "Items",
+                        "type": "FRAME",
+                        "visible": true,
+                        "absoluteBoundingBox": {
+                          "x": 0,
+                          "y": 166,
+                          "width": 640,
+                          "height": 194
+                        },
+                        "children": [
+                          {
+                            "id": "0:18",
+                            "name": "Accordion Item",
+                            "type": "INSTANCE",
+                            "visible": true,
+                            "absoluteBoundingBox": {
+                              "x": 0,
+                              "y": 0,
+                              "width": 640,
+                              "height": 54
+                            }
+                          },
+                          {
+                            "id": "0:28",
+                            "name": "Accordion Item",
+                            "type": "INSTANCE",
+                            "visible": true,
+                            "absoluteBoundingBox": {
+                              "x": 0,
+                              "y": 70,
+                              "width": 640,
+                              "height": 54
+                            }
+                          },
+                          {
+                            "id": "0:37",
+                            "name": "Accordion Item",
+                            "type": "INSTANCE",
+                            "visible": true,
+                            "absoluteBoundingBox": {
+                              "x": 0,
+                              "y": 140,
+                              "width": 640,
+                              "height": 54
+                            }
+                          },
+                          {
+                            "id": "0:46",
+                            "name": "Accordion Item",
+                            "type": "INSTANCE",
+                            "visible": false,
+                            "absoluteBoundingBox": {
+                              "x": 0,
+                              "y": 210,
+                              "width": 640,
+                              "height": 54
+                            }
+                          },
+                          {
+                            "id": "0:51",
+                            "name": "Accordion Item",
+                            "type": "INSTANCE",
+                            "visible": false,
+                            "absoluteBoundingBox": {
+                              "x": 0,
+                              "y": 280,
+                              "width": 640,
+                              "height": 54
+                            }
+                          },
+                          {
+                            "id": "0:52",
+                            "name": "Accordion Item",
+                            "type": "INSTANCE",
+                            "visible": false,
+                            "absoluteBoundingBox": {
+                              "x": 0,
+                              "y": 350,
+                              "width": 640,
+                              "height": 54
+                            }
+                          },
+                          {
+                            "id": "0:53",
+                            "name": "Accordion Item",
+                            "type": "INSTANCE",
+                            "visible": false,
+                            "absoluteBoundingBox": {
+                              "x": 0,
+                              "y": 420,
+                              "width": 640,
+                              "height": 54
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "components": {},
+  "styles": {}
+}

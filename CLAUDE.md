@@ -65,6 +65,13 @@ logs/calibration/   # Calibration analysis results
 logs/activity/      # Agent activity logs
 ```
 
+## Analysis Scope Policy
+
+- Analysis unit: section or page level (`node-id` required in URL)
+- Full-file analysis is discouraged — too many nodes, noisy results
+- If no `node-id` is provided, CLI prints a warning
+- Recommended scope: one screen or a related component group
+
 ## Dev Commands
 
 ```bash

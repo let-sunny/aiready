@@ -23,6 +23,7 @@ import {
   runCalibrationEvaluate,
 } from "../agents/orchestrator.js";
 import { createAnthropicExecutor } from "../agents/anthropic-executor.js";
+import { parseMcpMetadataXml } from "../adapters/figma-mcp-adapter.js";
 
 // Import rules to register them
 import "../rules/index.js";
@@ -33,6 +34,7 @@ interface AnalyzeOptions {
   preset?: Preset;
   output?: string;
   token?: string;
+  mcp?: boolean;
 }
 
 function isFigmaUrl(input: string): boolean {
@@ -50,10 +52,10 @@ interface LoadResult {
 
 async function loadFile(
   input: string,
-  token?: string
+  token?: string,
+  useMcp?: boolean
 ): Promise<LoadResult> {
   if (isJsonFile(input)) {
-    // Load from JSON fixture
     const filePath = resolve(input);
     if (!existsSync(filePath)) {
       throw new Error(`File not found: ${filePath}`);
@@ -63,8 +65,14 @@ async function loadFile(
   }
 
   if (isFigmaUrl(input)) {
-    // Fetch from Figma API
-    const { fileKey, nodeId } = parseFigmaUrl(input);
+    const { fileKey, nodeId, fileName } = parseFigmaUrl(input);
+
+    if (useMcp) {
+      console.log(`Loading via MCP: ${fileKey} (node: ${nodeId ?? "root"})`);
+      const file = await loadViaMcp(fileKey, nodeId ?? "0:1", fileName);
+      return { file, nodeId };
+    }
+
     console.log(`Fetching from Figma API: ${fileKey}`);
     if (nodeId) {
       console.log(`Target node: ${nodeId}`);
@@ -90,18 +98,56 @@ async function loadFile(
   );
 }
 
+/**
+ * Load Figma data via MCP Desktop bridge (no REST API, no rate limit)
+ */
+async function loadViaMcp(
+  fileKey: string,
+  nodeId: string,
+  fileName?: string
+): Promise<AnalysisFile> {
+  // Dynamic import to avoid hard dependency when MCP is not available
+  const { execSync } = await import("node:child_process");
+
+  // Call Claude Code CLI to invoke MCP tool and capture the XML output
+  // We use a simple approach: write a script that calls the MCP tool
+  // Try using the Figma MCP directly via claude CLI
+  const result = execSync(
+    `claude --print "Use the mcp__figma__get_metadata tool with fileKey=\\"${fileKey}\\" and nodeId=\\"${nodeId.replace(/-/g, ":")}\\" — return ONLY the raw XML output, nothing else."`,
+    { encoding: "utf-8", timeout: 120000 }
+  );
+
+  // Extract XML from the response (find first < to last >)
+  const xmlStart = result.indexOf("<");
+  const xmlEnd = result.lastIndexOf(">");
+  if (xmlStart === -1 || xmlEnd === -1) {
+    throw new Error("MCP did not return valid XML metadata");
+  }
+  const xml = result.slice(xmlStart, xmlEnd + 1);
+
+  return parseMcpMetadataXml(xml, fileKey, fileName);
+}
+
 cli
   .command("analyze <input>", "Analyze a Figma file or JSON fixture")
   .option("--preset <preset>", "Analysis preset (relaxed | dev-friendly | ai-ready | strict)")
   .option("--output <path>", "HTML report output path")
   .option("--token <token>", "Figma API token (or use FIGMA_TOKEN env var)")
+  .option("--mcp", "Load Figma data via MCP Desktop bridge (no REST API needed)")
   .example("  drc analyze https://www.figma.com/design/ABC123/MyDesign")
   .example("  drc analyze ./fixtures/design.json --output report.html")
-  .example("  drc analyze ./fixtures/design.json --preset strict")
+  .example("  drc analyze https://www.figma.com/design/ABC123/MyDesign --mcp")
   .action(async (input: string, options: AnalyzeOptions) => {
     try {
       // Load file
-      const { file, nodeId } = await loadFile(input, options.token);
+      const { file, nodeId } = await loadFile(input, options.token, options.mcp);
+
+      // Warn if analyzing full file without node-id
+      if (isFigmaUrl(input) && !nodeId) {
+        console.warn("\nWarning: No node-id specified. Analyzing entire file may produce noisy results.");
+        console.warn("Tip: Add ?node-id=XXX to analyze a specific section.\n");
+      }
+
       console.log(`\nAnalyzing: ${file.name}`);
       console.log(`Nodes: analyzing...`);
 
@@ -377,6 +423,64 @@ cli
       console.log("");
       console.log("Tip: For long-running sessions on macOS, prevent sleep with:");
       console.log(`  caffeinate -i drc calibrate-run "${input}"`);
+    } catch (error) {
+      console.error(
+        "\nError:",
+        error instanceof Error ? error.message : String(error)
+      );
+      process.exit(1);
+    }
+  });
+
+// ============================================
+// Utility commands
+// ============================================
+
+interface SaveFixtureOptions {
+  output?: string;
+  mcp?: boolean;
+  token?: string;
+}
+
+cli
+  .command(
+    "save-fixture <input>",
+    "Save Figma file data as a JSON fixture for offline analysis"
+  )
+  .option("--output <path>", "Output JSON path (default: fixtures/<filekey>.json)")
+  .option("--mcp", "Load via MCP Desktop bridge (no REST API needed)")
+  .option("--token <token>", "Figma API token (or use FIGMA_TOKEN env var)")
+  .example("  drc save-fixture https://www.figma.com/design/ABC123/MyDesign --mcp")
+  .example("  drc save-fixture https://www.figma.com/design/ABC123/MyDesign --output fixtures/my-design.json")
+  .action(async (input: string, options: SaveFixtureOptions) => {
+    try {
+      const { file } = await loadFile(input, options.token, options.mcp);
+
+      const outputPath = resolve(
+        options.output ?? `fixtures/${file.fileKey}.json`
+      );
+      const outputDir = dirname(outputPath);
+      if (!existsSync(outputDir)) {
+        mkdirSync(outputDir, { recursive: true });
+      }
+
+      await writeFile(outputPath, JSON.stringify(file, null, 2), "utf-8");
+
+      console.log(`Fixture saved: ${outputPath}`);
+      console.log(`  File: ${file.name}`);
+      console.log(`  Nodes: counting...`);
+
+      // Count nodes
+      function countNodes(node: AnalysisFile["document"]): number {
+        let count = 1;
+        if ("children" in node && node.children) {
+          for (const child of node.children) {
+            count += countNodes(child);
+          }
+        }
+        return count;
+      }
+      console.log(`  Nodes: ${countNodes(file.document)}`);
     } catch (error) {
       console.error(
         "\nError:",
