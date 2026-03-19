@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Nightly calibration script (loop mode)
-# Runs /calibrate-loop against Figma files, repeats if changes detected.
+# Nightly calibration script (loop mode, fixture-based)
+# Runs /calibrate-loop against local JSON fixtures, repeats if changes detected.
 # Stops on: no changes, max cycles reached, or error.
 # Usage:
 #   ./scripts/calibrate-night.sh
@@ -23,27 +23,28 @@ fi
 
 # ── Validate env vars ───────────────────────────────────────────────
 
-if [ -z "${CALIBRATE_URL_1:-}" ]; then
-  echo "Error: CALIBRATE_URL_1 is not set."
+if [ -z "${CALIBRATE_FIXTURES:-}" ]; then
+  echo "Error: CALIBRATE_FIXTURES is not set."
   echo ""
   echo "Usage:"
-  echo "  export CALIBRATE_URL_1=\"https://www.figma.com/design/.../...\""
-  echo "  export CALIBRATE_URL_2=\"https://www.figma.com/design/.../...\""
+  echo "  export CALIBRATE_FIXTURES=\"fixtures/a.json,fixtures/b.json\""
   echo "  ./scripts/calibrate-night.sh"
+  echo ""
+  echo "Or add to .env:"
+  echo "  CALIBRATE_FIXTURES=fixtures/material3-kit.json,fixtures/simple-ds-card-grid.json"
   exit 1
 fi
 
-if [ -z "${CALIBRATE_URL_2:-}" ]; then
-  echo "Error: CALIBRATE_URL_2 is not set."
-  echo ""
-  echo "Usage:"
-  echo "  export CALIBRATE_URL_1=\"https://www.figma.com/design/.../...\""
-  echo "  export CALIBRATE_URL_2=\"https://www.figma.com/design/.../...\""
-  echo "  ./scripts/calibrate-night.sh"
-  exit 1
-fi
+# Split comma-separated list into array
+IFS=',' read -ra FIXTURES <<< "$CALIBRATE_FIXTURES"
 
-URLS=("$CALIBRATE_URL_1" "$CALIBRATE_URL_2")
+# Verify all fixtures exist
+for f in "${FIXTURES[@]}"; do
+  if [ ! -f "$f" ]; then
+    echo "Error: Fixture not found: $f"
+    exit 1
+  fi
+done
 
 # ── Logging setup ───────────────────────────────────────────────────
 
@@ -81,8 +82,8 @@ fi
 TOTAL_START=$SECONDS
 STOP_REASON=""
 
-log "Nightly Calibration Started" "Max cycles: $MAX_CYCLES | Wait between cycles: ${WAIT_SECONDS}s | Files: ${#URLS[@]}"
-echo "Starting nightly calibration (max $MAX_CYCLES cycles, ${#URLS[@]} files per cycle)"
+log "Nightly Calibration Started" "Max cycles: $MAX_CYCLES | Wait between cycles: ${WAIT_SECONDS}s | Fixtures: ${#FIXTURES[@]}"
+echo "Starting nightly calibration (max $MAX_CYCLES cycles, ${#FIXTURES[@]} fixtures per cycle)"
 echo ""
 
 for cycle in $(seq 1 "$MAX_CYCLES"); do
@@ -91,28 +92,28 @@ for cycle in $(seq 1 "$MAX_CYCLES"); do
   FAIL=0
 
   echo "=== Cycle $cycle/$MAX_CYCLES ==="
-  log "Cycle $cycle Start" "Files: ${#URLS[@]}"
+  log "Cycle $cycle Start" "Fixtures: ${#FIXTURES[@]}"
 
   # Snapshot rule-config.ts before this cycle
   BEFORE_HASH=$(git hash-object src/rules/rule-config.ts 2>/dev/null || echo "none")
 
-  for i in "${!URLS[@]}"; do
-    url="${URLS[$i]}"
+  for i in "${!FIXTURES[@]}"; do
+    fixture="${FIXTURES[$i]}"
     idx=$((i + 1))
 
-    echo "  [$idx/${#URLS[@]}] $url"
-    log "Cycle $cycle — File $idx Start" "URL: $url"
+    echo "  [$idx/${#FIXTURES[@]}] $fixture"
+    log "Cycle $cycle — Fixture $idx Start" "File: $fixture"
 
     RUN_START=$SECONDS
 
-    if claude --dangerously-skip-permissions /calibrate-loop "$url"; then
+    if claude --dangerously-skip-permissions /calibrate-loop "$fixture"; then
       DURATION=$(( SECONDS - RUN_START ))
-      log "Cycle $cycle — File $idx Complete" "Duration: ${DURATION}s"
+      log "Cycle $cycle — Fixture $idx Complete" "Duration: ${DURATION}s"
       echo "    Complete (${DURATION}s)"
       PASS=$((PASS + 1))
     else
       DURATION=$(( SECONDS - RUN_START ))
-      log "Cycle $cycle — File $idx Failed" "Duration: ${DURATION}s — exit code: $?"
+      log "Cycle $cycle — Fixture $idx Failed" "Duration: ${DURATION}s — exit code: $?"
       echo "    Failed (${DURATION}s)"
       FAIL=$((FAIL + 1))
     fi
@@ -132,7 +133,7 @@ for cycle in $(seq 1 "$MAX_CYCLES"); do
     git add src/rules/rule-config.ts logs/
     git commit -m "chore: calibrate rule scores — cycle $cycle ($DATE)
 
-Passed: $PASS / ${#URLS[@]}, Failed: $FAIL
+Passed: $PASS / ${#FIXTURES[@]}, Failed: $FAIL
 Cycle duration: ${CYCLE_DURATION}s"
     git push
     log "Cycle $cycle Complete — Pushed" "Duration: ${CYCLE_DURATION}s | Passed: $PASS | Failed: $FAIL | Changes committed."
