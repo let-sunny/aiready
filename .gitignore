@@ -32,3 +32,7 @@ coverage/
 *.tmp
 *.temp
 .cache/
+
+# Generated reports
+*.report.html
+fixtures/*.html
