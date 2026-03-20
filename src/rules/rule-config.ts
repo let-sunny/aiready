@@ -87,7 +87,7 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
   },
   "inconsistent-spacing": {
     severity: "risk",
-    score: -5,
+    score: -4,
     enabled: true,
     options: {
       gridBase: 8,
@@ -162,12 +162,12 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
   // ============================================
   "default-name": {
     severity: "risk",
-    score: -7,
+    score: -5,
     enabled: true,
   },
   "non-semantic-name": {
     severity: "missing-info",
-    score: -4,
+    score: -2,
     enabled: true,
   },
   "inconsistent-naming-convention": {
