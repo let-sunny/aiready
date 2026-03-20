@@ -118,17 +118,37 @@ function hasTextDescendant(node: AnalysisNode): boolean {
 }
 
 /**
- * Check if a node is an icon instance (has componentId but no children)
+ * Minimum dimensions for conversion candidates
  */
-function isIconInstance(node: AnalysisNode): boolean {
-  return node.type === "INSTANCE"
-    && node.componentId !== undefined
-    && (!node.children || node.children.length === 0);
-}
+const MIN_WIDTH = 200;
+const MIN_HEIGHT = 200;
 
 /**
- * Filter node summaries to exclude pure graphics, icon instances,
- * and nodes without text content.
+ * Node types eligible for code conversion
+ */
+const ELIGIBLE_NODE_TYPES: Set<AnalysisNodeType> = new Set([
+  "FRAME",
+  "COMPONENT",
+  "INSTANCE",
+]);
+
+/**
+ * Name patterns that indicate icon/badge nodes (case-insensitive)
+ */
+const ICON_NAME_PATTERN = /\b(icon|ico|badge|indicator)\b/i;
+
+/**
+ * Filter node summaries to meaningful conversion candidates.
+ *
+ * Inclusion criteria:
+ * - type is FRAME, COMPONENT, or INSTANCE
+ * - width >= 200 AND height >= 200
+ * - 3+ direct children
+ * - at least one TEXT descendant (excludes pure icons/graphics)
+ *
+ * Exclusion criteria:
+ * - pure graphic types (VECTOR, BOOLEAN_OPERATION, etc.)
+ * - name contains "icon", "ico", "badge", or "indicator"
  */
 function filterConversionCandidates(
   summaries: NodeIssueSummary[],
@@ -136,13 +156,23 @@ function filterConversionCandidates(
 ): NodeIssueSummary[] {
   return summaries.filter((summary) => {
     const node = findNode(documentRoot, summary.nodeId);
-    if (!node) return true; // Keep if we can't find it (shouldn't happen)
+    if (!node) return false;
 
     // Exclude pure graphic node types
     if (EXCLUDED_NODE_TYPES.has(node.type)) return false;
 
-    // Exclude icon instances (componentId + no children)
-    if (isIconInstance(node)) return false;
+    // Only allow FRAME, COMPONENT, INSTANCE
+    if (!ELIGIBLE_NODE_TYPES.has(node.type)) return false;
+
+    // Exclude icon/badge/indicator by name
+    if (ICON_NAME_PATTERN.test(node.name)) return false;
+
+    // Require minimum dimensions
+    const bbox = node.absoluteBoundingBox;
+    if (bbox && (bbox.width < MIN_WIDTH || bbox.height < MIN_HEIGHT)) return false;
+
+    // Require 3+ direct children
+    if (!node.children || node.children.length < 3) return false;
 
     // Require at least one TEXT descendant
     if (!hasTextDescendant(node)) return false;

@@ -35,6 +35,32 @@ const mockFile: AnalysisFile = {
     name: "Document",
     type: "DOCUMENT",
     visible: true,
+    children: [
+      {
+        id: "1:1",
+        name: "Main Frame",
+        type: "FRAME",
+        visible: true,
+        absoluteBoundingBox: { x: 0, y: 0, width: 400, height: 600 },
+        children: [
+          { id: "1:2", name: "Title", type: "TEXT", visible: true },
+          { id: "1:3", name: "Body", type: "TEXT", visible: true },
+          { id: "1:4", name: "Footer", type: "FRAME", visible: true },
+        ],
+      },
+      {
+        id: "2:1",
+        name: "Card Component",
+        type: "COMPONENT",
+        visible: true,
+        absoluteBoundingBox: { x: 0, y: 0, width: 300, height: 250 },
+        children: [
+          { id: "2:2", name: "Label", type: "TEXT", visible: true },
+          { id: "2:3", name: "Value", type: "TEXT", visible: true },
+          { id: "2:4", name: "Divider", type: "RECTANGLE", visible: true },
+        ],
+      },
+    ],
   },
   components: {},
   styles: {},
