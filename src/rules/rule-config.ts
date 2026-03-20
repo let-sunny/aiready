@@ -161,13 +161,13 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
   // Naming (5 rules)
   // ============================================
   "default-name": {
-    severity: "blocking",
-    score: -5,
+    severity: "risk",
+    score: -4,
     enabled: true,
   },
   "non-semantic-name": {
-    severity: "risk",
-    score: -5,
+    severity: "missing-info",
+    score: -4,
     enabled: true,
   },
   "inconsistent-naming-convention": {
