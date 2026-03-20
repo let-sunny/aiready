@@ -27,38 +27,43 @@ src/
 
 ## Architecture
 
-### Commands
+### External (User-Facing)
 
 **`drc analyze`**
-- Role: Analyze Figma file structure + generate report (user-facing)
+- Role: Analyze Figma file structure + generate HTML report
 - Input: Figma URL or JSON fixture
 - Output: HTML report in `reports/`
-- No code generation — pure structural analysis only
+- Options:
+  - `--preset`: relaxed | dev-friendly | ai-ready | strict
+  - `--mcp`: load via MCP Desktop bridge (no REST API needed)
+  - `--screenshot`: include screenshot comparison (requires ANTHROPIC_API_KEY, coming soon)
+  - `--token`: Figma API token
+  - `--output`: custom report path
 - Each issue includes a Figma deep link (click → navigate to node in Figma)
 
-**`drc calibrate-run`**
-- Role: Automated rule score improvement (internal dev tool, not user-facing)
-- Input: Figma URL or JSON fixture
-- Pipeline:
-  1. Analysis Agent: collect issues and scores
-  2. Conversion Agent: generate code for nodes (via Anthropic API or Claude Code)
-  3. Evaluation Agent: compare conversion difficulty vs rule scores
-  4. Tuning Agent: propose score adjustments
-- Output: markdown report + data in `logs/calibration/`, debate log in `logs/activity/`
-- No HTML report — calibration is data-only
+**`drc save-fixture`**
+- Role: Save Figma file data as JSON fixture for offline analysis
+- Input: Figma URL
+- Output: JSON file in `fixtures/`
+
+### Internal (Claude Code Only)
+
+Calibration commands are NOT exposed as CLI commands. They run exclusively inside Claude Code via subagents.
 
 **`/calibrate-loop` (Claude Code command)**
-- Role: Autonomous rule-config.ts improvement via 3-agent debate
-- Flow: Runner → Critic → Arbitrator
+- Role: Autonomous rule-config.ts improvement via 4-agent pipeline
+- Flow: Runner (analysis) → Converter (Figma MCP code generation) → CLI evaluation → Critic → Arbitrator
+- The Converter subagent uses Figma MCP `get_design_context` to convert nodes to code — no external API key needed
 - Auto-commits agreed score changes
 - Full debate transcript logged to `logs/activity/`
+- Orchestrator functions (`runCalibrationAnalyze`, `runCalibrationEvaluate`) are in `src/agents/orchestrator.ts` — used programmatically by subagents, not via CLI
 
 ### File Output Structure
 
 ```
-reports/            # HTML reports (analyze + calibrate export)
-logs/calibration/   # Calibration analysis results
-logs/activity/      # Agent activity logs
+reports/            # HTML reports (drc analyze)
+logs/calibration/   # Calibration analysis results (internal)
+logs/activity/      # Agent activity logs (internal)
 ```
 
 ## Analysis Scope Policy
@@ -134,10 +139,10 @@ Rule scores started as intuition-based estimates. The calibration pipeline valid
 
 Process:
 1. Run analysis on real Figma files (`drc calibrate-analyze`)
-2. Convert flagged nodes to code via Claude API (Conversion Agent)
-3. Compare conversion difficulty vs rule scores (Evaluation Agent)
+2. Convert flagged nodes to code via Claude Code subagent with Figma MCP (`get_design_context`)
+3. Compare conversion difficulty vs rule scores (`drc calibrate-evaluate`)
 4. Propose adjustments: overscored rules get reduced, underscored rules get increased (Tuning Agent)
-5. 3-agent debate loop (`/calibrate-loop`) applies conservative changes automatically
+5. 4-agent debate loop (`/calibrate-loop`) applies conservative changes automatically
 
 Final score adjustments in `rule-config.ts` are always reviewed by the developer via `CALIBRATION_REPORT.md` or the calibrate-loop's Arbitrator decisions.
 

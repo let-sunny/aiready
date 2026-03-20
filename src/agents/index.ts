@@ -13,4 +13,3 @@ export {
   runCalibrationEvaluate,
 } from "./orchestrator.js";
 export { ActivityLogger } from "./activity-logger.js";
-export { createAnthropicExecutor } from "./anthropic-executor.js";

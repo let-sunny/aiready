@@ -62,18 +62,35 @@ Requires Node.js >= 18 and pnpm.
 
 ## Usage
 
-### Analyze a Figma file
-
 ```bash
 # From a Figma URL (requires FIGMA_TOKEN env var or --token flag)
-# Report auto-saved to reports/YYYY-MM-DD-HH-mm-<filekey>.html
 drc analyze https://www.figma.com/design/ABC123/MyDesign
 
-# From a JSON fixture
-drc analyze ./fixtures/design.json
+# Scoped to a specific node
+drc analyze "https://www.figma.com/design/ABC123/MyDesign?node-id=1-234"
 
-# With a preset and custom output path
-drc analyze https://www.figma.com/design/ABC123/MyDesign --preset strict --output my-report.html
+# From a JSON fixture
+drc analyze ./fixtures/design.json --output report.html
+
+# With a preset
+drc analyze https://www.figma.com/design/ABC123/MyDesign --preset strict
+
+# Via MCP Desktop bridge (no REST API needed)
+drc analyze https://www.figma.com/design/ABC123/MyDesign --mcp
+
+# With screenshot comparison (coming soon, requires ANTHROPIC_API_KEY)
+drc analyze https://www.figma.com/design/ABC123/MyDesign --screenshot
+```
+
+Reports are saved to `reports/YYYY-MM-DD-HH-mm-<filekey>.html`.
+
+### Save Fixture
+
+Save Figma file data as a JSON fixture for offline analysis:
+
+```bash
+drc save-fixture https://www.figma.com/design/ABC123/MyDesign
+drc save-fixture https://www.figma.com/design/ABC123/MyDesign --mcp
 ```
 
 ### Presets
@@ -90,63 +107,17 @@ drc analyze https://www.figma.com/design/ABC123/MyDesign --preset strict --outpu
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `FIGMA_TOKEN` | For Figma URLs | Figma personal access token |
+| `ANTHROPIC_API_KEY` | For `--screenshot` | Anthropic API key for screenshot comparison |
 
-### Output Paths
+## Calibration (Internal)
 
-```
-reports/                              # HTML analysis reports (gitignored)
-  YYYY-MM-DD-HH-mm-<filekey>.html
+Rule scores are validated against actual code conversion difficulty via a calibration pipeline. This runs inside Claude Code using the `/calibrate-loop` command — it is not exposed as a CLI command.
 
-logs/                                 # All logs and calibration data (gitignored)
-  activity/
-    agent-activity-YYYY-MM-DD.md      # Pipeline step logs
-  calibration/
-    calibration-analysis.json         # Step 1 output
-    calibration-YYYY-MM-DD-HH-mm.md  # Calibration report
-```
-
-## Calibration
-
-Rule scores are initially intuition-based. The calibration pipeline validates and adjusts them by comparing analysis results against actual code conversion difficulty.
-
-### How it works
-
-1. **Analysis Agent** — Runs the standard analysis and groups issues by node
-2. **Conversion Agent** — Attempts to convert flagged nodes to code (via LLM + Figma MCP)
-3. **Evaluation Agent** — Compares predicted difficulty (from rule scores) against actual conversion difficulty
-4. **Tuning Agent** — Proposes score adjustments with confidence levels
-
-If a rule flagged something as blocking but the conversion was easy, the rule is **overscored**. If conversion was hard but the rule gave a low score, it's **underscored**. Missing difficulties with no rule coverage become **new rule proposals**.
-
-### Manual 3-step workflow
-
-Step 2 (conversion) requires a Claude Code session with Figma MCP access, so the pipeline can be split:
-
-```bash
-# Step 1: Analyze
-drc calibrate-analyze ./fixtures/design.json
-
-# Step 2: Convert nodes in Claude Code session with Figma MCP
-# (produces calibration-conversion.json)
-
-# Step 3: Evaluate + generate report
-drc calibrate-evaluate logs/calibration/calibration-analysis.json calibration-conversion.json
-```
-
-### Automated calibration loop
-
-The `/calibrate-loop` Claude Code command runs a 3-agent debate for autonomous score tuning:
-
-1. **Runner** — Executes calibration, extracts score adjustment proposals
-2. **Critic** — Applies rejection heuristics (insufficient evidence, excessive change, severity jump)
-3. **Arbitrator** — Resolves disagreements, commits conservative changes
-
-```bash
-# Run nightly calibration (reads URLs from .env)
-./scripts/calibrate-night.sh
-```
-
-The script loops until scores stabilize (no changes) or max 5 cycles, with 30-minute waits between cycles.
+The pipeline uses 4 subagents:
+1. **Runner** — Analyzes a fixture and extracts issue data
+2. **Converter** — Converts flagged Figma nodes to code via Figma MCP
+3. **Critic** — Reviews proposed score adjustments
+4. **Arbitrator** — Makes final decisions and commits changes
 
 ## Tech Stack
 
@@ -168,11 +139,11 @@ The script loops until scores stabilize (no changes) or max 5 cycles, with 30-mi
 
 ### Phase 2 — Calibration Pipeline (done)
 
-4-agent calibration system, 3-step CLI workflow, markdown calibration reports, activity logging, `/calibrate-loop` autonomous tuning.
+4-agent calibration system, automated score tuning via Claude Code subagents with Figma MCP, `/calibrate-loop` autonomous debate loop.
 
-### Phase 3 — Analyze Report with Implementation Preview
+### Phase 3 — Screenshot Comparison
 
-Lighthouse-style HTML reports showing "if you implement this design, here's what you get" — Figma original screenshot next to Playwright-rendered code output, per node.
+`--screenshot` flag: Figma original screenshot next to AI-generated code rendered via Playwright, per node. Visual diff in the HTML report.
 
 ### Phase 4 — Ecosystem
 
