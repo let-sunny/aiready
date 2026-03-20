@@ -54,8 +54,8 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
     enabled: true,
   },
   "deep-nesting": {
-    severity: "risk",
-    score: -4,
+    severity: "missing-info",
+    score: -2,
     enabled: true,
     options: {
       maxDepth: 5,
@@ -215,8 +215,8 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
     enabled: true,
   },
   "empty-frame": {
-    severity: "blocking",
-    score: -10,
+    severity: "risk",
+    score: -5,
     enabled: true,
   },
 
