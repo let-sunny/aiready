@@ -63,8 +63,14 @@ Requires Node.js >= 18 and pnpm.
 ## Usage
 
 ```bash
-# From a Figma URL (requires FIGMA_TOKEN env var or --token flag)
+# Auto-detect: tries MCP first, falls back to REST API
 drc analyze https://www.figma.com/design/ABC123/MyDesign
+
+# Explicit MCP mode (no FIGMA_TOKEN needed, requires Claude Code with Figma MCP)
+drc analyze https://www.figma.com/design/ABC123/MyDesign --mcp
+
+# Explicit REST API mode (requires FIGMA_TOKEN)
+drc analyze https://www.figma.com/design/ABC123/MyDesign --api --token YOUR_TOKEN
 
 # Scoped to a specific node
 drc analyze "https://www.figma.com/design/ABC123/MyDesign?node-id=1-234"
@@ -75,14 +81,19 @@ drc analyze ./fixtures/design.json --output report.html
 # With a preset
 drc analyze https://www.figma.com/design/ABC123/MyDesign --preset strict
 
-# Via MCP Desktop bridge (no REST API needed)
-drc analyze https://www.figma.com/design/ABC123/MyDesign --mcp
-
 # With screenshot comparison (coming soon, requires ANTHROPIC_API_KEY)
 drc analyze https://www.figma.com/design/ABC123/MyDesign --screenshot
 ```
 
 Reports are saved to `reports/YYYY-MM-DD-HH-mm-<filekey>.html`.
+
+### Data Source
+
+| Flag | Source | Token required |
+|------|--------|----------------|
+| (none) | Auto-detect: MCP first, then REST API | FIGMA_TOKEN for fallback |
+| `--mcp` | Figma MCP via Claude Code | None |
+| `--api` | Figma REST API | FIGMA_TOKEN |
 
 ### Save Fixture
 
@@ -91,6 +102,7 @@ Save Figma file data as a JSON fixture for offline analysis:
 ```bash
 drc save-fixture https://www.figma.com/design/ABC123/MyDesign
 drc save-fixture https://www.figma.com/design/ABC123/MyDesign --mcp
+drc save-fixture https://www.figma.com/design/ABC123/MyDesign --api --token YOUR_TOKEN
 ```
 
 ### Presets

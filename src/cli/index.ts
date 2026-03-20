@@ -24,11 +24,14 @@ import "../rules/index.js";
 
 const cli = cac("drc");
 
+type LoadMode = "mcp" | "api" | "auto";
+
 interface AnalyzeOptions {
   preset?: Preset;
   output?: string;
   token?: string;
   mcp?: boolean;
+  api?: boolean;
   screenshot?: boolean;
 }
 
@@ -48,7 +51,7 @@ interface LoadResult {
 async function loadFile(
   input: string,
   token?: string,
-  useMcp?: boolean
+  mode: LoadMode = "auto"
 ): Promise<LoadResult> {
   if (isJsonFile(input)) {
     const filePath = resolve(input);
@@ -62,35 +65,63 @@ async function loadFile(
   if (isFigmaUrl(input)) {
     const { fileKey, nodeId, fileName } = parseFigmaUrl(input);
 
-    if (useMcp) {
-      console.log(`Loading via MCP: ${fileKey} (node: ${nodeId ?? "root"})`);
-      const file = await loadViaMcp(fileKey, nodeId ?? "0:1", fileName);
-      return { file, nodeId };
+    if (mode === "mcp") {
+      return loadFromMcp(fileKey, nodeId, fileName);
     }
 
-    console.log(`Fetching from Figma API: ${fileKey}`);
-    if (nodeId) {
-      console.log(`Target node: ${nodeId}`);
+    if (mode === "api") {
+      return loadFromApi(fileKey, nodeId, token);
     }
 
-    const figmaToken = token ?? process.env["FIGMA_TOKEN"];
-    if (!figmaToken) {
-      throw new Error(
-        "Figma token required. Provide --token or set FIGMA_TOKEN environment variable."
-      );
+    // Auto mode: try MCP first, fallback to API
+    try {
+      console.log("Auto-detecting data source... trying MCP first.");
+      return await loadFromMcp(fileKey, nodeId, fileName);
+    } catch (mcpError) {
+      const mcpMsg = mcpError instanceof Error ? mcpError.message : String(mcpError);
+      console.log(`MCP unavailable (${mcpMsg}). Falling back to REST API.`);
+      return loadFromApi(fileKey, nodeId, token);
     }
-
-    const client = new FigmaClient({ token: figmaToken });
-    const response = await client.getFile(fileKey);
-    return {
-      file: transformFigmaResponse(fileKey, response),
-      nodeId,
-    };
   }
 
   throw new Error(
     `Invalid input: ${input}. Provide a Figma URL or JSON file path.`
   );
+}
+
+async function loadFromMcp(
+  fileKey: string,
+  nodeId: string | undefined,
+  fileName: string | undefined
+): Promise<LoadResult> {
+  console.log(`Loading via MCP: ${fileKey} (node: ${nodeId ?? "root"})`);
+  const file = await loadViaMcp(fileKey, nodeId ?? "0:1", fileName);
+  return { file, nodeId };
+}
+
+async function loadFromApi(
+  fileKey: string,
+  nodeId: string | undefined,
+  token?: string
+): Promise<LoadResult> {
+  console.log(`Fetching from Figma REST API: ${fileKey}`);
+  if (nodeId) {
+    console.log(`Target node: ${nodeId}`);
+  }
+
+  const figmaToken = token ?? process.env["FIGMA_TOKEN"];
+  if (!figmaToken) {
+    throw new Error(
+      "FIGMA_TOKEN required for REST API mode. Provide --token or set FIGMA_TOKEN env var, or use --mcp instead."
+    );
+  }
+
+  const client = new FigmaClient({ token: figmaToken });
+  const response = await client.getFile(fileKey);
+  return {
+    file: transformFigmaResponse(fileKey, response),
+    nodeId,
+  };
 }
 
 /**
@@ -128,13 +159,20 @@ cli
   .option("--preset <preset>", "Analysis preset (relaxed | dev-friendly | ai-ready | strict)")
   .option("--output <path>", "HTML report output path")
   .option("--token <token>", "Figma API token (or use FIGMA_TOKEN env var)")
-  .option("--mcp", "Load Figma data via MCP Desktop bridge (no REST API needed)")
+  .option("--mcp", "Load via Figma MCP (no FIGMA_TOKEN needed)")
+  .option("--api", "Load via Figma REST API (requires FIGMA_TOKEN)")
   .option("--screenshot", "Include screenshot comparison in report (requires ANTHROPIC_API_KEY)")
   .example("  drc analyze https://www.figma.com/design/ABC123/MyDesign")
+  .example("  drc analyze https://www.figma.com/design/ABC123/MyDesign --mcp")
+  .example("  drc analyze https://www.figma.com/design/ABC123/MyDesign --api --token YOUR_TOKEN")
   .example("  drc analyze ./fixtures/design.json --output report.html")
-  .example("  drc analyze https://www.figma.com/design/ABC123/MyDesign --screenshot")
   .action(async (input: string, options: AnalyzeOptions) => {
     try {
+      // Validate mutually exclusive flags
+      if (options.mcp && options.api) {
+        throw new Error("Cannot use --mcp and --api together. Choose one.");
+      }
+
       // Validate --screenshot requirements
       if (options.screenshot) {
         const anthropicKey = process.env["ANTHROPIC_API_KEY"];
@@ -146,8 +184,11 @@ cli
         console.log("Screenshot comparison mode enabled (coming soon).\n");
       }
 
+      // Determine load mode
+      const mode: LoadMode = options.mcp ? "mcp" : options.api ? "api" : "auto";
+
       // Load file
-      const { file, nodeId } = await loadFile(input, options.token, options.mcp);
+      const { file, nodeId } = await loadFile(input, options.token, mode);
 
       // Warn if analyzing full file without node-id
       if (isFigmaUrl(input) && !nodeId) {
@@ -212,6 +253,7 @@ cli
 interface SaveFixtureOptions {
   output?: string;
   mcp?: boolean;
+  api?: boolean;
   token?: string;
 }
 
@@ -221,18 +263,24 @@ cli
     "Save Figma file data as a JSON fixture for offline analysis"
   )
   .option("--output <path>", "Output JSON path (default: fixtures/<filekey>.json)")
-  .option("--mcp", "Load via MCP Desktop bridge (no REST API needed)")
+  .option("--mcp", "Load via Figma MCP (no FIGMA_TOKEN needed)")
+  .option("--api", "Load via Figma REST API (requires FIGMA_TOKEN)")
   .option("--token <token>", "Figma API token (or use FIGMA_TOKEN env var)")
   .example("  drc save-fixture https://www.figma.com/design/ABC123/MyDesign --mcp")
-  .example("  drc save-fixture https://www.figma.com/design/ABC123/MyDesign --output fixtures/my-design.json")
+  .example("  drc save-fixture https://www.figma.com/design/ABC123/MyDesign --api --token YOUR_TOKEN")
   .action(async (input: string, options: SaveFixtureOptions) => {
     try {
+      if (options.mcp && options.api) {
+        throw new Error("Cannot use --mcp and --api together. Choose one.");
+      }
+
       if (isFigmaUrl(input) && !parseFigmaUrl(input).nodeId) {
         console.warn("\nWarning: No node-id specified. Saving entire file as fixture.");
         console.warn("Tip: Add ?node-id=XXX to save a specific section.\n");
       }
 
-      const { file } = await loadFile(input, options.token, options.mcp);
+      const mode: LoadMode = options.mcp ? "mcp" : options.api ? "api" : "auto";
+      const { file } = await loadFile(input, options.token, mode);
 
       const outputPath = resolve(
         options.output ?? `fixtures/${file.fileKey}.json`
