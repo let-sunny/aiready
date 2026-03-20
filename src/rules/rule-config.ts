@@ -216,7 +216,7 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
   },
   "empty-frame": {
     severity: "risk",
-    score: -3,
+    score: -4,
     enabled: true,
   },
 
