@@ -205,7 +205,7 @@ function renderGaugeSvg(pct: number, size: number, strokeW: number, grade?: Grad
     return `<svg width="${size}" height="${size}" viewBox="0 0 120 120" class="block">
             <circle cx="60" cy="60" r="${GAUGE_R}" fill="none" stroke-width="${strokeW}" class="stroke-border" />
             <circle cx="60" cy="60" r="${GAUGE_R}" fill="none" stroke="${color}" stroke-width="${strokeW}" stroke-linecap="round" stroke-dasharray="${GAUGE_C}" stroke-dashoffset="${offset}" transform="rotate(-90 60 60)" class="gauge-fill" />
-            <text x="60" y="60" text-anchor="middle" dominant-baseline="central" fill="currentColor" font-size="58" font-weight="700" class="font-sans">${esc(grade)}</text>
+            <text x="60" y="60" text-anchor="middle" dominant-baseline="central" fill="currentColor" font-size="52" font-weight="700" class="font-sans">${esc(grade)}</text>
           </svg>`;
   }
   const fontSize = 32;
