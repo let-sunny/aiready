@@ -166,8 +166,8 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
     enabled: true,
   },
   "non-semantic-name": {
-    severity: "missing-info",
-    score: -3,
+    severity: "risk",
+    score: -5,
     enabled: true,
   },
   "inconsistent-naming-convention": {
@@ -210,13 +210,13 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
     enabled: true,
   },
   "invisible-layer": {
-    severity: "missing-info",
-    score: -3,
+    severity: "blocking",
+    score: -10,
     enabled: true,
   },
   "empty-frame": {
-    severity: "missing-info",
-    score: -2,
+    severity: "blocking",
+    score: -10,
     enabled: true,
   },
 
@@ -224,8 +224,8 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
   // Handoff Risk (5 rules)
   // ============================================
   "hardcode-risk": {
-    severity: "blocking",
-    score: -10,
+    severity: "risk",
+    score: -5,
     depthWeight: 1.5,
     enabled: true,
   },
