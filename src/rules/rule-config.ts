@@ -27,8 +27,8 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
     enabled: true,
   },
   "missing-responsive-behavior": {
-    severity: "missing-info",
-    score: -2,
+    severity: "risk",
+    score: -3,
     depthWeight: 1.5,
     enabled: true,
   },
