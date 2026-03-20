@@ -352,7 +352,7 @@ interface CalibrateRunOptions {
 cli
   .command(
     "calibrate-run <input>",
-    "Run full calibration pipeline using Anthropic API"
+    "Run full calibration pipeline"
   )
   .option("--output <path>", "Markdown report output path")
   .option("--token <token>", "Figma API token (or use FIGMA_TOKEN env var)")
@@ -360,17 +360,10 @@ cli
   .option("--sampling <strategy>", "Sampling strategy (all | top-issues | random)", { default: "top-issues" })
   .option("--export-report", "Generate HTML report in reports/")
   .example("  drc calibrate-run https://www.figma.com/design/ABC123/MyDesign")
-  .example("  drc calibrate-run https://www.figma.com/design/ABC123/MyDesign --export-report")
+  .example("  drc calibrate-run fixtures/sample.json --export-report")
   .action(async (input: string, options: CalibrateRunOptions) => {
     try {
       const anthropicKey = process.env["ANTHROPIC_API_KEY"];
-      if (!anthropicKey) {
-        throw new Error(
-          "ANTHROPIC_API_KEY environment variable is required for calibrate-run.\n" +
-          "Set it in .env or export it in your shell."
-        );
-      }
-
       const figmaToken = options.token ?? process.env["FIGMA_TOKEN"];
 
       // Warn if no node-id
@@ -392,7 +385,23 @@ cli
       const calTs = `${calNow.getFullYear()}-${String(calNow.getMonth() + 1).padStart(2, "0")}-${String(calNow.getDate()).padStart(2, "0")}-${String(calNow.getHours()).padStart(2, "0")}-${String(calNow.getMinutes()).padStart(2, "0")}`;
       const defaultOutput = `logs/calibration/calibration-${calTs}.md`;
 
-      const executor = createAnthropicExecutor(anthropicKey);
+      const executor = anthropicKey
+        ? createAnthropicExecutor(anthropicKey)
+        : async (nodeId: string, _fileKey: string, flaggedRuleIds: string[]) => ({
+            generatedCode: `<!-- no ANTHROPIC_API_KEY, skipped conversion for ${nodeId} -->`,
+            difficulty: "moderate" as const,
+            notes: "Skipped — no ANTHROPIC_API_KEY. Analysis-only mode.",
+            ruleRelatedStruggles: flaggedRuleIds.map((r) => ({
+              ruleId: r,
+              description: "Unable to assess — conversion skipped",
+              actualImpact: "moderate" as const,
+            })),
+            uncoveredStruggles: [],
+          });
+
+      if (!anthropicKey) {
+        console.log("  Note: ANTHROPIC_API_KEY not set. Running analysis-only (no code conversion).\n");
+      }
 
       const result = await runCalibration(
         {
