@@ -23,14 +23,22 @@
     "lint": "tsc --noEmit",
     "clean": "rm -rf dist"
   },
+  "files": [
+    "dist"
+  ],
   "keywords": [
     "figma",
     "design",
     "analysis",
     "cli",
+    "mcp",
     "readiness",
     "ai"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/let-sunny/aiready.git"
+  },
   "author": "",
   "license": "MIT",
   "packageManager": "pnpm@10.32.1",
