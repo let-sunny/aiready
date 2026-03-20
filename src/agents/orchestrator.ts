@@ -150,7 +150,7 @@ const ICON_NAME_PATTERN = /\b(icon|ico|badge|indicator)\b/i;
  * - pure graphic types (VECTOR, BOOLEAN_OPERATION, etc.)
  * - name contains "icon", "ico", "badge", or "indicator"
  */
-function filterConversionCandidates(
+export function filterConversionCandidates(
   summaries: NodeIssueSummary[],
   documentRoot: AnalysisNode
 ): NodeIssueSummary[] {

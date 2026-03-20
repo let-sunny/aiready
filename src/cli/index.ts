@@ -24,6 +24,7 @@ import {
   runCalibration,
   runCalibrationAnalyze,
   runCalibrationEvaluate,
+  filterConversionCandidates,
 } from "../agents/orchestrator.js";
 import { handleDocs } from "./docs.js";
 
@@ -258,6 +259,12 @@ cli
       const { analysisOutput, ruleScores, fileKey } =
         await runCalibrationAnalyze(calibConfig);
 
+      // Filter out icon/graphic nodes that are not useful for code conversion
+      const filteredSummaries = filterConversionCandidates(
+        analysisOutput.nodeIssueSummaries,
+        analysisOutput.analysisResult.file.document
+      );
+
       const outputData = {
         fileKey,
         fileName: analysisOutput.analysisResult.file.name,
@@ -265,7 +272,7 @@ cli
         nodeCount: analysisOutput.analysisResult.nodeCount,
         issueCount: analysisOutput.analysisResult.issues.length,
         scoreReport: analysisOutput.scoreReport,
-        nodeIssueSummaries: analysisOutput.nodeIssueSummaries,
+        nodeIssueSummaries: filteredSummaries,
         ruleScores,
       };
 
