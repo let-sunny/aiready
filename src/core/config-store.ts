@@ -2,16 +2,17 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-const CONFIG_DIR = join(homedir(), ".config", "aiready");
-const CONFIG_PATH = join(CONFIG_DIR, "config.json");
+const AIREADY_DIR = join(homedir(), ".aiready");
+const CONFIG_PATH = join(AIREADY_DIR, "config.json");
+const REPORTS_DIR = join(AIREADY_DIR, "reports");
 
 interface AireadyConfig {
   figmaToken?: string;
 }
 
-function ensureConfigDir(): void {
-  if (!existsSync(CONFIG_DIR)) {
-    mkdirSync(CONFIG_DIR, { recursive: true });
+function ensureDir(dir: string): void {
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true });
   }
 }
 
@@ -28,7 +29,7 @@ export function readConfig(): AireadyConfig {
 }
 
 export function writeConfig(config: AireadyConfig): void {
-  ensureConfigDir();
+  ensureDir(AIREADY_DIR);
   writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2) + "\n", "utf-8");
 }
 
@@ -43,6 +44,26 @@ export function setFigmaToken(token: string): void {
   writeConfig(config);
 }
 
+export function hasConfig(): boolean {
+  return existsSync(CONFIG_PATH);
+}
+
 export function getConfigPath(): string {
   return CONFIG_PATH;
+}
+
+export function getReportsDir(): string {
+  return REPORTS_DIR;
+}
+
+export function ensureReportsDir(): void {
+  ensureDir(REPORTS_DIR);
+}
+
+/**
+ * Initialize aiready: write config + create reports dir
+ */
+export function initAiready(token: string): void {
+  setFigmaToken(token);
+  ensureReportsDir();
 }

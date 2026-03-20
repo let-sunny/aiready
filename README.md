@@ -39,7 +39,7 @@ Three ways to use AIReady. Pick one.
 
 ```bash
 npm install -g aiready
-aiready init --token figd_xxxxxxxxxxxxx    # saved to ~/.config/aiready/
+aiready init --token figd_xxxxxxxxxxxxx    # saved to ~/.aiready/
 aiready analyze "https://www.figma.com/design/ABC123/MyDesign?node-id=1-234"
 ```
 
@@ -74,7 +74,7 @@ Then in Claude Code: `/aiready analyze <url>`
 Token priority:
 1. `--token` flag (one-time override)
 2. `FIGMA_TOKEN` env var (CI/CD)
-3. `~/.config/aiready/config.json` (`aiready init`)
+3. `~/.aiready/config.json` (`aiready init`)
 
 </details>
 

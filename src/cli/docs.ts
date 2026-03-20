@@ -27,10 +27,11 @@ AIREADY SETUP GUIDE
 
   Setup:
     aiready init --token figd_xxxxxxxxxxxxx
-    (saved to ~/.config/aiready/config.json)
+    (saved to ~/.aiready/config.json, reports go to ~/.aiready/reports/)
 
   Use:
     aiready analyze "https://www.figma.com/design/ABC123/MyDesign?node-id=1-234"
+    (opens report in browser automatically, use --no-open to disable)
 
   Data source flags:
     --api     REST API (uses saved token)
@@ -41,9 +42,10 @@ AIREADY SETUP GUIDE
     --preset strict|relaxed|dev-friendly|ai-ready
     --config ./my-config.json
     --custom-rules ./my-rules.json
+    --no-open   Don't open report in browser
 
   Output:
-    reports/YYYY-MM-DD-HH-mm-<filekey>.html
+    ~/.aiready/reports/report-YYYY-MM-DD-HH-mm-<filekey>.html
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  2. MCP SERVER (Claude Code integration)
@@ -98,7 +100,7 @@ AIREADY SETUP GUIDE
 
   1. --token flag (one-time override)
   2. FIGMA_TOKEN env var (CI/CD)
-  3. ~/.config/aiready/config.json (aiready init)
+  3. ~/.aiready/config.json (aiready init)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  WHICH ONE SHOULD I USE?

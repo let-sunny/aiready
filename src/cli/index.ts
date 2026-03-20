@@ -13,7 +13,7 @@ import type { AnalysisFile } from "../contracts/figma-node.js";
 import type { RuleConfig, RuleId } from "../contracts/rule.js";
 import { analyzeFile } from "../core/rule-engine.js";
 import { loadFile, isFigmaUrl, isJsonFile, type LoadMode } from "../core/loader.js";
-import { getFigmaToken, setFigmaToken, getConfigPath } from "../core/config-store.js";
+import { getFigmaToken, initAiready, getConfigPath, getReportsDir, ensureReportsDir } from "../core/config-store.js";
 import { calculateScores, formatScoreSummary } from "../core/scoring.js";
 import { getConfigsWithPreset, RULE_CONFIGS, type Preset } from "../rules/rule-config.js";
 import { ruleRegistry } from "../rules/rule-registry.js";
@@ -81,6 +81,7 @@ interface AnalyzeOptions {
   screenshot?: boolean;
   customRules?: string;
   config?: string;
+  noOpen?: boolean;
 }
 
 cli
@@ -93,6 +94,7 @@ cli
   .option("--screenshot", "Include screenshot comparison in report (requires ANTHROPIC_API_KEY)")
   .option("--custom-rules <path>", "Path to custom rules JSON file")
   .option("--config <path>", "Path to config JSON file (override rule scores/settings)")
+  .option("--no-open", "Don't open report in browser after analysis")
   .example("  aiready analyze https://www.figma.com/design/ABC123/MyDesign")
   .example("  aiready analyze https://www.figma.com/design/ABC123/MyDesign --mcp")
   .example("  aiready analyze https://www.figma.com/design/ABC123/MyDesign --api --token YOUR_TOKEN")
@@ -104,6 +106,14 @@ cli
       // Validate mutually exclusive flags
       if (options.mcp && options.api) {
         throw new Error("Cannot use --mcp and --api together. Choose one.");
+      }
+
+      // Check init for non-MCP mode
+      if (!options.mcp && !options.token && !getFigmaToken() && !isJsonFile(input)) {
+        throw new Error(
+          "aiready is not configured. Run 'aiready init --token YOUR_TOKEN' first.\n" +
+          "Or use --mcp flag for Figma MCP mode (no token needed)."
+        );
       }
 
       // Validate --screenshot requirements
@@ -198,18 +208,29 @@ cli
       // Generate HTML report
       const now = new Date();
       const ts = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}-${String(now.getHours()).padStart(2, "0")}-${String(now.getMinutes()).padStart(2, "0")}`;
-      const defaultOutput = `reports/${ts}-${file.fileKey}.html`;
-      const reportOutput = options.output ?? defaultOutput;
-      const outputPath = resolve(reportOutput);
-      const outputDir = dirname(outputPath);
+      let outputPath: string;
 
-      if (!existsSync(outputDir)) {
-        mkdirSync(outputDir, { recursive: true });
+      if (options.output) {
+        outputPath = resolve(options.output);
+        const outputDir = dirname(outputPath);
+        if (!existsSync(outputDir)) {
+          mkdirSync(outputDir, { recursive: true });
+        }
+      } else {
+        ensureReportsDir();
+        outputPath = resolve(getReportsDir(), `report-${ts}-${file.fileKey}.html`);
       }
 
       const html = generateHtmlReport(file, result, scores);
       await writeFile(outputPath, html, "utf-8");
       console.log(`\nReport saved: ${outputPath}`);
+
+      // Open in browser unless --no-open
+      if (!options.noOpen) {
+        const { exec } = await import("node:child_process");
+        const cmd = process.platform === "darwin" ? "open" : process.platform === "win32" ? "start" : "xdg-open";
+        exec(`${cmd} "${outputPath}"`);
+      }
 
       // Exit with error code if grade is F
       if (scores.overall.grade === "F") {
@@ -513,16 +534,16 @@ interface InitOptions {
 
 cli
   .command("init", "Set up aiready (Figma token or MCP)")
-  .option("--token <token>", "Save Figma API token to ~/.config/aiready/")
+  .option("--token <token>", "Save Figma API token to ~/.aiready/")
   .option("--mcp", "Show Figma MCP setup instructions")
   .action((options: InitOptions) => {
     try {
       if (options.token) {
-        setFigmaToken(options.token);
+        initAiready(options.token);
 
-        console.log(`Figma token saved to ${getConfigPath()}`);
-        console.log(`\nYou can now run:`);
-        console.log(`  aiready analyze "https://www.figma.com/design/..."`);
+        console.log(`  Config saved: ${getConfigPath()}`);
+        console.log(`  Reports will be saved to: ${getReportsDir()}/`);
+        console.log(`\n  Next: aiready analyze "https://www.figma.com/design/..."`);
         return;
       }
 
@@ -574,7 +595,7 @@ cli.help((sections) => {
     {
       title: "\nSetup",
       body: [
-        `  aiready init --token <token>   Save Figma token to ~/.config/aiready/`,
+        `  aiready init --token <token>   Save Figma token to ~/.aiready/`,
         `  aiready init --mcp             Show MCP setup instructions`,
       ].join("\n"),
     },
