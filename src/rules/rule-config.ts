@@ -54,8 +54,8 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
     enabled: true,
   },
   "deep-nesting": {
-    severity: "risk",
-    score: -5,
+    severity: "missing-info",
+    score: -3,
     enabled: true,
     options: {
       maxDepth: 5,
@@ -161,8 +161,8 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
   // Naming (5 rules)
   // ============================================
   "default-name": {
-    severity: "risk",
-    score: -4,
+    severity: "missing-info",
+    score: -2,
     enabled: true,
   },
   "non-semantic-name": {
@@ -216,7 +216,7 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
   },
   "empty-frame": {
     severity: "risk",
-    score: -5,
+    score: -3,
     enabled: true,
   },
 
