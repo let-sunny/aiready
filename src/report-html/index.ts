@@ -136,11 +136,10 @@ export function generateHtmlReport(
 
     <!-- Overall Score -->
     <section class="flex flex-col items-center pt-12 pb-6">
-      ${renderGaugeSvg(scores.overall.percentage, 200, 10)}
+      ${renderGaugeSvg(scores.overall.percentage, 200, 10, scores.overall.grade)}
       <div class="mt-3 text-center">
         <span class="text-lg font-semibold">${scores.overall.percentage}</span>
         <span class="text-muted-foreground text-sm ml-1">/ 100</span>
-        <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${gradeStyle(scores.overall.grade)}">${esc(scores.overall.grade)}</span>
       </div>
       <p class="text-muted-foreground text-sm mt-1">Overall Score</p>
     </section>
@@ -198,10 +197,18 @@ ${CATEGORIES.map(cat => renderCategory(cat, scores, issuesByCategory.get(cat) ??
 
 // ---- Components ----
 
-function renderGaugeSvg(pct: number, size: number, strokeW: number): string {
+function renderGaugeSvg(pct: number, size: number, strokeW: number, grade?: Grade): string {
   const offset = GAUGE_C * (1 - pct / 100);
   const color = gaugeColor(pct);
-  const fontSize = size > 100 ? 28 : size > 80 ? 20 : 16;
+  if (grade) {
+    // Large gauge with grade inside
+    return `<svg width="${size}" height="${size}" viewBox="0 0 120 120" class="block">
+            <circle cx="60" cy="60" r="${GAUGE_R}" fill="none" stroke-width="${strokeW}" class="stroke-border" />
+            <circle cx="60" cy="60" r="${GAUGE_R}" fill="none" stroke="${color}" stroke-width="${strokeW}" stroke-linecap="round" stroke-dasharray="${GAUGE_C}" stroke-dashoffset="${offset}" transform="rotate(-90 60 60)" class="gauge-fill" />
+            <text x="60" y="60" text-anchor="middle" dominant-baseline="central" fill="currentColor" font-size="40" font-weight="700" class="font-sans">${esc(grade)}</text>
+          </svg>`;
+  }
+  const fontSize = size > 80 ? 20 : 16;
   return `<svg width="${size}" height="${size}" viewBox="0 0 120 120" class="block">
             <circle cx="60" cy="60" r="${GAUGE_R}" fill="none" stroke-width="${strokeW}" class="stroke-border" />
             <circle cx="60" cy="60" r="${GAUGE_R}" fill="none" stroke="${color}" stroke-width="${strokeW}" stroke-linecap="round" stroke-dasharray="${GAUGE_C}" stroke-dashoffset="${offset}" transform="rotate(-90 60 60)" class="gauge-fill" />
@@ -217,14 +224,6 @@ function renderSummaryDot(dotClass: string, count: number, label: string): strin
         </div>`;
 }
 
-function gradeStyle(grade: Grade): string {
-  const g = grade.replace("+", "");
-  if (g === "S" || g === "A") return "bg-green-500/10 text-green-700 border-green-500/20";
-  if (g === "B") return "bg-blue-500/10 text-blue-700 border-blue-500/20";
-  if (g === "C") return "bg-amber-500/10 text-amber-700 border-amber-500/20";
-  if (g === "D") return "bg-orange-500/10 text-orange-700 border-orange-500/20";
-  return "bg-red-500/10 text-red-700 border-red-500/20";
-}
 
 function renderOpportunities(issues: AnalysisIssue[], fileKey: string): string {
   const maxAbs = issues.reduce((m, i) => Math.max(m, Math.abs(i.calculatedScore)), 1);
