@@ -25,8 +25,8 @@ jobs:
       - name: Build with monitoring keys
         run: pnpm build
         env:
-          POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
-          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          POSTHOG_API_KEY: ${{ vars.POSTHOG_API_KEY }}
+          SENTRY_DSN: ${{ vars.SENTRY_DSN }}
 
       - run: pnpm test:run
 
