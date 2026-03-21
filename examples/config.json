@@ -1,20 +1,23 @@
 {
-  "excludeNodeTypes": [],
-  "excludeNodeNames": [],
+  "excludeNodeTypes": ["SLICE", "STICKY"],
+  "excludeNodeNames": ["chatbot", "ad-banner", "prototype", "wip"],
   "gridBase": 4,
   "colorTolerance": 5,
   "rules": {
     "no-auto-layout": {
       "score": -15,
-      "severity": "blocking",
-      "enabled": true
+      "severity": "blocking"
     },
     "raw-color": {
       "score": -12,
-      "enabled": true
+      "severity": "blocking"
     },
     "default-name": {
       "enabled": false
+    },
+    "missing-responsive-behavior": {
+      "score": -8,
+      "severity": "blocking"
     }
   }
 }

@@ -176,7 +176,9 @@ EXAMPLE
 
 USAGE
   canicode analyze <url> --config ./my-config.json
-  See full example: examples/config.json
+
+  Full guide: docs/CUSTOMIZATION.md
+  Examples:   examples/config.json
 `.trimStart());
 }
 

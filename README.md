@@ -175,7 +175,7 @@ See [`examples/custom-rules.json`](examples/custom-rules.json) | Run `canicode d
 <details>
 <summary><strong>Config Overrides</strong></summary>
 
-Override built-in rule scores, severity, and global settings:
+Override rule scores, severity, node exclusions, and global settings:
 
 ```bash
 canicode analyze <url> --config ./my-config.json
@@ -183,8 +183,8 @@ canicode analyze <url> --config ./my-config.json
 
 ```json
 {
+  "excludeNodeNames": ["chatbot", "ad-banner", "wip"],
   "gridBase": 4,
-  "colorTolerance": 5,
   "rules": {
     "no-auto-layout": { "score": -15, "severity": "blocking" },
     "default-name": { "enabled": false }
@@ -202,7 +202,7 @@ canicode analyze <url> --config ./my-config.json
 | `rules.<id>.severity` | Override rule severity |
 | `rules.<id>.enabled` | Enable/disable a rule |
 
-See [`examples/config.json`](examples/config.json) | Run `canicode docs config`
+See [`examples/config.json`](examples/config.json) | [`docs/CUSTOMIZATION.md`](docs/CUSTOMIZATION.md) | Run `canicode docs config`
 
 </details>
 
