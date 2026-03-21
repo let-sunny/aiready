@@ -144,33 +144,6 @@ canicode analyze <url> --preset strict
 
 </details>
 
-<details>
-<summary><strong>Custom Rules</strong></summary>
-
-Add project-specific checks via a JSON file:
-
-```bash
-canicode analyze <url> --custom-rules ./my-rules.json
-```
-
-```json
-[
-  {
-    "id": "icon-missing-component",
-    "category": "component",
-    "severity": "blocking",
-    "score": -10,
-    "prompt": "Check if this node is an icon and is not a component.",
-    "why": "Icons that are not components cannot be reused.",
-    "impact": "Developers will hardcode icons.",
-    "fix": "Convert to a component and publish to the library."
-  }
-]
-```
-
-See [`examples/custom-rules.json`](examples/custom-rules.json) | Run `canicode docs rules`
-
-</details>
 
 <details>
 <summary><strong>Config Overrides</strong></summary>
@@ -308,9 +281,10 @@ pnpm lint       # type check
 
 - [x] **Phase 1** — 39 rules, density-based scoring, HTML reports, presets, scoped analysis
 - [x] **Phase 2** — 4-agent calibration pipeline, `/calibrate-loop` debate loop
-- [x] **Phase 3** — Custom rules, config overrides, MCP server, Claude Skills
+- [x] **Phase 3** — Config overrides, MCP server, Claude Skills
 - [x] **Phase 4** — Figma comment from report (per-issue "Comment" button in HTML report, posts to Figma node via API)
-- [ ] **Phase 5** — Screenshot comparison (Figma vs AI-generated code, visual diff)
+- [ ] **Phase 5** — Custom rules with pattern matching (node name/type/attribute conditions)
+- [ ] **Phase 6** — Screenshot comparison (Figma vs AI-generated code, visual diff)
 
 ## License
 

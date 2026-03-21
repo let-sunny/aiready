@@ -791,7 +791,6 @@ cli.help((sections) => {
     {
       title: "\nCustomization",
       body: [
-        `  --custom-rules <path>   Add custom rules (see: canicode docs rules)`,
         `  --config <path>         Override rule settings (see: canicode docs config)`,
       ].join("\n"),
     },
@@ -802,7 +801,6 @@ cli.help((sections) => {
         `  $ canicode analyze "https://www.figma.com/design/..." --api`,
         `  $ canicode analyze "https://www.figma.com/design/..." --preset strict`,
         `  $ canicode analyze "https://www.figma.com/design/..." --config ./my-config.json`,
-        `  $ canicode analyze "https://www.figma.com/design/..." --custom-rules ./my-rules.json`,
       ].join("\n"),
     },
     {
