@@ -49,7 +49,10 @@ node -e "
   const fs = require('fs');
   const template = fs.readFileSync('$TEMPLATE', 'utf-8');
   const browserJs = fs.readFileSync('$BROWSER_JS', 'utf-8');
-  const output = template.replace('/* BROWSER_GLOBAL_JS */', browserJs);
+  const placeholder = '/* __CANICODE_BROWSER_BUNDLE_INJECT__ */';
+  const idx = template.indexOf(placeholder);
+  if (idx === -1) { console.error('ERROR: placeholder not found in template'); process.exit(1); }
+  const output = template.slice(0, idx) + browserJs + template.slice(idx + placeholder.length);
   fs.writeFileSync('$OUTPUT', output, 'utf-8');
   console.log('  ui.html written (' + Math.round(output.length / 1024) + ' KB)');
 "
