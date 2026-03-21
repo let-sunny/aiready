@@ -15,6 +15,10 @@
 
 <p align="center"><strong><a href="https://let-sunny.github.io/canicode/">Try it in your browser</a></strong> — no install needed.</p>
 
+<p align="center">
+  <img src="docs/screenshot.png" alt="CanICode Report" width="720">
+</p>
+
 ```bash
 npm install -g canicode
 canicode init --token YOUR_FIGMA_TOKEN
