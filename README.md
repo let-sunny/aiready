@@ -15,6 +15,8 @@
 
 <p align="center">Analyze Figma designs. Score how dev-friendly and AI-friendly they are. Get actionable issues before writing code.</p>
 
+<p align="center"><strong><a href="https://github.com/let-sunny/canicode/discussions/new?category=share-your-figma">Share your Figma design</a></strong> to help improve scoring accuracy.</p>
+
 <p align="center"><strong><a href="https://let-sunny.github.io/canicode/">Try it in your browser</a></strong> — no install needed.</p>
 
 <p align="center">

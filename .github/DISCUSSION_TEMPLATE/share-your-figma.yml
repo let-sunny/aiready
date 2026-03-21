@@ -1,0 +1,65 @@
+title: "[Figma] "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for sharing your Figma design! Your contribution helps improve CanICode's scoring accuracy through calibration.
+
+        **What happens with your design:**
+        - We run `canicode analyze` on your file to test rule accuracy
+        - Scores are compared against actual code conversion difficulty
+        - Rules that are too harsh or too lenient get adjusted
+
+        **Your design is never stored, published, or shared.**
+
+  - type: input
+    id: figma-url
+    attributes:
+      label: Figma URL
+      description: Paste your Figma file URL. Include `?node-id=` for a specific section.
+      placeholder: "https://www.figma.com/design/ABC123/MyDesign?node-id=1-234"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: design-type
+    attributes:
+      label: What kind of design is this?
+      options:
+        - Mobile app screen
+        - Web page / dashboard
+        - Design system / component library
+        - Landing page
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: complexity
+    attributes:
+      label: How complex is this design?
+      options:
+        - Simple (< 50 nodes)
+        - Medium (50-200 nodes)
+        - Complex (200-500 nodes)
+        - Very complex (500+ nodes)
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Any context?
+      description: Optional — anything that helps us understand the design (e.g., "this is a production screen", "early prototype", "design system tokens are set up").
+      placeholder: "This is a production mobile app screen with full auto-layout and design tokens."
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: permission
+    attributes:
+      label: Permission
+      options:
+        - label: I confirm this design can be used for calibration testing (analysis only, not stored or shared).
+          required: true
