@@ -180,6 +180,43 @@ See [`examples/config.json`](examples/config.json) | [`docs/CUSTOMIZATION.md`](d
 </details>
 
 <details>
+<summary><strong>Custom Rules</strong></summary>
+
+Add project-specific checks with declarative pattern matching:
+
+```bash
+canicode analyze <url> --custom-rules ./my-rules.json
+```
+
+```json
+[
+  {
+    "id": "icon-not-component",
+    "category": "component",
+    "severity": "blocking",
+    "score": -10,
+    "match": {
+      "type": ["FRAME", "GROUP"],
+      "maxWidth": 48,
+      "maxHeight": 48,
+      "hasChildren": true,
+      "nameContains": "icon"
+    },
+    "message": "\"{name}\" is an icon but not a component",
+    "why": "Icons that are not components cannot be reused consistently.",
+    "impact": "Developers will hardcode icon SVGs instead of using a shared component.",
+    "fix": "Convert this icon to a component and publish it to the design system library."
+  }
+]
+```
+
+Conditions use AND logic — all must match for the rule to fire. Available conditions: `type`, `notType`, `nameContains`, `nameNotContains`, `namePattern`, `minWidth`, `maxWidth`, `minHeight`, `maxHeight`, `hasAutoLayout`, `hasChildren`, `minChildren`, `maxChildren`, `isComponent`, `isInstance`, `hasComponentId`, `isVisible`, `hasFills`, `hasStrokes`, `hasEffects`, `minDepth`, `maxDepth`.
+
+See [`examples/custom-rules.json`](examples/custom-rules.json) | [`docs/CUSTOMIZATION.md`](docs/CUSTOMIZATION.md)
+
+</details>
+
+<details>
 <summary><strong>Scoring Algorithm</strong></summary>
 
 ```
@@ -283,7 +320,7 @@ pnpm lint       # type check
 - [x] **Phase 2** — 4-agent calibration pipeline, `/calibrate-loop` debate loop
 - [x] **Phase 3** — Config overrides, MCP server, Claude Skills
 - [x] **Phase 4** — Figma comment from report (per-issue "Comment" button in HTML report, posts to Figma node via API)
-- [ ] **Phase 5** — Custom rules with pattern matching (node name/type/attribute conditions)
+- [x] **Phase 5** — Custom rules with pattern matching (node name/type/attribute conditions)
 - [ ] **Phase 6** — Screenshot comparison (Figma vs AI-generated code, visual diff)
 
 ## License

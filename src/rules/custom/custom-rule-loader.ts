@@ -20,6 +20,9 @@ export async function loadCustomRules(filePath: string): Promise<{
   const configs: Record<string, RuleConfig> = {};
 
   for (const cr of customRules) {
+    // Skip rules that only have a prompt (old format) and no match conditions
+    if (!cr.match) continue;
+
     rules.push(toRule(cr));
     configs[cr.id] = {
       severity: cr.severity,
@@ -41,28 +44,82 @@ function toRule(cr: CustomRule): Rule {
       impact: cr.impact,
       fix: cr.fix,
     },
-    check: createPromptBasedCheck(cr),
+    check: createPatternCheck(cr),
   };
 }
 
 /**
- * Custom rules use a prompt-based check that pattern-matches on node properties.
- * The prompt field describes what to look for - this is a simple heuristic check
- * that flags nodes matching the category/type pattern.
- *
- * For now, custom rules are registered as no-ops (they return null).
- * Future: integrate with LLM for prompt-based evaluation.
+ * Create a check function that evaluates all match conditions against a node.
+ * ALL conditions must pass (AND logic) for the rule to fire.
  */
-function createPromptBasedCheck(_cr: CustomRule) {
+function createPatternCheck(cr: CustomRule) {
   return (
     node: AnalysisNode,
-    _context: RuleContext,
+    context: RuleContext,
   ): RuleViolation | null => {
-    // Custom rules are prompt-based - they need LLM evaluation or explicit matchers.
     // Skip non-visual nodes
     if (node.type === "DOCUMENT" || node.type === "CANVAS") return null;
 
-    // Placeholder: custom rules need LLM evaluation or explicit matcher
-    return null;
+    const match = cr.match;
+
+    // Type checks
+    if (match.type && !match.type.includes(node.type)) return null;
+    if (match.notType && match.notType.includes(node.type)) return null;
+
+    // Name checks (case-insensitive)
+    if (match.nameContains !== undefined && !node.name.toLowerCase().includes(match.nameContains.toLowerCase())) return null;
+    if (match.nameNotContains !== undefined && node.name.toLowerCase().includes(match.nameNotContains.toLowerCase())) return null;
+    if (match.namePattern !== undefined && !new RegExp(match.namePattern, "i").test(node.name)) return null;
+
+    // Size checks
+    const bbox = node.absoluteBoundingBox;
+    if (match.minWidth !== undefined && (!bbox || bbox.width < match.minWidth)) return null;
+    if (match.maxWidth !== undefined && (!bbox || bbox.width > match.maxWidth)) return null;
+    if (match.minHeight !== undefined && (!bbox || bbox.height < match.minHeight)) return null;
+    if (match.maxHeight !== undefined && (!bbox || bbox.height > match.maxHeight)) return null;
+
+    // Layout checks
+    if (match.hasAutoLayout === true && !node.layoutMode) return null;
+    if (match.hasAutoLayout === false && node.layoutMode) return null;
+    if (match.hasChildren === true && (!node.children || node.children.length === 0)) return null;
+    if (match.hasChildren === false && node.children && node.children.length > 0) return null;
+    if (match.minChildren !== undefined && (!node.children || node.children.length < match.minChildren)) return null;
+    if (match.maxChildren !== undefined && node.children && node.children.length > match.maxChildren) return null;
+
+    // Component checks
+    if (match.isComponent === true && node.type !== "COMPONENT" && node.type !== "COMPONENT_SET") return null;
+    if (match.isComponent === false && (node.type === "COMPONENT" || node.type === "COMPONENT_SET")) return null;
+    if (match.isInstance === true && node.type !== "INSTANCE") return null;
+    if (match.isInstance === false && node.type === "INSTANCE") return null;
+    if (match.hasComponentId === true && !node.componentId) return null;
+    if (match.hasComponentId === false && node.componentId) return null;
+
+    // Visibility
+    if (match.isVisible === true && !node.visible) return null;
+    if (match.isVisible === false && node.visible) return null;
+
+    // Fill/stroke/effect checks
+    if (match.hasFills === true && (!node.fills || node.fills.length === 0)) return null;
+    if (match.hasFills === false && node.fills && node.fills.length > 0) return null;
+    if (match.hasStrokes === true && (!node.strokes || node.strokes.length === 0)) return null;
+    if (match.hasStrokes === false && node.strokes && node.strokes.length > 0) return null;
+    if (match.hasEffects === true && (!node.effects || node.effects.length === 0)) return null;
+    if (match.hasEffects === false && node.effects && node.effects.length > 0) return null;
+
+    // Depth checks
+    if (match.minDepth !== undefined && context.depth < match.minDepth) return null;
+    if (match.maxDepth !== undefined && context.depth > match.maxDepth) return null;
+
+    // ALL conditions passed — flag this node
+    const msg = (cr.message ?? `"${node.name}" matched custom rule "${cr.id}"`)
+      .replace(/\{name\}/g, node.name)
+      .replace(/\{type\}/g, node.type);
+
+    return {
+      ruleId: cr.id,
+      nodeId: node.id,
+      nodePath: context.path.join(" > "),
+      message: msg,
+    };
   };
 }
