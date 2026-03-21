@@ -172,9 +172,14 @@ cli
         : { ...RULE_CONFIGS };
 
       // Load and merge config file overrides
+      let excludeNodeNames: string[] | undefined;
+      let excludeNodeTypes: string[] | undefined;
+
       if (options.config) {
         const configFile = await loadConfigFile(options.config);
         configs = mergeConfigs(configs, configFile);
+        excludeNodeNames = configFile.excludeNodeNames;
+        excludeNodeTypes = configFile.excludeNodeTypes;
         console.log(`Config loaded: ${options.config}`);
       }
 
@@ -192,6 +197,8 @@ cli
       const analyzeOptions = {
         configs: configs as Record<RuleId, RuleConfig>,
         ...(effectiveNodeId && { targetNodeId: effectiveNodeId }),
+        ...(excludeNodeNames && { excludeNodeNames }),
+        ...(excludeNodeTypes && { excludeNodeTypes }),
       };
 
       // Run analysis

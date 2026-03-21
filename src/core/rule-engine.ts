@@ -41,6 +41,8 @@ export interface RuleEngineOptions {
   enabledRules?: RuleId[];
   disabledRules?: RuleId[];
   targetNodeId?: string;
+  excludeNodeNames?: string[];
+  excludeNodeTypes?: string[];
 }
 
 /**
@@ -121,6 +123,8 @@ export class RuleEngine {
   private enabledRuleIds: Set<RuleId> | null;
   private disabledRuleIds: Set<RuleId>;
   private targetNodeId: string | undefined;
+  private excludeNamePattern: RegExp | null;
+  private excludeNodeTypes: Set<string> | null;
 
   constructor(options: RuleEngineOptions = {}) {
     this.configs = options.configs ?? RULE_CONFIGS;
@@ -129,6 +133,12 @@ export class RuleEngine {
       : null;
     this.disabledRuleIds = new Set(options.disabledRules ?? []);
     this.targetNodeId = options.targetNodeId;
+    this.excludeNamePattern = options.excludeNodeNames && options.excludeNodeNames.length > 0
+      ? new RegExp(`\\b(${options.excludeNodeNames.join("|")})\\b`, "i")
+      : null;
+    this.excludeNodeTypes = options.excludeNodeTypes && options.excludeNodeTypes.length > 0
+      ? new Set(options.excludeNodeTypes)
+      : null;
   }
 
   /**
@@ -208,6 +218,14 @@ export class RuleEngine {
     siblings?: AnalysisNode[]
   ): void {
     const nodePath = [...path, node.name];
+
+    // Skip nodes matching excluded types or name patterns
+    if (this.excludeNodeTypes && this.excludeNodeTypes.has(node.type)) {
+      return;
+    }
+    if (this.excludeNamePattern && this.excludeNamePattern.test(node.name)) {
+      return;
+    }
 
     // Build context for this node
     const context: RuleContext = {
