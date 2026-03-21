@@ -65,10 +65,10 @@ const absolutePositionInAutoLayoutDef: RuleDefinition = {
 };
 
 /**
- * Name patterns that indicate intentional absolute positioning
- * (badges, close buttons, decorations, overlays, floating elements)
+ * Name patterns that indicate intentional absolute positioning.
+ * Matches if the name contains any of these words (case-insensitive).
  */
-const INTENTIONAL_ABSOLUTE_PATTERNS = /^(badge|close|dismiss|overlay|float|fab|dot|indicator|corner|decoration|tag|status|notification|x|icon[-_ ]?(close|dismiss|x)|btn[-_ ]?(close|dismiss))/i;
+const INTENTIONAL_ABSOLUTE_PATTERNS = /(badge|close|dismiss|overlay|float|fab|dot|indicator|corner|decoration|tag|status|notification|icon|image|asset|filter|dim|dimmed|bg|background|logo|avatar|divider|separator|nav|navigation|gnb|header|footer|sidebar|toolbar|modal|dialog|popup|toast|tooltip|dropdown|menu|sticky|spinner|loader|cursor|cta|chatbot|thumb|thumbnail)/i;
 
 /**
  * Check if a node is small relative to its parent (decoration/badge pattern).
