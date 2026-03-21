@@ -37,7 +37,7 @@ canicode analyze <url> --config ./my-config.json
 |-------|------|---------|-------------|
 | `excludeNodeTypes` | `string[]` | `[]` | Figma node types to skip entirely (node + children) |
 | `excludeNodeNames` | `string[]` | `[]` | Name patterns to skip (case-insensitive word match) |
-| `gridBase` | `number` | `8` | Spacing grid unit for `inconsistent-spacing` and `magic-number-spacing` |
+| `gridBase` | `number` | `4` | Spacing grid unit for `inconsistent-spacing` and `magic-number-spacing` |
 | `colorTolerance` | `number` | `10` | Color difference tolerance for `multiple-fill-colors` |
 | `rules` | `object` | — | Per-rule overrides (see below) |
 

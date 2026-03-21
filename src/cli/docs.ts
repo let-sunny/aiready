@@ -158,7 +158,7 @@ Override canicode's default rule scores, severity, and filters.
 STRUCTURE
   - excludeNodeTypes: node types to skip (e.g. VECTOR, BOOLEAN_OPERATION)
   - excludeNodeNames: name patterns to skip (e.g. icon, ico)
-  - gridBase: spacing grid unit, default 8
+  - gridBase: spacing grid unit, default 4
   - colorTolerance: color diff tolerance, default 10
   - rules: per-rule overrides (score, severity, enabled)
 

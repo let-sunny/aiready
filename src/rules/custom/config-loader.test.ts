@@ -93,13 +93,13 @@ describe("mergeConfigs", () => {
       severity: "risk",
       score: -3,
       enabled: true,
-      options: { gridBase: 8 },
+      options: { gridBase: 4 },
     },
     "magic-number-spacing": {
       severity: "suggestion",
       score: -1,
       enabled: true,
-      options: { gridBase: 8 },
+      options: { gridBase: 4 },
     },
     "multiple-fill-colors": {
       severity: "risk",
@@ -180,7 +180,7 @@ describe("mergeConfigs", () => {
     // gridBase rules unaffected
     expect(
       (result["inconsistent-spacing"]?.options as Record<string, unknown>)?.["gridBase"]
-    ).toBe(8);
+    ).toBe(4);
   });
 
   it("does not modify base configs object", () => {
@@ -196,7 +196,7 @@ describe("mergeConfigs", () => {
     expect(baseConfigs["no-auto-layout"]?.score).toBe(-5);
     expect(
       (baseConfigs["inconsistent-spacing"]?.options as Record<string, unknown>)?.["gridBase"]
-    ).toBe(8);
+    ).toBe(4);
   });
 
   it("ignores rule overrides for non-existent rules", () => {

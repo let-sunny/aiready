@@ -194,7 +194,7 @@ canicode analyze <url> --config ./my-config.json
 
 | Option | Description |
 |--------|-------------|
-| `gridBase` | Spacing grid unit (default: 8) |
+| `gridBase` | Spacing grid unit (default: 4) |
 | `colorTolerance` | Color difference tolerance (default: 10) |
 | `excludeNodeTypes` | Node types to skip |
 | `excludeNodeNames` | Node name patterns to skip |

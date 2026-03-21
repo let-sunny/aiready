@@ -90,7 +90,7 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
     score: -2,
     enabled: true,
     options: {
-      gridBase: 8,
+      gridBase: 4,
     },
   },
   "magic-number-spacing": {
@@ -98,7 +98,7 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
     score: -4,
     enabled: true,
     options: {
-      gridBase: 8,
+      gridBase: 4,
     },
   },
   "raw-shadow": {

@@ -169,6 +169,6 @@ All rule scores, severity, and thresholds are managed in `rules/rule-config.ts`.
 Rule logic and score config are intentionally separated so scores can be tuned without touching rule logic.
 
 Configurable thresholds:
-- `gridBase` (default: 8) — spacing grid unit for inconsistent-spacing and magic-number-spacing
+- `gridBase` (default: 4) — spacing grid unit for inconsistent-spacing and magic-number-spacing
 - `tolerance` (default: 10) — color difference tolerance for multiple-fill-colors
 - `no-dev-status` — disabled by default
