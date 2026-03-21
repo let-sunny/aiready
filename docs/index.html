@@ -365,7 +365,7 @@
         var res = await fetch('https://api.figma.com/v1/files/' + fileKey + '/comments', {
           method: 'POST',
           headers: { 'X-FIGMA-TOKEN': token, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: commentBody, client_meta: { node_id: nodeId } }),
+          body: JSON.stringify({ message: commentBody, client_meta: { node_id: nodeId, node_offset: { x: 0, y: 0 } } }),
         });
         if (!res.ok) throw new Error(await res.text());
         btn.textContent = 'Sent \u2713';
