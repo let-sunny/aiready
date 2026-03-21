@@ -133,9 +133,11 @@ const ELIGIBLE_NODE_TYPES: Set<AnalysisNodeType> = new Set([
 ]);
 
 /**
- * Name patterns that indicate icon/badge nodes (case-insensitive)
+ * Name patterns for nodes that should be excluded from conversion candidates.
+ * These are typically decorative, structural, or overlay elements where
+ * absolute positioning is intentional and not a design issue.
  */
-const ICON_NAME_PATTERN = /\b(icon|ico|badge|indicator)\b/i;
+const EXCLUDED_NAME_PATTERN = /\b(icon|ico|badge|indicator|image|asset|chatbot|cta|gnb|navigation|nav|fab|modal|dialog|popup|overlay|toast|snackbar|tooltip|dropdown|menu|sticky|bg|background|divider|separator|logo|avatar|thumbnail|thumb|header|footer|sidebar|toolbar|tabbar|tab-bar|statusbar|status-bar|spinner|loader|cursor|dot|dim|dimmed|filter)\b/i;
 
 /**
  * Filter node summaries to meaningful conversion candidates.
@@ -164,8 +166,8 @@ export function filterConversionCandidates(
     // Only allow FRAME, COMPONENT, INSTANCE
     if (!ELIGIBLE_NODE_TYPES.has(node.type)) return false;
 
-    // Exclude icon/badge/indicator by name
-    if (ICON_NAME_PATTERN.test(node.name)) return false;
+    // Exclude decorative/structural/overlay nodes by name
+    if (EXCLUDED_NAME_PATTERN.test(node.name)) return false;
 
     // Require minimum dimensions
     const bbox = node.absoluteBoundingBox;
