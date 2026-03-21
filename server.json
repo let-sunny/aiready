@@ -1,7 +1,7 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.let-sunny/canicode",
-  "description": "Analyze Figma designs for development-friendliness and AI-friendliness. 39 rules, density-based scoring, HTML reports with Figma comment integration.",
+  "description": "Analyze Figma designs for dev & AI readiness. 39 rules, scoring, HTML reports.",
   "repository": {
     "url": "https://github.com/let-sunny/canicode",
     "source": "github"
