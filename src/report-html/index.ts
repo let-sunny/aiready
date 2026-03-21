@@ -152,7 +152,7 @@ export function generateHtmlReport(
 ${CATEGORIES.map(cat => {
     const cs = scores.byCategory[cat];
     const desc = CATEGORY_DESCRIPTIONS[cat];
-    return `        <div class="flex flex-col items-center group relative">
+    return `        <a href="#cat-${cat}" class="flex flex-col items-center group relative cursor-pointer no-underline text-foreground hover:opacity-80 transition-opacity">
           ${renderGaugeSvg(cs.percentage, 100, 7)}
           <span class="text-xs font-medium mt-2.5 text-center leading-tight">${CATEGORY_LABELS[cat]}</span>
           <span class="text-[11px] text-muted-foreground">${cs.issueCount} issues</span>
@@ -160,7 +160,7 @@ ${CATEGORIES.map(cat => {
             ${esc(desc)}
             <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-zinc-900"></div>
           </div>
-        </div>`;
+        </a>`;
   }).join("\n")}
       </div>
     </section>
@@ -315,7 +315,7 @@ function renderCategory(
   for (const issue of issues) bySeverity.get(issue.config.severity)?.push(issue);
 
   return `
-      <details class="bg-card border border-border rounded-lg shadow-sm overflow-hidden group"${hasProblems ? " open" : ""}>
+      <details id="cat-${cat}" class="bg-card border border-border rounded-lg shadow-sm overflow-hidden group"${hasProblems ? " open" : ""}>
         <summary class="px-5 py-3.5 flex items-center gap-3 cursor-pointer hover:bg-muted/50 transition-colors select-none">
           <span class="inline-flex items-center justify-center w-10 h-6 rounded-md text-xs font-bold border ${scoreBadgeStyle(cs.percentage)}">${cs.percentage}</span>
           <div class="flex-1 min-w-0">
