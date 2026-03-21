@@ -304,15 +304,6 @@ figma.ui.onmessage = (msg: { type: string }) => {
     // Use the first selected node (or a wrapper frame if multiple)
     const target = selection[0]!;
     const nodeCount = countNodes(target as unknown as { children?: readonly unknown[] });
-
-    if (nodeCount > 2000) {
-      figma.ui.postMessage({
-        type: "error",
-        message: `Selection has ${nodeCount} nodes — too large. Select a smaller scope (max 2000 nodes).`,
-      });
-      return;
-    }
-
     const file = buildAnalysisFile(target, figma.currentPage.name);
 
     figma.ui.postMessage({
@@ -340,13 +331,6 @@ figma.ui.onmessage = (msg: { type: string }) => {
 
     for (const child of children) {
       totalNodes += countNodes(child as unknown as { children?: readonly unknown[] });
-      if (totalNodes > 2000) {
-        figma.ui.postMessage({
-          type: "error",
-          message: `Page has ${totalNodes}+ nodes — too large. Select specific frames instead (max 2000 nodes).`,
-        });
-        return;
-      }
       allChildren.push(transformPluginNode(child));
     }
 
