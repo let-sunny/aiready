@@ -11,6 +11,8 @@ let monitoringEnabled = false;
 let posthogApiKey: string | undefined;
 let sentryDsn: string | undefined;
 let distinctId = "anonymous";
+let environment = "unknown";
+let version = "unknown";
 let commonProps: Record<string, unknown> = {};
 
 /** Generate a simple UUID v4 (no crypto dependency needed for monitoring) */
@@ -45,10 +47,12 @@ export function initCapture(config: MonitoringConfig): void {
   posthogApiKey = config.posthogApiKey;
   sentryDsn = config.sentryDsn;
   distinctId = config.distinctId ?? "anonymous";
+  environment = config.environment ?? "unknown";
+  version = config.version ?? "unknown";
   commonProps = {
     _sdk: "canicode",
-    _sdk_version: config.version ?? "unknown",
-    _env: config.environment ?? "unknown",
+    _sdk_version: version,
+    _env: environment,
   };
 }
 
@@ -88,6 +92,8 @@ export function captureError(error: Error, context?: Record<string, unknown>): v
             event_id: eventId,
             exception: { values: [{ type: error.name, value: error.message }] },
             platform: "node",
+            environment,
+            release: `canicode@${version}`,
             timestamp: Date.now() / 1000,
             extra: context,
           }),
@@ -116,5 +122,7 @@ export function shutdownCapture(): void {
   posthogApiKey = undefined;
   sentryDsn = undefined;
   distinctId = "anonymous";
+  environment = "unknown";
+  version = "unknown";
   commonProps = {};
 }
