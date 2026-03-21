@@ -7,5 +7,6 @@
   "editorType": ["figma"],
   "networkAccess": {
     "allowedDomains": ["none"]
-  }
+  },
+  "iconUrl": "icon.png"
 }
