@@ -198,12 +198,16 @@ function transformPluginNode(node: SceneNode): AnalysisNode {
     }
   }
   if (node.type === "COMPONENT" || node.type === "COMPONENT_SET") {
-    if ("componentPropertyDefinitions" in node) {
-      result.componentPropertyDefinitions = JSON.parse(
-        JSON.stringify(
-          (node as ComponentNode).componentPropertyDefinitions
-        )
-      ) as Record<string, unknown>;
+    try {
+      if ("componentPropertyDefinitions" in node) {
+        result.componentPropertyDefinitions = JSON.parse(
+          JSON.stringify(
+            (node as ComponentNode).componentPropertyDefinitions
+          )
+        ) as Record<string, unknown>;
+      }
+    } catch {
+      // Variant components throw when accessing componentPropertyDefinitions
     }
   }
 
