@@ -792,6 +792,7 @@ cli.help((sections) => {
       title: "\nCustomization",
       body: [
         `  --config <path>         Override rule settings (see: canicode docs config)`,
+        `  --custom-rules <path>   Add custom rules (see: canicode docs rules)`,
       ].join("\n"),
     },
     {

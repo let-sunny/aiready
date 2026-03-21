@@ -117,35 +117,56 @@ export function printDocsRules(): void {
   console.log(`
 CUSTOM RULES GUIDE
 
-Custom rules let you add project-specific checks beyond canicode's built-in 39 rules.
+Add project-specific checks with declarative pattern matching.
+All conditions in "match" use AND logic — every condition must be true to flag a node.
 
-STRUCTURE
-  - id: unique identifier (kebab-case)
-  - category: layout | token | component | naming | ai-readability | handoff-risk
-  - severity: blocking | risk | missing-info | suggestion
-  - score: negative number (-1 to -15)
-  - prompt: what Claude checks for (used in AI-based evaluation)
-  - why: reason this matters
-  - impact: consequence if ignored
-  - fix: how to resolve
+MATCH CONDITIONS
+  type: ["FRAME","GROUP"]     Node type must be one of these
+  notType: ["INSTANCE"]       Node type must NOT be one of these
+  nameContains: "icon"        Name contains (case-insensitive)
+  nameNotContains: "badge"    Name does NOT contain
+  namePattern: "^btn-"        Regex pattern on name
+  minWidth / maxWidth         Size constraints (px)
+  minHeight / maxHeight       Size constraints (px)
+  hasAutoLayout: true/false   Has layoutMode set
+  hasChildren: true/false     Has child nodes
+  minChildren / maxChildren   Child count range
+  isComponent: true/false     Is COMPONENT or COMPONENT_SET
+  isInstance: true/false       Is INSTANCE
+  hasComponentId: true/false  Has componentId
+  isVisible: true/false       Visibility
+  hasFills / hasStrokes       Has fills or strokes
+  hasEffects: true/false      Has effects
+  minDepth / maxDepth         Tree depth range
 
 EXAMPLE
   [
     {
-      "id": "icon-missing-component",
+      "id": "icon-not-component",
       "category": "component",
       "severity": "blocking",
       "score": -10,
-      "prompt": "Check if this node is an icon (small size, vector children, no text) and is not a component or instance.",
-      "why": "Icon nodes that are not components cannot be reused consistently.",
-      "impact": "Developers will hardcode icons instead of using a shared component.",
-      "fix": "Convert this icon node to a component and publish it to the library."
+      "match": {
+        "type": ["FRAME", "GROUP"],
+        "maxWidth": 48,
+        "maxHeight": 48,
+        "nameContains": "icon"
+      },
+      "message": "\"{name}\" is an icon but not a component",
+      "why": "Icons should be reusable components.",
+      "impact": "Developers hardcode icons.",
+      "fix": "Convert to component and publish to library."
     }
   ]
 
 USAGE
   canicode analyze <url> --custom-rules ./my-rules.json
-  See full example: examples/custom-rules.json
+
+  Full guide: docs/CUSTOMIZATION.md
+  Examples:   examples/custom-rules.json
+
+TIP: Ask any LLM "Write a canicode custom rule that checks X" with the
+  match conditions above. It can generate the JSON for you.
 `.trimStart());
 }
 
