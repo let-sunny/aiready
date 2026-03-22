@@ -122,7 +122,7 @@ function hasTextDescendant(node: AnalysisNode): boolean {
  */
 const MIN_WIDTH = 200;
 const MIN_HEIGHT = 200;
-const FILTER_THRESHOLD = 100;
+const FILTER_THRESHOLD = 500;
 
 /**
  * Node types eligible for code conversion
@@ -138,7 +138,7 @@ import { isExcludedName } from "@/core/rules/excluded-names.js";
 /**
  * Filter node summaries to meaningful conversion candidates.
  *
- * If summaries.length <= FILTER_THRESHOLD (100), all nodes pass (small tree).
+ * If summaries.length <= FILTER_THRESHOLD (500), all nodes pass (typical page size).
  * Otherwise, inclusion criteria:
  * - type is FRAME, COMPONENT, or INSTANCE
  * - width >= 200 AND height >= 200
