@@ -18,7 +18,7 @@
   },
   "scripts": {
     "build": "tsup --config tsup.config.ts",
-    "build:web": "tsup src/browser.ts --config tsup.browser.config.ts",
+    "build:web": "bash scripts/build-web.sh",
     "dev": "tsup --watch",
     "test": "vitest",
     "test:run": "vitest run",

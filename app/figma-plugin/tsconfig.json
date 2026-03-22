@@ -1,16 +1,16 @@
 {
   "compilerOptions": {
     "target": "ES5",
-    "lib": ["ES2015"],
+    "lib": ["ES2017"],
     "module": "commonjs",
     "strict": true,
     "outDir": "./build",
-    "rootDir": ".",
+    "rootDir": "./src",
     "baseUrl": "../..",
     "paths": {},
     "skipLibCheck": true,
     "downlevelIteration": true,
     "types": ["@figma/plugin-typings"]
   },
-  "include": ["main.ts"]
+  "include": ["src/main.ts"]
 }

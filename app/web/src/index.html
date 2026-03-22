@@ -222,25 +222,29 @@
     })();
   </script>
 
+  <!-- Shared UI code (inlined at build time) -->
   <script>
-    // ---- Constants ----
-    const GAUGE_R = 54;
-    const GAUGE_C = Math.round(2 * Math.PI * GAUGE_R);
-    const CATEGORIES = ['layout', 'token', 'component', 'naming', 'ai-readability', 'handoff-risk'];
-    const CATEGORY_LABELS = { layout: 'Layout', token: 'Design Token', component: 'Component', naming: 'Naming', 'ai-readability': 'AI Readability', 'handoff-risk': 'Handoff Risk' };
-    const CATEGORY_DESCRIPTIONS = { layout: 'Auto Layout, responsive constraints, nesting depth, absolute positioning', token: 'Design token binding for colors, fonts, shadows, spacing grid', component: 'Component reuse, detached instances, variant coverage', naming: 'Semantic layer names, naming conventions, default names', 'ai-readability': 'Structure clarity for AI code generation, z-index, empty frames', 'handoff-risk': 'Hardcoded values, text truncation, image placeholders, dev status' };
-    const SEVERITY_ORDER = ['blocking', 'risk', 'missing-info', 'suggestion'];
-    const SEVERITY_DOT_CLASS = { blocking: 'bg-red-500', risk: 'bg-amber-500', 'missing-info': 'bg-zinc-400', suggestion: 'bg-green-500' };
-    const SEVERITY_BADGE_CLASS = { blocking: 'bg-red-500/10 text-red-600 border-red-500/20', risk: 'bg-amber-500/10 text-amber-600 border-amber-500/20', 'missing-info': 'bg-zinc-500/10 text-zinc-600 border-zinc-500/20', suggestion: 'bg-green-500/10 text-green-600 border-green-500/20' };
-    const SEVERITY_LABELS = { blocking: 'Blocking', risk: 'Risk', 'missing-info': 'Missing Info', suggestion: 'Suggestion' };
+    /* __SHARED_CONSTANTS_INJECT__ */
+  </script>
+  <script>
+    /* __SHARED_UTILS_INJECT__ */
+  </script>
+  <script>
+    /* __SHARED_GAUGE_INJECT__ */
+  </script>
+
+  <script>
+    // ---- Web-specific constants ----
+    var SEVERITY_DOT_CLASS = { blocking: 'bg-red-500', risk: 'bg-amber-500', 'missing-info': 'bg-zinc-400', suggestion: 'bg-green-500' };
+    var SEVERITY_BADGE_CLASS = { blocking: 'bg-red-500/10 text-red-600 border-red-500/20', risk: 'bg-amber-500/10 text-amber-600 border-amber-500/20', 'missing-info': 'bg-zinc-500/10 text-zinc-600 border-zinc-500/20', suggestion: 'bg-green-500/10 text-green-600 border-green-500/20' };
 
     // ---- Auth ----
     function getToken() { return sessionStorage.getItem('canicode-figma-token'); }
 
     function updateAuthUI() {
-      const token = getToken();
-      const dot = document.getElementById('auth-dot');
-      const label = document.getElementById('auth-label');
+      var token = getToken();
+      var dot = document.getElementById('auth-dot');
+      var label = document.getElementById('auth-label');
       if (token) {
         dot.className = 'w-1.5 h-1.5 rounded-full bg-green-500';
         label.textContent = 'Authorized';
@@ -254,7 +258,7 @@
 
     function openAuthModal() {
       document.getElementById('auth-modal').classList.remove('hidden');
-      const input = document.getElementById('auth-token-input');
+      var input = document.getElementById('auth-token-input');
       input.value = getToken() || '';
       input.focus();
     }
@@ -262,7 +266,7 @@
     function closeAuthModal() { document.getElementById('auth-modal').classList.add('hidden'); }
 
     function saveAuth() {
-      const token = document.getElementById('auth-token-input').value.trim();
+      var token = document.getElementById('auth-token-input').value.trim();
       if (token) {
         sessionStorage.setItem('canicode-figma-token', token);
       }
@@ -280,21 +284,11 @@
     // Init auth UI
     updateAuthUI();
 
-    // ---- Helpers ----
-    function esc(text) { var el = document.createElement('span'); el.textContent = text; return el.innerHTML; }
-    function gaugeColor(pct) { if (pct >= 75) return '#22c55e'; if (pct >= 50) return '#f59e0b'; return '#ef4444'; }
-    function scoreBadgeStyle(pct) { if (pct >= 75) return 'bg-green-500/10 text-green-700 border-green-500/20'; if (pct >= 50) return 'bg-amber-500/10 text-amber-700 border-amber-500/20'; return 'bg-red-500/10 text-red-700 border-red-500/20'; }
+    // ---- Web-specific helpers ----
+    // Alias for backward compat — web app used esc(), shared module uses escapeHtml()
+    var esc = escapeHtml;
 
-    function renderGaugeSvg(pct, size, strokeW, grade) {
-      var offset = GAUGE_C * (1 - pct / 100), color = gaugeColor(pct);
-      var label = grade
-        ? '<text x="60" y="60" text-anchor="middle" dominant-baseline="central" fill="currentColor" font-size="52" font-weight="700" class="font-sans">' + esc(grade) + '</text>'
-        : '<text x="60" y="62" text-anchor="middle" dominant-baseline="central" fill="currentColor" font-size="32" font-weight="700" class="font-sans">' + pct + '</text>';
-      return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 120 120" class="block">' +
-        '<circle cx="60" cy="60" r="' + GAUGE_R + '" fill="none" stroke-width="' + strokeW + '" class="stroke-border" />' +
-        '<circle cx="60" cy="60" r="' + GAUGE_R + '" fill="none" stroke="' + color + '" stroke-width="' + strokeW + '" stroke-linecap="round" stroke-dasharray="' + GAUGE_C + '" stroke-dashoffset="' + offset + '" transform="rotate(-90 60 60)" class="gauge-fill" />' +
-        label + '</svg>';
-    }
+    function scoreBadgeStyle(pct) { if (pct >= 75) return 'bg-green-500/10 text-green-700 border-green-500/20'; if (pct >= 50) return 'bg-amber-500/10 text-amber-700 border-amber-500/20'; return 'bg-red-500/10 text-red-700 border-red-500/20'; }
 
     function showError(title, detail) { document.getElementById('error-title').textContent = title; document.getElementById('error-detail').textContent = detail || ''; document.getElementById('error-box').classList.remove('hidden'); }
     function hideError() { document.getElementById('error-box').classList.add('hidden'); }

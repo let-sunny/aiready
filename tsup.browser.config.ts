@@ -5,7 +5,7 @@ export default defineConfig({
   format: ["iife"],
   globalName: "CanICode",
   platform: "browser",
-  outDir: "app/web",
+  outDir: "app/web/dist",
   dts: false,
   clean: false,
   sourcemap: false,

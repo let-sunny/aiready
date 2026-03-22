@@ -2,8 +2,8 @@
   "name": "CanICode",
   "id": "1617144221046795292",
   "api": "1.0.0",
-  "main": "main.js",
-  "ui": "ui.html",
+  "main": "dist/main.js",
+  "ui": "dist/ui.html",
   "editorType": ["figma"],
   "documentAccess": "dynamic-page",
   "networkAccess": {
