@@ -313,7 +313,10 @@
 
       setLoading(true, 'Fetching Figma data...');
       try {
-        var res = await fetch('https://api.figma.com/v1/files/' + encodeURIComponent(fileKey), { headers: { 'X-FIGMA-TOKEN': token } });
+        var apiUrl = nodeId
+          ? 'https://api.figma.com/v1/files/' + encodeURIComponent(fileKey) + '/nodes?ids=' + encodeURIComponent(nodeId.replace(/-/g, ':'))
+          : 'https://api.figma.com/v1/files/' + encodeURIComponent(fileKey);
+        var res = await fetch(apiUrl, { headers: { 'X-FIGMA-TOKEN': token } });
         if (!res.ok) {
           setLoading(false);
           if (res.status === 403) { showError('Access denied', 'Your token does not have access to this file.'); return; }
@@ -326,7 +329,9 @@
       } catch (e) { setLoading(false); showError('Network error', 'Could not reach Figma API.'); return; }
 
       setLoading(true, 'Analyzing...');
-      var analysisFile = CanICode.transformFigmaResponse(fileKey, response);
+      var analysisFile = nodeId
+        ? CanICode.transformFileNodesResponse(fileKey, response)
+        : CanICode.transformFigmaResponse(fileKey, response);
       var options = nodeId ? { targetNodeId: nodeId } : {};
       var result, scores;
       try {
