@@ -48,15 +48,7 @@ Scores use density + diversity weighting per category, combined into an overall 
 
 Five ways to use CanICode. Pick one.
 
-### Figma Plugin (under review)
-
-Install from **[Figma Community](https://www.figma.com/community/plugin/1617144221046795292/canicode)** — analyze directly inside Figma. No tokens needed.
-
-### Web (no install)
-
-Go to **[let-sunny.github.io/canicode](https://let-sunny.github.io/canicode/)**, paste a Figma URL, and get results instantly in your browser.
-
-### CLI
+### 1. CLI
 
 ```bash
 npx canicode analyze "https://www.figma.com/design/ABC123/MyDesign?node-id=1-234"
@@ -69,7 +61,7 @@ canicode init --token figd_xxxxxxxxxxxxx
 
 > **Get your token:** Figma → Settings → Security → Personal access tokens → Generate new token
 
-### MCP Server (Claude Code / Cursor / Claude Desktop)
+### 2. MCP Server (Claude Code / Cursor / Claude Desktop)
 
 **Claude Code (recommended — with official Figma MCP, no token needed):**
 ```bash
@@ -82,9 +74,17 @@ claude mcp add -s project -t http figma https://mcp.figma.com/mcp
 claude mcp add canicode -e FIGMA_TOKEN=figd_xxxxxxxxxxxxx -- npx -y -p canicode canicode-mcp
 ```
 
-**Cursor / Claude Desktop:** See [`docs/CUSTOMIZATION.md`](docs/CUSTOMIZATION.md) for JSON config examples.
+For Cursor / Claude Desktop config, see [`docs/CUSTOMIZATION.md`](docs/CUSTOMIZATION.md).
 
 Then ask: *"Analyze this Figma design: https://www.figma.com/design/..."*
+
+### 3. Web (no install)
+
+Go to **[let-sunny.github.io/canicode](https://let-sunny.github.io/canicode/)**, paste a Figma URL, and get results instantly in your browser.
+
+### 4. Figma Plugin (under review)
+
+Install from **[Figma Community](https://www.figma.com/community/plugin/1617144221046795292/canicode)** — analyze directly inside Figma. No tokens needed.
 
 ---
 
