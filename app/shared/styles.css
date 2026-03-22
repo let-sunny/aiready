@@ -233,6 +233,21 @@ body {
   color: var(--fg);
   font-weight: 600;
 }
+.btn-focus {
+  margin-top: 8px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--accent);
+  background: transparent;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  cursor: pointer;
+}
+.btn-focus:hover {
+  background: var(--accent);
+  color: #fff;
+}
 
 /* ---- Category filter tabs ---- */
 .filter-tabs {

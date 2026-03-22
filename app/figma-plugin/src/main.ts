@@ -357,6 +357,16 @@ figma.ui.onmessage = (msg: { type: string }) => {
     });
   }
 
+  if (msg.type === "focus-node") {
+    const { nodeId } = msg as { type: string; nodeId: string };
+    const node = figma.getNodeByIdAsync(nodeId).then((n) => {
+      if (n && "absoluteBoundingBox" in n) {
+        figma.viewport.scrollAndZoomIntoView([n as SceneNode]);
+        figma.currentPage.selection = [n as SceneNode];
+      }
+    });
+  }
+
   if (msg.type === "resize") {
     const { width, height } = msg as { type: string; width: number; height: number };
     figma.ui.resize(width, height);

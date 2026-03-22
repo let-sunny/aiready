@@ -238,8 +238,14 @@
             '<p><strong>Impact:</strong> ' + esc(def.impact) + '</p>' +
             '<p><strong>Fix:</strong> ' + esc(def.fix) + '</p>' +
           '</div>' +
+          '<button class="btn-focus" onclick="focusNode(\'' + esc(issue.violation.nodeId) + '\')">Focus in Figma</button>' +
         '</div>' +
       '</div>';
+    }
+
+    // ---- Focus node in Figma ----
+    function focusNode(nodeId) {
+      parent.postMessage({ pluginMessage: { type: 'focus-node', nodeId: nodeId } }, '*');
     }
 
     // ---- Interactions ----
