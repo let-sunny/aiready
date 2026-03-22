@@ -5,9 +5,31 @@ on:
     types: [labeled]
 
 jobs:
+  decline:
+    if: >-
+      github.event.label.name == 'not-available' &&
+      github.event.discussion.category.slug == 'share-your-figma'
+    runs-on: ubuntu-latest
+    permissions:
+      discussions: write
+    steps:
+      - name: Comment on discussion
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const mutation = `mutation($id: ID!, $body: String!) {
+              addDiscussionComment(input: { discussionId: $id, body: $body }) {
+                comment { id }
+              }
+            }`;
+            await github.graphql(mutation, {
+              id: context.payload.discussion.node_id,
+              body: 'Thanks for sharing! Unfortunately we couldn\'t access this design — it may be private or the link may have expired.\n\nPlease make sure the file is set to **"Anyone with the link" → "can view"** in Figma\'s Share settings, then feel free to submit again. 🙏',
+            });
+
   process:
     if: >-
-      github.event.label.name == 'approved' &&
+      github.event.label.name == 'thank-you' &&
       github.event.discussion.category.slug == 'share-your-figma'
     runs-on: ubuntu-latest
     permissions:
