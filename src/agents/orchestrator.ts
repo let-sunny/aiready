@@ -282,33 +282,53 @@ export function runCalibrationEvaluate(
     nodeCount: number;
     issueCount: number;
   },
-  conversionJson: {
-    records: Array<{
-      nodeId: string;
-      nodePath: string;
-      difficulty: string;
-      ruleRelatedStruggles: Array<{
-        ruleId: string;
-        description: string;
-        actualImpact: string;
-      }>;
-      uncoveredStruggles: Array<{
-        description: string;
-        suggestedCategory: string;
-        estimatedImpact: string;
-      }>;
-    }>;
-    skippedNodeIds: string[];
-  },
+  conversionJson: Record<string, unknown>,
   ruleScores: Record<string, { score: number; severity: string }>
 ) {
+  // Support both formats:
+  // Old: { records: [...], skippedNodeIds: [...] }
+  // New: { rootNodeId, similarity, ruleImpactAssessment: [...], uncoveredStruggles: [...] }
+  let conversionRecords: Array<{
+    nodeId: string;
+    nodePath: string;
+    difficulty: string;
+    ruleRelatedStruggles: Array<{ ruleId: string; description: string; actualImpact: string }>;
+    uncoveredStruggles: Array<{ description: string; suggestedCategory: string; estimatedImpact: string }>;
+  }>;
+
+  if (Array.isArray(conversionJson["records"])) {
+    // Old per-node format
+    conversionRecords = conversionJson["records"] as typeof conversionRecords;
+  } else if (conversionJson["ruleImpactAssessment"]) {
+    // New whole-design format — convert to records format
+    const assessment = conversionJson["ruleImpactAssessment"] as Array<{
+      ruleId: string; issueCount: number; actualImpact: string; description: string;
+    }>;
+    const struggles = (conversionJson["uncoveredStruggles"] ?? []) as Array<{
+      description: string; suggestedCategory: string; estimatedImpact: string;
+    }>;
+    conversionRecords = [{
+      nodeId: (conversionJson["rootNodeId"] as string) ?? "root",
+      nodePath: "root",
+      difficulty: (conversionJson["difficulty"] as string) ?? "moderate",
+      ruleRelatedStruggles: assessment.map(a => ({
+        ruleId: a.ruleId,
+        description: a.description,
+        actualImpact: a.actualImpact === "low" ? "easy" : a.actualImpact === "high" ? "hard" : a.actualImpact,
+      })),
+      uncoveredStruggles: struggles,
+    }];
+  } else {
+    conversionRecords = [];
+  }
+
   const evaluationOutput = runEvaluationAgent({
     nodeIssueSummaries: analysisJson.nodeIssueSummaries.map((s) => ({
       nodeId: s.nodeId,
       nodePath: s.nodePath,
       flaggedRuleIds: s.flaggedRuleIds,
     })),
-    conversionRecords: conversionJson.records,
+    conversionRecords,
     ruleScores,
   });
 
@@ -323,8 +343,8 @@ export function runCalibrationEvaluate(
     analyzedAt: analysisJson.analyzedAt,
     nodeCount: analysisJson.nodeCount,
     issueCount: analysisJson.issueCount,
-    convertedNodeCount: conversionJson.records.length,
-    skippedNodeCount: conversionJson.skippedNodeIds.length,
+    convertedNodeCount: conversionRecords.length,
+    skippedNodeCount: Array.isArray(conversionJson["skippedNodeIds"]) ? (conversionJson["skippedNodeIds"] as unknown[]).length : 0,
     scoreReport: analysisJson.scoreReport,
     mismatches: evaluationOutput.mismatches,
     validatedRules: evaluationOutput.validatedRules,
