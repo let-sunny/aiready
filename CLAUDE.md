@@ -81,22 +81,31 @@ Calibration commands are NOT exposed as CLI commands. They run exclusively insid
 **`/calibrate-loop` (Claude Code command)**
 - Role: Autonomous rule-config.ts improvement via fixture-based calibration
 - Input: fixture JSON path (e.g. `fixtures/material3-kit.json`)
-- Flow: CLI analysis → Converter (reads fixture JSON directly) → CLI evaluation → Critic → Arbitrator
+- Flow: Analysis → Converter (entire design → HTML + visual-compare) → Gap Analyzer → Evaluation → Critic → Arbitrator
+- Converter implements the full scoped design as one HTML page, runs `visual-compare` for pixel-level similarity
+- Gap Analyzer examines the diff image, categorizes pixel differences, saves to `logs/calibration/gaps/`
 - No Figma MCP or API keys needed — works fully offline
 - Auto-commits agreed score changes
-- Used by `calibrate-night.sh` for automated nightly runs
 
 **`/calibrate-loop-deep` (Claude Code command)**
 - Role: Deep calibration using Figma MCP for precise design context
 - Input: Figma URL (e.g. `https://www.figma.com/design/ABC123/MyDesign?node-id=1-234`)
-- Flow: CLI analysis → Converter (Figma MCP `get_design_context`) → CLI evaluation → Critic → Arbitrator
-- Used for high-fidelity validation against live Figma data
+- Flow: Same as `/calibrate-loop` but Converter uses Figma MCP `get_design_context` for richer style data
+
+**`/add-rule` (Claude Code command)**
+- Role: Research, design, implement, and evaluate new analysis rules
+- Input: concept + fixture path (e.g. `"component description" fixtures/material3-kit.json`)
+- Flow: Researcher → Designer → Implementer → A/B Visual Validation → Evaluator → Critic
+- Researcher reads accumulated gap data from `logs/calibration/gaps/` to find recurring patterns
+- A/B Validation: implements entire design with/without the rule's data, compares similarity
+- Critic decides KEEP / ADJUST / DROP
 
 ### File Output Structure
 
 ```
 reports/            # HTML reports (canicode analyze)
 logs/calibration/   # Calibration analysis results (internal)
+logs/calibration/gaps/  # Accumulated gap analysis data (internal)
 logs/activity/      # Agent activity logs (internal)
 ```
 
@@ -169,16 +178,19 @@ Rules are classified into 4 severity levels:
 
 ## Score Calibration
 
-Rule scores started as intuition-based estimates. The calibration pipeline validates them against actual code conversion difficulty.
+Rule scores started as intuition-based estimates. The calibration pipeline validates them against actual code conversion difficulty measured by pixel-level visual comparison.
 
 Process:
 1. Run analysis on real Figma files (`canicode calibrate-analyze`)
-2. Convert flagged nodes to code via Claude Code subagent with Figma MCP (`get_design_context`)
-3. Compare conversion difficulty vs rule scores (`canicode calibrate-evaluate`)
-4. Propose adjustments: overscored rules get reduced, underscored rules get increased (Tuning Agent)
-5. 4-agent debate loop (`/calibrate-loop`) applies conservative changes automatically
+2. Implement the entire scoped design as one HTML page (`Converter`)
+3. Run `canicode visual-compare` — pixel-level comparison against Figma screenshot
+4. Analyze the diff image to categorize pixel gaps (`Gap Analyzer`)
+5. Compare conversion difficulty vs rule scores (`canicode calibrate-evaluate`)
+6. 6-agent debate loop (`/calibrate-loop`): Analysis → Converter → Gap Analyzer → Evaluation → Critic → Arbitrator
 
-Final score adjustments in `rule-config.ts` are always reviewed by the developer via `CALIBRATION_REPORT.md` or the calibrate-loop's Arbitrator decisions.
+Gap data accumulates in `logs/calibration/gaps/` and feeds into rule discovery (`/add-rule`).
+
+Final score adjustments in `rule-config.ts` are always reviewed by the developer via the Arbitrator's decisions.
 
 ## Adjustable Rule Config
 
