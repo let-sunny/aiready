@@ -40,6 +40,7 @@ If the input is a Figma URL, call `get_design_context` MCP tool instead.
    - Each node in the tree maps 1:1 to an HTML element
    - Copy style values directly — they are already CSS-ready
    - Do NOT interpret or change any value from the tree
+   - If any value is missing and you have to guess, record it as an interpretation
 3. Save to `/tmp/calibration-output.html`
 4. Run visual comparison:
    ```
@@ -78,6 +79,10 @@ Write results to `logs/calibration/calibration-conversion.json`:
       "actualImpact": "easy | moderate | hard | failed",
       "description": "How this rule's issues affected the overall conversion"
     }
+  ],
+  "interpretations": [
+    "Used system font fallback for Inter (not installed in CI)",
+    "Set body margin to 0 (not specified in design tree)"
   ],
   "uncoveredStruggles": [
     {

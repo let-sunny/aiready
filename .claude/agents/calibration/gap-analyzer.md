@@ -17,6 +17,7 @@ You will be given:
 - The generated HTML code path
 - The fixture path (for reference)
 - The analysis JSON (nodeIssueSummaries)
+- The Converter's interpretations list (values that were guessed, not from data)
 
 ## Steps
 
@@ -38,9 +39,15 @@ You will be given:
 | `content` | Missing element, extra element, wrong text |
 | `rendering` | Anti-aliasing, subpixel rendering, font smoothing |
 
-4. For each gap, assess:
+4. Cross-reference with the Converter's interpretations list:
+   - Does this gap correspond to a value the AI guessed?
+   - If yes → the gap is caused by missing data, not AI error
+   - If no → the gap is AI error or rendering difference
+
+5. For each gap, assess:
    - Is this catchable by an existing canicode rule?
    - Is this a new pattern that could become a rule?
+   - Was this caused by an interpretation (missing data)?
    - Or is this inherent to the rendering engine (not actionable)?
 
 ## Output
@@ -58,6 +65,7 @@ Write gap analysis to `logs/calibration/gaps/<fixture-name>-<timestamp>.json`:
       "description": "Top padding is 156px in code vs 160px in Figma",
       "pixelImpact": "low",
       "coveredByRule": null,
+      "causedByInterpretation": false,
       "actionable": true,
       "suggestedRuleCategory": "layout"
     },
