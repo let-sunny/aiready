@@ -35,13 +35,30 @@ For each proposal, output ONE of:
 
 ## Output
 
-**CRITICAL: Your prompt will contain a line like `Append your critique to: logs/activity/2026-03-20-22-30-material3-kit.jsonl`. You MUST append your output to that EXACT file path. Do NOT use any other path. Do NOT create `agent-activity-*.jsonl` or any other file.**
+Write your critique to `$RUN_DIR/debate.json`. Create the file if it doesn't exist, or append to the existing `reviews` array:
 
+```json
+{
+  "critic": {
+    "timestamp": "<ISO8601>",
+    "summary": "approved=1 rejected=1 revised=1",
+    "reviews": [
+      {"ruleId": "X", "decision": "APPROVE", "reason": "3 cases, high confidence"},
+      {"ruleId": "X", "decision": "REJECT", "reason": "Rule 1 — only 1 case with low confidence"},
+      {"ruleId": "X", "decision": "REVISE", "revised": -7, "reason": "Rule 2 — change too large, midpoint applied"}
+    ]
+  }
+}
+```
+
+Also append a summary to `$RUN_DIR/activity.jsonl`.
 The log uses **JSON Lines format** — append exactly one JSON object on a single line:
 
 ```json
-{"step":"Critic","timestamp":"<ISO8601>","result":"approved=1 rejected=1 revised=1","durationMs":<ms>,"reviews":[{"ruleId":"X","decision":"APPROVE","reason":"3 cases, high confidence"},{"ruleId":"X","decision":"REJECT","reason":"Rule 1 — only 1 case with low confidence"},{"ruleId":"X","decision":"REVISE","revised":-7,"reason":"Rule 2 — change too large, midpoint applied"}]}
+{"step":"Critic","timestamp":"<ISO8601>","result":"approved=1 rejected=1 revised=1","durationMs":<ms>}
 ```
+
+**CRITICAL: The run directory path will be provided in your prompt as `Run directory: <path>`. Use that EXACT path. Do NOT create files in any other location.**
 
 ## Rules
 

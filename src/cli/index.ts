@@ -30,6 +30,7 @@ import {
   runCalibrationEvaluate,
   filterConversionCandidates,
 } from "../agents/orchestrator.js";
+import { generateGapRuleReport } from "../agents/gap-rule-report.js";
 import { handleDocs } from "./docs.js";
 import { initMonitoring, trackEvent, trackError, shutdownMonitoring, EVENTS } from "../core/monitoring/index.js";
 import { POSTHOG_API_KEY as BUILTIN_PH_KEY, SENTRY_DSN as BUILTIN_SENTRY_DSN } from "../core/monitoring/keys.js";
@@ -303,6 +304,7 @@ cli
 
 interface CalibrateAnalyzeOptions {
   output?: string;
+  runDir?: string;
   token?: string;
   targetNodeId?: string;
 }
@@ -313,6 +315,7 @@ cli
     "Run calibration analysis and output JSON for conversion step"
   )
   .option("--output <path>", "Output JSON path", { default: "logs/calibration/calibration-analysis.json" })
+  .option("--run-dir <path>", "Run directory (overrides --output, writes to <run-dir>/analysis.json)")
   .option("--token <token>", "Figma API token (or use FIGMA_TOKEN env var)")
   .option("--target-node-id <nodeId>", "Scope analysis to a specific node")
   .action(async (input: string, options: CalibrateAnalyzeOptions) => {
@@ -348,7 +351,9 @@ cli
         ruleScores,
       };
 
-      const outputPath = resolve(options.output ?? "logs/calibration/calibration-analysis.json");
+      const outputPath = options.runDir
+        ? resolve(options.runDir, "analysis.json")
+        : resolve(options.output ?? "logs/calibration/calibration-analysis.json");
       const outputDir = dirname(outputPath);
       if (!existsSync(outputDir)) {
         mkdirSync(outputDir, { recursive: true });
@@ -372,6 +377,7 @@ cli
 
 interface CalibrateEvaluateOptions {
   output?: string;
+  runDir?: string;
 }
 
 cli
@@ -380,12 +386,17 @@ cli
     "Evaluate conversion results and generate calibration report"
   )
   .option("--output <path>", "Report output path")
+  .option("--run-dir <path>", "Run directory (reads analysis.json + conversion.json, writes summary.md)")
   .action(async (analysisJsonPath: string, conversionJsonPath: string, options: CalibrateEvaluateOptions) => {
     try {
       console.log("Running calibration evaluation...");
 
-      const analysisPath = resolve(analysisJsonPath);
-      const conversionPath = resolve(conversionJsonPath);
+      const analysisPath = options.runDir
+        ? resolve(options.runDir, "analysis.json")
+        : resolve(analysisJsonPath);
+      const conversionPath = options.runDir
+        ? resolve(options.runDir, "conversion.json")
+        : resolve(conversionJsonPath);
 
       if (!existsSync(analysisPath)) {
         throw new Error(`Analysis file not found: ${analysisPath}`);
@@ -404,10 +415,16 @@ cli
         analysisData.ruleScores
       );
 
-      const calNow = new Date();
-      const calTs = `${calNow.getFullYear()}-${String(calNow.getMonth() + 1).padStart(2, "0")}-${String(calNow.getDate()).padStart(2, "0")}-${String(calNow.getHours()).padStart(2, "0")}-${String(calNow.getMinutes()).padStart(2, "0")}`;
-      const defaultCalOutput = `logs/calibration/calibration-${calTs}.md`;
-      const outputPath = resolve(options.output ?? defaultCalOutput);
+      let outputPath: string;
+      if (options.runDir) {
+        outputPath = resolve(options.runDir, "summary.md");
+      } else if (options.output) {
+        outputPath = resolve(options.output);
+      } else {
+        const calNow = new Date();
+        const calTs = `${calNow.getFullYear()}-${String(calNow.getMonth() + 1).padStart(2, "0")}-${String(calNow.getDate()).padStart(2, "0")}-${String(calNow.getHours()).padStart(2, "0")}-${String(calNow.getMinutes()).padStart(2, "0")}`;
+        outputPath = resolve(`logs/calibration/calibration-${calTs}.md`);
+      }
       const calOutputDir = dirname(outputPath);
       if (!existsSync(calOutputDir)) {
         mkdirSync(calOutputDir, { recursive: true });
@@ -433,6 +450,70 @@ cli
       console.log(`  Score adjustments proposed: ${tuningOutput.adjustments.length}`);
       console.log(`  New rule proposals: ${tuningOutput.newRuleProposals.length}`);
       console.log(`\nReport saved: ${outputPath}`);
+    } catch (error) {
+      console.error(
+        "\nError:",
+        error instanceof Error ? error.message : String(error)
+      );
+      process.exit(1);
+    }
+  });
+
+interface CalibrateGapReportOptions {
+  calibrationDir?: string;
+  output?: string;
+  minRepeat?: string;
+  json?: boolean;
+}
+
+cli
+  .command(
+    "calibrate-gap-report",
+    "Aggregate gap data and calibration runs into a rule review report"
+  )
+  .option("--calibration-dir <path>", "Calibration runs directory", {
+    default: "logs/calibration",
+  })
+  .option("--output <path>", "Markdown report path", {
+    default: "logs/calibration/REPORT.md",
+  })
+  .option("--min-repeat <n>", "Minimum distinct fixtures to treat as a repeating pattern", {
+    default: "2",
+  })
+  .option("--json", "Print JSON summary to stdout")
+  .action(async (options: CalibrateGapReportOptions) => {
+    try {
+      const minRepeat = Math.max(1, parseInt(options.minRepeat ?? "2", 10) || 2);
+      const result = generateGapRuleReport({
+        calibrationDir: resolve(options.calibrationDir ?? "logs/calibration"),
+        minPatternRepeat: minRepeat,
+      });
+
+      const outPath = resolve(options.output ?? "logs/calibration/REPORT.md");
+      const outDir = dirname(outPath);
+      if (!existsSync(outDir)) {
+        mkdirSync(outDir, { recursive: true });
+      }
+      await writeFile(outPath, result.markdown, "utf-8");
+
+      console.log("Gap rule review report written.");
+      console.log(`  Runs with gaps: ${result.gapRunCount}`);
+      console.log(`  Runs with snapshots: ${result.runCount}`);
+      console.log(`  Output: ${outPath}`);
+
+      if (options.json) {
+        console.log(
+          JSON.stringify(
+            {
+              gapRunCount: result.gapRunCount,
+              runCount: result.runCount,
+              outputPath: outPath,
+            },
+            null,
+            2
+          )
+        );
+      }
     } catch (error) {
       console.error(
         "\nError:",

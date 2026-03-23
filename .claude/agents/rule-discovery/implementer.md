@@ -35,7 +35,7 @@ You will receive:
 
 ## Output
 
-Append your implementation summary to the activity log file specified by the orchestrator.
+Append your implementation summary to `$RUN_DIR/activity.jsonl`.
 The log uses **JSON Lines format** — append exactly one JSON object on a single line:
 
 ```json

@@ -30,11 +30,17 @@ You will receive:
 
 ## Output
 
-Append your proposal to the activity log file specified by the orchestrator.
-The log uses **JSON Lines format** — append exactly one JSON object on a single line:
+Write your proposal to `$RUN_DIR/design.json`:
 
 ```json
 {"step":"Designer","timestamp":"<ISO8601>","result":"proposed rule <rule-id>","durationMs":<ms>,"ruleId":"<rule-id>","category":"<category>","severity":"<severity>","initialScore":-5,"trigger":"<when does this fire>","requiresTransformerChanges":false}
+```
+
+Also append a summary to `$RUN_DIR/activity.jsonl`.
+The log uses **JSON Lines format** — append exactly one JSON object on a single line:
+
+```json
+{"step":"Designer","timestamp":"<ISO8601>","result":"proposed rule <rule-id>","durationMs":<ms>}
 ```
 
 ## Rules

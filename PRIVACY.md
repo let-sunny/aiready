@@ -60,8 +60,9 @@ CanICode stores data locally on your machine:
 |----------|----------|
 | `~/.canicode/config.json` | User configuration (Figma token, telemetry preference) |
 | `reports/` (project directory) | Generated HTML analysis reports |
-| `logs/calibration/` | Calibration analysis results (internal/development use) |
-| `logs/activity/` | Agent activity logs (internal/development use) |
+| `logs/calibration/` | Calibration run data — each run in its own directory (internal/development use) |
+| `logs/rule-discovery/` | Rule discovery run data (internal/development use) |
+| `logs/activity/` | Nightly orchestration logs (internal/development use) |
 
 No local data is uploaded or shared unless you explicitly choose to do so.
 

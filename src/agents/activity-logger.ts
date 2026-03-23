@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync } from "node:fs";
 import { appendFile, writeFile } from "node:fs/promises";
-import { resolve, dirname } from "node:path";
+import { resolve, join } from "node:path";
 
 export interface ActivityStep {
   step: string;
@@ -13,33 +13,12 @@ function getIsoTimestamp(): string {
   return new Date().toISOString();
 }
 
-function getDateTimeString(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  const hours = String(now.getHours()).padStart(2, "0");
-  const minutes = String(now.getMinutes()).padStart(2, "0");
-  return `${year}-${month}-${day}-${hours}-${minutes}`;
-}
-
-/**
- * Extract a short fixture name from a file path.
- * e.g. "fixtures/http-design.json" → "http-design"
- */
-function extractFixtureName(fixturePath: string): string {
-  const fileName = fixturePath.split("/").pop() ?? fixturePath;
-  return fileName.replace(/\.json$/, "");
-}
-
 export class ActivityLogger {
   private logPath: string;
   private initialized = false;
 
-  constructor(fixturePath?: string, logDir = "logs/activity") {
-    const dateTimeStr = getDateTimeString();
-    const fixtureName = fixturePath ? extractFixtureName(fixturePath) : "unknown";
-    this.logPath = resolve(logDir, `${dateTimeStr}-${fixtureName}.jsonl`);
+  constructor(runDir: string) {
+    this.logPath = resolve(join(runDir, "activity.jsonl"));
   }
 
   /**
@@ -48,7 +27,7 @@ export class ActivityLogger {
   private async ensureInitialized(): Promise<void> {
     if (this.initialized) return;
 
-    const dir = dirname(this.logPath);
+    const dir = resolve(this.logPath, "..");
     if (!existsSync(dir)) {
       mkdirSync(dir, { recursive: true });
     }

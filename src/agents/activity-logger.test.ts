@@ -27,8 +27,8 @@ describe("ActivityLogger", () => {
   });
 
   it("logStep creates directory and file if they don't exist, file contains step data", async () => {
-    const logDir = join(tempDir, "nested", "logs");
-    const logger = new ActivityLogger("fixtures/http-design.json", logDir);
+    const runDir = join(tempDir, "nested", "run");
+    const logger = new ActivityLogger(runDir);
 
     await logger.logStep({
       step: "Analyze Node",
@@ -39,6 +39,7 @@ describe("ActivityLogger", () => {
 
     const logPath = logger.getLogPath();
     expect(existsSync(logPath)).toBe(true);
+    expect(logPath).toContain("activity.jsonl");
 
     const entries = readJsonLines(logPath);
     // First entry is the session-start header, second is our step
@@ -51,7 +52,7 @@ describe("ActivityLogger", () => {
   });
 
   it("logStep with nodePath includes nodePath field in entry", async () => {
-    const logger = new ActivityLogger("fixtures/sample.json", tempDir);
+    const logger = new ActivityLogger(tempDir);
 
     await logger.logStep({
       step: "Convert Component",
@@ -66,7 +67,7 @@ describe("ActivityLogger", () => {
   });
 
   it("logStep without nodePath omits nodePath field", async () => {
-    const logger = new ActivityLogger("fixtures/sample.json", tempDir);
+    const logger = new ActivityLogger(tempDir);
 
     await logger.logStep({
       step: "Initialize Pipeline",
@@ -83,7 +84,7 @@ describe("ActivityLogger", () => {
   });
 
   it("logSummary writes summary entry with all fields", async () => {
-    const logger = new ActivityLogger("fixtures/sample.json", tempDir);
+    const logger = new ActivityLogger(tempDir);
 
     await logger.logSummary({
       totalDurationMs: 5000,
@@ -106,7 +107,7 @@ describe("ActivityLogger", () => {
   });
 
   it("multiple logStep calls append to the same file (not overwrite)", async () => {
-    const logger = new ActivityLogger("fixtures/sample.json", tempDir);
+    const logger = new ActivityLogger(tempDir);
 
     await logger.logStep({
       step: "First Step",
@@ -130,24 +131,11 @@ describe("ActivityLogger", () => {
     expect(secondEntry!["result"]).toBe("done");
   });
 
-  it("getLogPath contains fixture name, datetime, and .jsonl extension", () => {
-    const logger = new ActivityLogger("fixtures/http-design.json", tempDir);
+  it("getLogPath returns activity.jsonl inside the run directory", () => {
+    const logger = new ActivityLogger(tempDir);
     const logPath = logger.getLogPath();
 
-    expect(logPath).toContain("http-design");
-    expect(logPath.endsWith(".jsonl")).toBe(true);
-
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const day = String(now.getDate()).padStart(2, "0");
-    const todayStr = `${year}-${month}-${day}`;
-
-    expect(logPath).toContain(todayStr);
-  });
-
-  it("defaults fixture name to unknown when not provided", () => {
-    const logger = new ActivityLogger(undefined, tempDir);
-    expect(logger.getLogPath()).toContain("unknown");
+    expect(logPath.endsWith("activity.jsonl")).toBe(true);
+    expect(logPath).toContain(tempDir);
   });
 });

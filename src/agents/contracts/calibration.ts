@@ -21,6 +21,7 @@ export const CalibrationConfigSchema = z.object({
   maxConversionNodes: z.number().int().positive().default(20),
   samplingStrategy: SamplingStrategySchema.default("top-issues"),
   outputPath: z.string().default("logs/calibration/calibration-report.md"),
+  runDir: z.string().optional(),
 });
 
 export type CalibrationConfig = z.infer<typeof CalibrationConfigSchema>;

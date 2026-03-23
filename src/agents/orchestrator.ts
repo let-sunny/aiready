@@ -27,6 +27,7 @@ import { runEvaluationAgent } from "./evaluation-agent.js";
 import { runTuningAgent } from "./tuning-agent.js";
 import { generateCalibrationReport } from "./report-generator.js";
 import { ActivityLogger } from "./activity-logger.js";
+import { createCalibrationRunDir, extractFixtureName } from "./run-directory.js";
 
 export interface CalibrationRunOptions {
   enableActivityLog?: boolean;
@@ -372,7 +373,8 @@ export async function runCalibration(
   const parsed = CalibrationConfigSchema.parse(config);
   const pipelineStart = Date.now();
   const startedAt = new Date().toISOString();
-  const logger = options?.enableActivityLog ? new ActivityLogger(parsed.input) : null;
+  const runDir = parsed.runDir ?? createCalibrationRunDir(extractFixtureName(parsed.input));
+  const logger = options?.enableActivityLog ? new ActivityLogger(runDir) : null;
 
   try {
     // Step 1: Load and analyze

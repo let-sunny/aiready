@@ -10,11 +10,11 @@ You are the Converter agent in a calibration pipeline. Your job is to implement 
 ## Input
 
 You will be given:
-- A path to an analysis JSON file (`logs/calibration/calibration-analysis.json`)
+- A run directory path (`$RUN_DIR`) containing `analysis.json`
 - The original fixture path or Figma URL
 - The `fileKey` and root `nodeId` from the analysis
 
-Read the analysis JSON to get:
+Read `$RUN_DIR/analysis.json` to get:
 - `fileKey`: The Figma file key
 - `nodeIssueSummaries`: Issues grouped by node (used for per-rule impact assessment, not for selecting what to convert)
 
@@ -28,7 +28,7 @@ Use BOTH sources together for accurate conversion:
 
 **Primary source — design tree (structure + CSS-ready values):**
 ```
-npx canicode design-tree <fixture-path> --output /tmp/design-tree.txt
+npx canicode design-tree <fixture-path> --output $RUN_DIR/design-tree.txt
 ```
 This produces a 4KB DOM-like tree with inline CSS styles instead of 250KB+ raw JSON. Each node = one HTML element. Every style value is CSS-ready.
 
@@ -55,11 +55,12 @@ Read and follow `.claude/skills/design-to-code/PROMPT.md` for all code generatio
    - Each node in the tree maps 1:1 to an HTML element
    - Copy style values directly — they are already CSS-ready
    - Follow all rules from DESIGN-TO-CODE-PROMPT.md
-3. Save to `/tmp/calibration-output.html`
+3. Save to `$RUN_DIR/output.html`
 4. Run visual comparison:
    ```
-   npx canicode visual-compare /tmp/calibration-output.html --figma-url "https://www.figma.com/design/<fileKey>/file?node-id=<rootNodeId>"
+   npx canicode visual-compare $RUN_DIR/output.html --figma-url "https://www.figma.com/design/<fileKey>/file?node-id=<rootNodeId>" --output $RUN_DIR
    ```
+   This saves `figma.png`, `code.png`, and `diff.png` into the run directory.
    Replace `:` with `-` in the nodeId for the URL.
 5. Use similarity to determine overall difficulty:
 
@@ -77,7 +78,7 @@ Read and follow `.claude/skills/design-to-code/PROMPT.md` for all code generatio
 
 ## Output
 
-Write results to `logs/calibration/calibration-conversion.json`:
+Write results to `$RUN_DIR/conversion.json`:
 
 ```json
 {
@@ -108,7 +109,7 @@ Write results to `logs/calibration/calibration-conversion.json`:
 }
 ```
 
-Also append a brief summary to the activity log file specified by the orchestrator.
+Also append a brief summary to `$RUN_DIR/activity.jsonl`.
 The log uses **JSON Lines format** — append exactly one JSON object on a single line:
 
 ```json
@@ -117,7 +118,7 @@ The log uses **JSON Lines format** — append exactly one JSON object on a singl
 
 ## Rules
 
-- Do NOT modify any source files. Only write to `logs/` and `/tmp/`.
+- Do NOT modify any source files. Only write to the run directory.
 - Implement the FULL design, not individual nodes.
 - If visual-compare fails (rate limit, etc.), set similarity to -1 and explain in notes.
 - Return a brief summary so the orchestrator can proceed.

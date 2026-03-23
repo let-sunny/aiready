@@ -99,7 +99,7 @@ Each adjustment requires:
 - Severity changes require high confidence
 - All changes committed with fixture source and reasoning
 
-The full calibration log is auto-generated via `/calibrate-loop` and stored in `logs/activity/`.
+The full calibration log is auto-generated via `/calibrate-loop` and stored in `logs/calibration/<name>--<timestamp>/activity.jsonl`.
 
 ## Running Calibration
 
@@ -219,7 +219,7 @@ The Gap Analyzer examines the diff image between Figma screenshot and AI-generat
 - **Actionable but no rule?** → candidate for rule discovery
 - **Rendering artifact?** → not actionable (font smoothing, anti-aliasing)
 
-Gap data accumulates in `logs/calibration/gaps/` across runs. The rule discovery pipeline reads this data to find recurring patterns worth turning into new rules.
+Gap data accumulates in each run's `gaps.json` file (`logs/calibration/*/gaps.json`). The rule discovery pipeline reads this data to find recurring patterns worth turning into new rules.
 
 ---
 
@@ -243,7 +243,7 @@ Step 6 — Critic: decide KEEP / ADJUST / DROP
 ```
 Calibration runs accumulate gap data
     ↓
-logs/calibration/gaps/*.json
+logs/calibration/*/gaps.json  (one per run directory)
     ↓
 Researcher reads accumulated gaps
     ↓

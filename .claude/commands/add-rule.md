@@ -10,23 +10,24 @@ You are the orchestrator. Do NOT implement rules yourself. Only pass data betwee
 
 Parse the input: first argument is the concept (quoted string), remaining arguments are fixture paths.
 
-Generate the activity log filename:
+Create the run directory:
 
 ```
-LOG_FILE=logs/activity/YYYY-MM-DD-HH-mm-rule-<concept-slug>.md
+RUN_DIR=logs/rule-discovery/<concept-slug>--<YYYY-MM-DD>/
+mkdir -p $RUN_DIR
 ```
 
-Create the file with a header.
+Create `$RUN_DIR/activity.jsonl` with a session-start entry.
 
 ### Step 1 — Researcher
 
 Spawn the `rule-discovery-researcher` subagent. Provide:
 - The concept to investigate
 - The fixture paths
-- The activity log path:
+- The run directory:
 
 ```
-Append your report to: <paste LOG_FILE here>
+Run directory: <paste RUN_DIR here>
 ```
 
 If the Researcher says the concept is not feasible, stop here and report why.
@@ -38,7 +39,7 @@ Spawn the `rule-discovery-designer` subagent. Provide:
 - The concept
 
 ```
-Append your proposal to: <paste LOG_FILE here>
+Run directory: <paste RUN_DIR here>
 ```
 
 ### Step 3 — Implementer
@@ -47,7 +48,7 @@ Spawn the `rule-discovery-implementer` subagent. Provide:
 - The Designer's rule proposal
 
 ```
-Append your summary to: <paste LOG_FILE here>
+Run directory: <paste RUN_DIR here>
 ```
 
 After implementation, rebuild: `pnpm build`
@@ -58,21 +59,21 @@ Run an A/B comparison on the entire design to measure the rule's actual impact o
 
 1. Extract `fileKey` and root `nodeId` from the fixture or Figma URL.
 
-2. Generate design tree: `npx canicode design-tree <fixture> --output /tmp/design-tree.txt`
+2. Generate design tree: `npx canicode design-tree <fixture> --output $RUN_DIR/design-tree.txt`
 
 3. Spawn a general-purpose subagent for **Test A (without the rule's data)**:
    - Read and follow `.claude/skills/design-to-code/PROMPT.md` for code generation rules
    - Use the design tree to convert the ENTIRE design to a single HTML page
    - Strip or withhold the information the rule checks for from the tree (e.g., remove descriptions if testing missing-component-description)
-   - Save to `/tmp/visual-a.html`
-   - Run: `npx canicode visual-compare /tmp/visual-a.html --figma-url "<figma-url-with-root-node-id>"`
+   - Save to `$RUN_DIR/visual-a.html`
+   - Run: `npx canicode visual-compare $RUN_DIR/visual-a.html --figma-url "<figma-url-with-root-node-id>" --output $RUN_DIR/visual-a`
    - Record similarity_a
 
 4. Spawn a general-purpose subagent for **Test B (with the rule's data)**:
    - Read and follow `.claude/skills/design-to-code/PROMPT.md` for code generation rules
    - Same design tree, but this time INCLUDE the information (e.g., generate component descriptions via AI and add them to the tree)
-   - Save to `/tmp/visual-b.html`
-   - Run: `npx canicode visual-compare /tmp/visual-b.html --figma-url "<figma-url-with-root-node-id>"`
+   - Save to `$RUN_DIR/visual-b.html`
+   - Run: `npx canicode visual-compare $RUN_DIR/visual-b.html --figma-url "<figma-url-with-root-node-id>" --output $RUN_DIR/visual-b`
    - Record similarity_b
 
 5. Compare: if similarity_b > similarity_a → the rule catches something that genuinely improves implementation quality.
@@ -87,7 +88,7 @@ Spawn the `rule-discovery-evaluator` subagent. Provide:
 - The visual comparison results from Step 4
 
 ```
-Append your evaluation to: <paste LOG_FILE here>
+Run directory: <paste RUN_DIR here>
 ```
 
 ### Step 6 — Critic
@@ -97,7 +98,7 @@ Spawn the `rule-discovery-critic` subagent. Provide:
 - The Evaluator's results (including visual scores)
 
 ```
-Append your critique to: <paste LOG_FILE here>
+Run directory: <paste RUN_DIR here>
 ```
 
 ### Step 7 — Apply Decision
@@ -117,4 +118,4 @@ Report the final decision and summary.
 - Pass only structured data between agents — never raw reasoning.
 - Only the Implementer may modify source files.
 - If the Critic says DROP, revert ALL source changes (`git checkout -- src/`).
-- **CRITICAL**: Every subagent prompt MUST contain the exact LOG_FILE path.
+- **CRITICAL**: Every subagent prompt MUST contain the exact RUN_DIR path.

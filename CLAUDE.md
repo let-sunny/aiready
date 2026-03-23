@@ -87,7 +87,8 @@ Calibration commands are NOT exposed as CLI commands. They run exclusively insid
 - Input: fixture JSON path (e.g. `fixtures/material3-kit.json`)
 - Flow: Analysis → Converter (entire design → HTML + visual-compare) → Gap Analyzer → Evaluation → Critic → Arbitrator
 - Converter implements the full scoped design as one HTML page, runs `visual-compare` for pixel-level similarity
-- Gap Analyzer examines the diff image, categorizes pixel differences, saves to `logs/calibration/gaps/`
+- Gap Analyzer examines the diff image, categorizes pixel differences, saves to run directory
+- Each run creates a self-contained directory: `logs/calibration/<fixture>--<timestamp>/`
 - No Figma MCP or API keys needed — works fully offline
 - Auto-commits agreed score changes
 
@@ -96,21 +97,41 @@ Calibration commands are NOT exposed as CLI commands. They run exclusively insid
 - Input: Figma URL (e.g. `https://www.figma.com/design/ABC123/MyDesign?node-id=1-234`)
 - Flow: Same as `/calibrate-loop` but Converter uses Figma MCP `get_design_context` for richer style data
 
+**`/calibrate-night` (Claude Code command)**
+- Role: Run calibration on multiple fixtures sequentially, then generate aggregate report
+- Input: comma-separated fixture paths (e.g. `fixtures/a.json,fixtures/b.json`)
+- Flow: sequential `/calibrate-loop` per fixture → `calibrate-gap-report` → `logs/calibration/REPORT.md`
+
 **`/add-rule` (Claude Code command)**
 - Role: Research, design, implement, and evaluate new analysis rules
 - Input: concept + fixture path (e.g. `"component description" fixtures/material3-kit.json`)
 - Flow: Researcher → Designer → Implementer → A/B Visual Validation → Evaluator → Critic
-- Researcher reads accumulated gap data from `logs/calibration/gaps/` to find recurring patterns
+- Researcher reads accumulated gap data from `logs/calibration/*/gaps.json` to find recurring patterns
+- Each run creates a directory: `logs/rule-discovery/<concept>--<date>/`
 - A/B Validation: implements entire design with/without the rule's data, compares similarity
 - Critic decides KEEP / ADJUST / DROP
 
 ### File Output Structure
 
 ```
-reports/            # HTML reports (canicode analyze)
-logs/calibration/   # Calibration analysis results (internal)
-logs/calibration/gaps/  # Accumulated gap analysis data (internal)
-logs/activity/      # Agent activity logs (internal)
+reports/                                    # HTML reports (canicode analyze)
+logs/calibration/                           # Calibration runs (internal)
+logs/calibration/<name>--<timestamp>/       # One calibration run = one folder
+  ├── analysis.json                         #   Rule analysis result
+  ├── conversion.json                       #   HTML conversion + similarity
+  ├── gaps.json                             #   Pixel gap analysis
+  ├── debate.json                           #   Critic + Arbitrator decisions
+  ├── activity.jsonl                        #   Agent step-by-step timeline
+  ├── summary.md                            #   Human-readable summary
+  ├── output.html                           #   Generated HTML page
+  ├── design-tree.txt                       #   Design tree (structure)
+  ├── figma.png                             #   Figma screenshot
+  ├── code.png                              #   Code rendering screenshot
+  └── diff.png                              #   Pixel diff image
+logs/calibration/REPORT.md                  # Cross-run aggregate report
+logs/rule-discovery/                        # Rule discovery runs (internal)
+logs/rule-discovery/<concept>--<date>/      # One rule discovery = one folder
+logs/activity/                              # Nightly orchestration logs
 ```
 
 ## Analysis Scope Policy
@@ -192,7 +213,7 @@ Process:
 5. Compare conversion difficulty vs rule scores (`canicode calibrate-evaluate`)
 6. 6-agent debate loop (`/calibrate-loop`): Analysis → Converter → Gap Analyzer → Evaluation → Critic → Arbitrator
 
-Gap data accumulates in `logs/calibration/gaps/` and feeds into rule discovery (`/add-rule`).
+Gap data accumulates in each run's `gaps.json` and feeds into rule discovery (`/add-rule`).
 
 Final score adjustments in `rule-config.ts` are always reviewed by the developer via the Arbitrator's decisions.
 

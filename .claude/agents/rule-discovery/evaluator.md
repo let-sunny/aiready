@@ -33,11 +33,17 @@ You will receive:
 
 ## Output
 
-Append your evaluation to the activity log file specified by the orchestrator.
-The log uses **JSON Lines format** — append exactly one JSON object on a single line:
+Write your evaluation to `$RUN_DIR/evaluation.json`:
 
 ```json
 {"step":"Evaluator","timestamp":"<ISO8601>","result":"verdict=<KEEP|ADJUST|DROP> falsePositiveRate=<X>%","durationMs":<ms>,"ruleId":"<rule-id>","fixtures":[{"name":"material3-kit.json","issues":0,"nodesAffected":0,"scoreImpact":"-X%"}],"falsePositiveRate":"<X>%","verdict":"<KEEP|ADJUST|DROP>","verdictReason":"..."}
+```
+
+Also append a summary to `$RUN_DIR/activity.jsonl`.
+The log uses **JSON Lines format** — append exactly one JSON object on a single line:
+
+```json
+{"step":"Evaluator","timestamp":"<ISO8601>","result":"verdict=<KEEP|ADJUST|DROP> falsePositiveRate=<X>%","durationMs":<ms>}
 ```
 
 ## Rules

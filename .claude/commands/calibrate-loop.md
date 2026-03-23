@@ -8,13 +8,14 @@ You are the orchestrator. Do NOT make calibration decisions yourself. Only pass 
 
 ### Step 0 — Setup
 
-Generate the activity log filename. Extract the fixture name (e.g. `fixtures/material3-kit.json` → `material3-kit`). Build the path:
+Extract the fixture name (e.g. `fixtures/material3-kit.json` → `material3-kit`). Create the run directory:
 
 ```
-LOG_FILE=logs/activity/YYYY-MM-DD-HH-mm-<fixture-name>.jsonl
+RUN_DIR=logs/calibration/<fixture-name>--<YYYY-MM-DD-HHMM>/
+mkdir -p $RUN_DIR
 ```
 
-Create the file and write the first JSON Lines entry:
+Create `$RUN_DIR/activity.jsonl` and write the first JSON Lines entry:
 
 ```json
 {"step":"session-start","timestamp":"<ISO8601>","result":"Calibration activity log initialized","durationMs":0}
@@ -25,15 +26,15 @@ The log uses **JSON Lines format** (one JSON object per line). Each entry has th
 {"step":"<StepName>","timestamp":"<ISO8601>","result":"<summary>","durationMs":<ms>}
 ```
 
-Store the exact path — you will paste it verbatim into every subagent prompt below.
+Store the exact `RUN_DIR` path — you will paste it verbatim into every subagent prompt below.
 
 ### Step 1 — Analysis (CLI)
 
 ```
-npx canicode calibrate-analyze $ARGUMENTS --output logs/calibration/calibration-analysis.json
+npx canicode calibrate-analyze $ARGUMENTS --run-dir $RUN_DIR
 ```
 
-Read `logs/calibration/calibration-analysis.json`. If `issueCount` is 0, stop here.
+Read `$RUN_DIR/analysis.json`. If `issueCount` is 0, stop here.
 
 ### Step 2 — Converter
 
@@ -45,8 +46,7 @@ Spawn a `general-purpose` subagent. In the prompt, include the full converter in
 Fixture path: <paste input path here>
 fileKey: <extracted fileKey>
 Root nodeId: <extracted nodeId>
-Activity log: <paste LOG_FILE here>
-Append a brief summary to this EXACT file. Do NOT write to any other log file.
+Run directory: <paste RUN_DIR here>
 ```
 
 The Converter will implement the ENTIRE design as one HTML page and run visual-compare.
@@ -56,51 +56,48 @@ The Converter will implement the ENTIRE design as one HTML page and run visual-c
 Before spawning the Gap Analyzer, check whether the visual-compare screenshots were produced by the Converter:
 
 ```bash
-test -f /tmp/canicode-visual-compare/figma.png && echo "EXISTS" || echo "MISSING"
+test -f $RUN_DIR/figma.png && echo "EXISTS" || echo "MISSING"
 ```
 
-- **If `/tmp/canicode-visual-compare/figma.png` does NOT exist**: skip Gap Analyzer entirely. Log a warning to `LOG_FILE`:
-  ```
-  WARNING: Gap Analyzer skipped — /tmp/canicode-visual-compare/figma.png not found. Visual-compare may have failed or been skipped by Converter.
+- **If `$RUN_DIR/figma.png` does NOT exist**: skip Gap Analyzer entirely. Append a warning to `$RUN_DIR/activity.jsonl`:
+  ```json
+  {"step":"Gap Analyzer","timestamp":"<ISO8601>","result":"SKIPPED — figma.png not found","durationMs":0}
   ```
   Then proceed directly to Step 4.
 
 - **If the file exists**: spawn the `calibration-gap-analyzer` subagent. Provide:
-  - Screenshot paths: `/tmp/canicode-visual-compare/figma.png`, `/tmp/canicode-visual-compare/code.png`, `/tmp/canicode-visual-compare/diff.png`
+  - Screenshot paths: `$RUN_DIR/figma.png`, `$RUN_DIR/code.png`, `$RUN_DIR/diff.png`
   - Similarity score from the Converter's output
-  - Generated HTML path: `/tmp/calibration-output.html`
+  - Generated HTML path: `$RUN_DIR/output.html`
   - Fixture path
-  - Analysis JSON path: `logs/calibration/calibration-analysis.json`
+  - Analysis JSON path: `$RUN_DIR/analysis.json`
 
   ```
-  Append your summary to: <paste LOG_FILE here>
+  Run directory: <paste RUN_DIR here>
   ```
-
-Gap data is saved to `logs/calibration/gaps/` and accumulates over time for rule discovery.
 
 ### Step 4 — Evaluation (CLI)
 
-
 ```
-npx canicode calibrate-evaluate logs/calibration/calibration-analysis.json logs/calibration/calibration-conversion.json
+npx canicode calibrate-evaluate _ _ --run-dir $RUN_DIR
 ```
 
-Read the generated report, extract proposals. If zero proposals, stop.
+Read the generated report (`$RUN_DIR/summary.md`), extract proposals. If zero proposals, stop.
 
 ### Step 5 — Critic
 
-Spawn the `calibration-critic` subagent. The prompt MUST include this exact line:
+Spawn the `calibration-critic` subagent. The prompt MUST include:
 
 ```
-Append your critique to: <paste LOG_FILE here>
+Run directory: <paste RUN_DIR here>
 ```
 
 ### Step 6 — Arbitrator
 
-Spawn the `calibration-arbitrator` subagent. The prompt MUST include this exact line:
+Spawn the `calibration-arbitrator` subagent. The prompt MUST include:
 
 ```
-Activity log: <paste LOG_FILE here>
+Run directory: <paste RUN_DIR here>
 ```
 
 ### Done
@@ -113,5 +110,5 @@ Report the final summary from the Arbitrator.
 - Pass only structured data between agents — never raw reasoning.
 - The Critic must NOT see the Runner's or Converter's reasoning, only the proposal list.
 - Only the Arbitrator may edit `rule-config.ts`.
-- Steps 1 and 3 are CLI commands — run them directly with Bash.
-- **CRITICAL**: Every subagent prompt MUST contain the exact LOG_FILE path. Do NOT use placeholders. Paste the actual path string.
+- Steps 1 and 4 are CLI commands — run them directly with Bash.
+- **CRITICAL**: Every subagent prompt MUST contain the exact RUN_DIR path. Do NOT use placeholders. Paste the actual path string.

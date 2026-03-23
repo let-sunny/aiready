@@ -41,14 +41,20 @@ You will receive:
 
 ## Output
 
-Append your critique to the activity log file specified by the orchestrator.
-The log uses **JSON Lines format** — append exactly one JSON object on a single line:
+Write your decision to `$RUN_DIR/decision.json`:
 
 ```json
 {"step":"Critic","timestamp":"<ISO8601>","result":"<KEEP|ADJUST|DROP> for rule <rule-id>","durationMs":<ms>,"ruleId":"<rule-id>","decision":"<KEEP|ADJUST|DROP>","evidenceStrength":"<strong|moderate|weak>","falsePositiveConcern":"<none|low|high>","difficultyCorrelation":"<strong|moderate|weak>","adjustments":{"score":-7,"severity":"blocking","triggerChange":"..."},"dropReason":"..."}
 ```
 
 For KEEP decisions, omit `adjustments` and `dropReason`. For ADJUST decisions, omit `dropReason`. For DROP decisions, omit `adjustments`.
+
+Also append a summary to `$RUN_DIR/activity.jsonl`.
+The log uses **JSON Lines format** — append exactly one JSON object on a single line:
+
+```json
+{"step":"Critic","timestamp":"<ISO8601>","result":"<KEEP|ADJUST|DROP> for rule <rule-id>","durationMs":<ms>}
+```
 
 ## Rules
 

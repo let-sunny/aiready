@@ -1,57 +1,59 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Nightly calibration script (loop mode, fixture-based)
-# Runs /calibrate-loop against local JSON fixtures, repeats if changes detected.
-# Stops on: no changes, max cycles reached, or error.
+# Nightly calibration: one pass over fixtures (Claude /calibrate-loop), then gap-based rule review.
+#
+# Each /calibrate-loop invocation creates its own run directory under logs/calibration/<name>--<timestamp>/.
+# No manual snapshot copying needed — run directories are self-contained.
+#
+# Phase 1 — For each fixture: run calibration.
+# Phase 2 — canicode calibrate-gap-report → logs/calibration/REPORT.md
+# Phase 3 — Manual: review the report, then run /add-rule in Claude Code.
+#
 # Usage:
-#   ./scripts/calibrate-night.sh          # fixture-only (fast)
-#   ./scripts/calibrate-night.sh --deep   # Figma MCP deep validation
+#   export CALIBRATE_FIXTURES="fixtures/a.json,fixtures/b.json,..."
+#   ./scripts/calibrate-night.sh
+#   ./scripts/calibrate-night.sh --deep   # uses /calibrate-loop-deep instead
+#
+# Optional:
+#   CALIBRATE_SKIP_PHASE2=1     — only Phase 1 (no gap report)
+#   CALIBRATE_SKIP_BUILD=1      — skip pnpm build before Phase 2 (use existing dist/)
+#   CALIBRATE_AUTO_COMMIT=1     — git commit + push at end if rule-config or logs changed
 
-MAX_CYCLES=5
-WAIT_SECONDS=1800  # 30 minutes
 COMMAND="/calibrate-loop"
-
-# ── Parse flags ────────────────────────────────────────────────────
 
 for arg in "$@"; do
   case "$arg" in
     --deep)
       COMMAND="/calibrate-loop-deep"
-      shift
       ;;
   esac
 done
 
-# ── Load .env ───────────────────────────────────────────────────────
-
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$PROJECT_ROOT"
 
 if [ -f "$PROJECT_ROOT/.env" ]; then
   set -a
+  # shellcheck source=/dev/null
   source "$PROJECT_ROOT/.env"
   set +a
 fi
 
-# ── Validate env vars ───────────────────────────────────────────────
-
 if [ -z "${CALIBRATE_FIXTURES:-}" ]; then
   echo "Error: CALIBRATE_FIXTURES is not set."
   echo ""
-  echo "Usage:"
-  echo "  export CALIBRATE_FIXTURES=\"fixtures/a.json,fixtures/b.json\""
+  echo "Example:"
+  echo "  export CALIBRATE_FIXTURES=\"fixtures/material3-kit-1.json,fixtures/material3-kit-2.json,...\""
   echo "  ./scripts/calibrate-night.sh"
   echo ""
-  echo "Or add to .env:"
-  echo "  CALIBRATE_FIXTURES=fixtures/material3-kit.json,fixtures/simple-ds-card-grid.json"
+  echo "Or add CALIBRATE_FIXTURES to .env"
   exit 1
 fi
 
-# Split comma-separated list into array
 IFS=',' read -ra FIXTURES <<< "$CALIBRATE_FIXTURES"
 
-# Verify all fixtures exist
 for f in "${FIXTURES[@]}"; do
   if [ ! -f "$f" ]; then
     echo "Error: Fixture not found: $f"
@@ -59,128 +61,123 @@ for f in "${FIXTURES[@]}"; do
   fi
 done
 
-# ── Logging setup ───────────────────────────────────────────────────
-
-LOG_DIR="logs/activity"
-mkdir -p "$LOG_DIR"
+# Nightly-level log (not per-run — tracks the orchestration itself)
+NIGHTLY_LOG_DIR="logs/activity"
+mkdir -p "$NIGHTLY_LOG_DIR"
 
 DATETIME=$(date +%Y-%m-%d-%H-%M)
-LOG_FILE="$LOG_DIR/${DATETIME}-nightly.md"
+NIGHTLY_LOG="$NIGHTLY_LOG_DIR/${DATETIME}-nightly.md"
 
 log() {
   local timestamp
   timestamp=$(date +%H:%M)
-  echo "## $timestamp — $1" >> "$LOG_FILE"
-  echo "" >> "$LOG_FILE"
+  echo "## $timestamp — $1" >> "$NIGHTLY_LOG"
+  echo "" >> "$NIGHTLY_LOG"
   if [ -n "${2:-}" ]; then
-    echo "$2" >> "$LOG_FILE"
-    echo "" >> "$LOG_FILE"
+    echo "$2" >> "$NIGHTLY_LOG"
+    echo "" >> "$NIGHTLY_LOG"
   fi
 }
 
-echo "# Calibration Activity Log — $DATETIME" > "$LOG_FILE"
-echo "" >> "$LOG_FILE"
-
-# ── Prevent sleep (re-exec under caffeinate if not already) ─────────
+echo "# Calibration night — $DATETIME" > "$NIGHTLY_LOG"
+echo "" >> "$NIGHTLY_LOG"
 
 if [ -z "${CAFFEINATED:-}" ]; then
   echo "Wrapping in caffeinate to prevent sleep..."
   CAFFEINATED=1 exec caffeinate -i "$0" "$@"
 fi
 
-# ── Cycle loop ──────────────────────────────────────────────────────
-
 TOTAL_START=$SECONDS
-STOP_REASON=""
+BEFORE_HASH=$(git hash-object src/rules/rule-config.ts 2>/dev/null || echo "none")
 
-log "Nightly Calibration Started" "Command: $COMMAND | Max cycles: $MAX_CYCLES | Wait between cycles: ${WAIT_SECONDS}s | Fixtures: ${#FIXTURES[@]}"
-echo "Starting nightly calibration (max $MAX_CYCLES cycles, ${#FIXTURES[@]} fixtures per cycle, command: $COMMAND)"
+log "Phase 1 started" "Command: $COMMAND | Fixtures: ${#FIXTURES[@]}"
+
+echo "Phase 1: calibrate ${#FIXTURES[@]} fixture(s) with ${COMMAND}"
 echo ""
 
-for cycle in $(seq 1 "$MAX_CYCLES"); do
-  CYCLE_START=$SECONDS
-  PASS=0
-  FAIL=0
+PASS=0
+FAIL=0
 
-  echo "=== Cycle $cycle/$MAX_CYCLES ==="
-  log "Cycle $cycle Start" "Fixtures: ${#FIXTURES[@]}"
+for i in "${!FIXTURES[@]}"; do
+  fixture="${FIXTURES[$i]}"
+  idx=$((i + 1))
 
-  # Snapshot rule-config.ts before this cycle
-  BEFORE_HASH=$(git hash-object src/rules/rule-config.ts 2>/dev/null || echo "none")
+  echo "  [$idx/${#FIXTURES[@]}] $fixture"
+  log "Fixture $idx start" "File: $fixture"
 
-  for i in "${!FIXTURES[@]}"; do
-    fixture="${FIXTURES[$i]}"
-    idx=$((i + 1))
-
-    echo "  [$idx/${#FIXTURES[@]}] $fixture"
-    log "Cycle $cycle — Fixture $idx Start" "File: $fixture"
-
-    RUN_START=$SECONDS
-
-    if claude --dangerously-skip-permissions "$COMMAND" "$fixture"; then
-      DURATION=$(( SECONDS - RUN_START ))
-      log "Cycle $cycle — Fixture $idx Complete" "Duration: ${DURATION}s"
-      echo "    Complete (${DURATION}s)"
-      PASS=$((PASS + 1))
-    else
-      DURATION=$(( SECONDS - RUN_START ))
-      log "Cycle $cycle — Fixture $idx Failed" "Duration: ${DURATION}s — exit code: $?"
-      echo "    Failed (${DURATION}s)"
-      FAIL=$((FAIL + 1))
-    fi
-  done
-
-  CYCLE_DURATION=$(( SECONDS - CYCLE_START ))
-
-  # Check if rule-config.ts changed
-  AFTER_HASH=$(git hash-object src/rules/rule-config.ts 2>/dev/null || echo "none")
-  HAS_CHANGES=false
-  if [ "$BEFORE_HASH" != "$AFTER_HASH" ]; then
-    HAS_CHANGES=true
-  fi
-
-  # Commit & push if changed
-  if [ "$HAS_CHANGES" = true ]; then
-    git add src/rules/rule-config.ts logs/
-    git commit -m "chore: calibrate rule scores — cycle $cycle ($DATETIME)
-
-Passed: $PASS / ${#FIXTURES[@]}, Failed: $FAIL
-Cycle duration: ${CYCLE_DURATION}s"
-    git push
-    log "Cycle $cycle Complete — Pushed" "Duration: ${CYCLE_DURATION}s | Passed: $PASS | Failed: $FAIL | Changes committed."
-    echo "  Cycle $cycle: changes committed and pushed (${CYCLE_DURATION}s)"
+  RUN_START=$SECONDS
+  if claude --dangerously-skip-permissions "$COMMAND" "$fixture"; then
+    DURATION=$(( SECONDS - RUN_START ))
+    log "Fixture $idx complete" "Duration: ${DURATION}s"
+    echo "    Complete (${DURATION}s)"
+    PASS=$((PASS + 1))
   else
-    log "Cycle $cycle Complete — No Changes" "Duration: ${CYCLE_DURATION}s | Passed: $PASS | Failed: $FAIL"
-    echo "  Cycle $cycle: no changes (${CYCLE_DURATION}s)"
-    STOP_REASON="no-changes"
-    break
+    DURATION=$(( SECONDS - RUN_START ))
+    log "Fixture $idx failed" "Duration: ${DURATION}s"
+    echo "    Failed (${DURATION}s)"
+    FAIL=$((FAIL + 1))
   fi
-
-  # Check if this was the last cycle
-  if [ "$cycle" -eq "$MAX_CYCLES" ]; then
-    STOP_REASON="max-cycles"
-    break
-  fi
-
-  # Wait before next cycle
-  echo ""
-  echo "  Waiting ${WAIT_SECONDS}s before next cycle..."
-  log "Waiting" "${WAIT_SECONDS}s until cycle $((cycle + 1))"
-  sleep "$WAIT_SECONDS"
 done
 
-# ── Final summary ──────────────────────────────────────────────────
-
-TOTAL_DURATION=$(( SECONDS - TOTAL_START ))
-
-if [ -z "$STOP_REASON" ]; then
-  STOP_REASON="completed"
-fi
-
-log "Nightly Calibration Finished" "Reason: $STOP_REASON | Total duration: ${TOTAL_DURATION}s"
+PHASE1_DURATION=$(( SECONDS - TOTAL_START ))
+log "Phase 1 finished" "Passed: $PASS | Failed: $FAIL | Duration: ${PHASE1_DURATION}s"
 
 echo ""
-echo "Nightly calibration finished."
-echo "  Reason: $STOP_REASON"
-echo "  Total: ${TOTAL_DURATION}s"
-echo "  Log: $LOG_FILE"
+echo "Phase 1 done: ${PASS} passed, ${FAIL} failed (${PHASE1_DURATION}s)"
+echo ""
+
+GAP_REPORT_PATH="logs/calibration/REPORT.md"
+
+if [ -z "${CALIBRATE_SKIP_PHASE2:-}" ]; then
+  echo "Phase 2: gap rule review report → ${GAP_REPORT_PATH}"
+
+  if [ -z "${CALIBRATE_SKIP_BUILD:-}" ]; then
+    pnpm build
+  fi
+
+  if [ ! -f dist/cli/index.js ]; then
+    echo "Error: dist/cli/index.js not found. Run pnpm build or unset CALIBRATE_SKIP_BUILD."
+    exit 1
+  fi
+
+  node dist/cli/index.js calibrate-gap-report --output "$GAP_REPORT_PATH"
+
+  log "Phase 2 complete" "Report: ${GAP_REPORT_PATH}"
+  echo ""
+  echo "Phase 2 done."
+  echo "  Report: ${GAP_REPORT_PATH}"
+  echo ""
+  echo "Phase 3 (manual): read the report, then run /add-rule in Claude Code when you add a rule."
+else
+  echo "Phase 2 skipped (CALIBRATE_SKIP_PHASE2=1)."
+fi
+
+TOTAL_DURATION=$(( SECONDS - TOTAL_START ))
+log "Nightly finished" "Total duration: ${TOTAL_DURATION}s | Log: $NIGHTLY_LOG"
+
+echo "Log: $NIGHTLY_LOG"
+echo "Total time: ${TOTAL_DURATION}s"
+
+AFTER_HASH=$(git hash-object src/rules/rule-config.ts 2>/dev/null || echo "none")
+HAS_CHANGES=false
+if [ "$BEFORE_HASH" != "$AFTER_HASH" ]; then
+  HAS_CHANGES=true
+fi
+
+if [ "${CALIBRATE_AUTO_COMMIT:-}" = "1" ]; then
+  if [ "$HAS_CHANGES" = true ] || [ -n "$(git status --porcelain logs/ 2>/dev/null)" ]; then
+    git add src/rules/rule-config.ts logs/ || true
+    if git diff --cached --quiet; then
+      echo "No staged changes to commit."
+    else
+      git commit -m "chore: nightly calibration — ${DATETIME}
+
+Phase 1: ${PASS}/${#FIXTURES[@]} fixtures passed
+Report: ${GAP_REPORT_PATH}"
+      git push
+      echo "Committed and pushed calibration changes."
+    fi
+  else
+    echo "No rule-config or logs changes to commit."
+  fi
+fi
