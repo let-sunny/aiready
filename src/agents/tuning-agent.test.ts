@@ -111,6 +111,8 @@ describe("runTuningAgent", () => {
           actualDifficulty: "hard",
           reasoning:
             'Uncovered struggle: "inconsistent border radius". category: border-radius',
+          category: "border-radius",
+          description: "inconsistent border radius",
         }),
         makeMismatch({
           type: "missing-rule",
@@ -118,6 +120,8 @@ describe("runTuningAgent", () => {
           actualDifficulty: "hard",
           reasoning:
             'Uncovered struggle: "mixed border radius values". category: border-radius',
+          category: "border-radius",
+          description: "mixed border radius values",
         }),
         makeMismatch({
           type: "missing-rule",
@@ -125,6 +129,8 @@ describe("runTuningAgent", () => {
           actualDifficulty: "moderate",
           reasoning:
             'Uncovered struggle: "no text truncation rule". category: text-overflow',
+          category: "text-overflow",
+          description: "no text truncation rule",
         }),
       ],
       ruleScores: {},

@@ -297,10 +297,8 @@ export function runCalibrationEvaluate(
           const isNoise = ENVIRONMENT_NOISE_PATTERNS.some(p => p.test(m.reasoning));
           if (isNoise) continue;
 
-          const categoryMatch = m.reasoning.match(/category:\s*([^,)]+)/);
-          const category = categoryMatch?.[1]?.trim() ?? "unknown";
-          const descMatch = m.reasoning.match(/Uncovered struggle: "([^"]+)"/);
-          const description = descMatch?.[1] ?? m.reasoning;
+          const category = m.category ?? "unknown";
+          const description = m.description ?? m.reasoning;
           discoveryEntries.push({
             description,
             category,
