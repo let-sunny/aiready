@@ -4,6 +4,7 @@ import { RULE_CONFIGS } from "../core/rules/rule-config.js";
 import type { RuleId } from "../core/contracts/rule.js";
 import { runCalibrationEvaluate } from "./orchestrator.js";
 import { GapAnalyzerOutputSchema } from "./contracts/gap-analyzer.js";
+import { loadCalibrationEvidence, loadDiscoveryEvidence } from "./evidence-collector.js";
 
 type CalibrationAnalysisJson = Parameters<typeof runCalibrationEvaluate>[0] & {
   ruleScores: Record<string, { score: number; severity: string }>;
@@ -483,6 +484,53 @@ export function generateGapRuleReport(options: GapRuleReportOptions): GapRuleRep
     lines.push("");
     for (const id of neverFlagged) {
       lines.push(`- \`${id}\``);
+    }
+  }
+  lines.push("");
+
+  // Cross-run evidence from git-tracked files
+  const calibrationEvidence = loadCalibrationEvidence();
+  const calibrationEvidenceRules = Object.keys(calibrationEvidence);
+  lines.push("## Cross-run calibration evidence (git-tracked)");
+  lines.push("");
+  if (calibrationEvidenceRules.length === 0) {
+    lines.push("_No accumulated calibration evidence. Evidence is collected during `calibrate-evaluate --run-dir` runs._");
+  } else {
+    lines.push("_Evidence persisted in `data/calibration-evidence.json` across sessions. Pruned when Arbitrator applies score changes._");
+    lines.push("");
+    lines.push("| Rule ID | Overscored | Underscored |");
+    lines.push("| --- | --- | --- |");
+    for (const ruleId of calibrationEvidenceRules.sort()) {
+      const ev = calibrationEvidence[ruleId];
+      if (!ev) continue;
+      lines.push(`| \`${ruleId}\` | ${ev.overscoredCount} | ${ev.underscoredCount} |`);
+    }
+  }
+  lines.push("");
+
+  const discoveryEvidence = loadDiscoveryEvidence();
+  lines.push("## Cross-run discovery evidence (git-tracked)");
+  lines.push("");
+  if (discoveryEvidence.length === 0) {
+    lines.push("_No accumulated discovery evidence. Evidence is collected from missing-rule mismatches and gap analysis._");
+  } else {
+    const byCat = new Map<string, { count: number; fixtures: Set<string> }>();
+    for (const e of discoveryEvidence) {
+      const cur = byCat.get(e.category);
+      if (cur) {
+        cur.count++;
+        cur.fixtures.add(e.fixture);
+      } else {
+        byCat.set(e.category, { count: 1, fixtures: new Set([e.fixture]) });
+      }
+    }
+    lines.push("_Evidence persisted in `data/discovery-evidence.json` across sessions. Pruned when `/add-rule` implements a rule._");
+    lines.push("");
+    lines.push("| Category | Entries | Fixtures |");
+    lines.push("| --- | --- | --- |");
+    for (const [cat, info] of [...byCat.entries()].sort((a, b) => b[1].count - a[1].count)) {
+      const fx = [...info.fixtures].sort().join(", ");
+      lines.push(`| ${cat} | ${info.count} | ${fx} |`);
     }
   }
   lines.push("");

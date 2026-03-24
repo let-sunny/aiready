@@ -139,15 +139,37 @@ export function runTuningAgent(
     }
   }
 
+  const prior = input.priorEvidence ?? {};
+
   // Generate score reduction proposals for overscored rules
-  for (const [ruleId, cases] of overscoredByRule) {
+  // Include rules with prior-only evidence (no current mismatches)
+  const allOverscoredRuleIds = new Set([
+    ...overscoredByRule.keys(),
+    ...Object.keys(prior).filter((id) => {
+      const p = prior[id];
+      return p && p.overscoredCount > 0 && !overscoredByRule.has(id);
+    }),
+  ]);
+
+  for (const ruleId of allOverscoredRuleIds) {
     const ruleInfo = input.ruleScores[ruleId];
     if (!ruleInfo) continue;
 
-    const difficulties = cases.map((c) => c.actualDifficulty);
-    const proposedScore = proposedScoreFromDifficulties(difficulties);
+    const cases = overscoredByRule.get(ruleId) ?? [];
+    const priorData = prior[ruleId];
+    const currentDifficulties = cases.map((c) => c.actualDifficulty);
+    const priorDifficulties = priorData?.overscoredDifficulties ?? [];
+    const allDifficulties = [...currentDifficulties, ...priorDifficulties];
+    const totalCases = cases.length + (priorData?.overscoredCount ?? 0);
+
+    const proposedScore = proposedScoreFromDifficulties(allDifficulties);
     const currentSeverity = ruleInfo.severity as Severity;
     const newSeverity = proposeSeverity(currentSeverity, proposedScore);
+    const priorNote = priorData?.overscoredCount
+      ? ` (+ ${priorData.overscoredCount} case(s) from prior runs)`
+      : "";
+
+    const disable = proposedScore >= 0;
 
     adjustments.push({
       ruleId,
@@ -155,21 +177,40 @@ export function runTuningAgent(
       proposedScore,
       currentSeverity,
       proposedSeverity: newSeverity,
-      reasoning: `Overscored in ${cases.length} case(s). Actual difficulties: [${difficulties.join(", ")}]. Current score ${ruleInfo.score} is too harsh.`,
-      confidence: getConfidence(cases.length),
-      supportingCases: cases.length,
+      reasoning: `Overscored in ${cases.length} case(s)${priorNote}. Actual difficulties: [${allDifficulties.join(", ")}]. Current score ${ruleInfo.score} is too harsh.${disable ? " Score converged to 0 — rule has no measurable impact on conversion difficulty. Recommend disabling." : ""}`,
+      confidence: getConfidence(totalCases),
+      supportingCases: totalCases,
+      ...(disable ? { disable: true } : {}),
     });
   }
 
   // Generate score increase proposals for underscored rules
-  for (const [ruleId, cases] of underscoredByRule) {
+  // Include rules with prior-only evidence (no current mismatches)
+  const allUnderscoredRuleIds = new Set([
+    ...underscoredByRule.keys(),
+    ...Object.keys(prior).filter((id) => {
+      const p = prior[id];
+      return p && p.underscoredCount > 0 && !underscoredByRule.has(id);
+    }),
+  ]);
+
+  for (const ruleId of allUnderscoredRuleIds) {
     const ruleInfo = input.ruleScores[ruleId];
     if (!ruleInfo) continue;
 
-    const difficulties = cases.map((c) => c.actualDifficulty);
-    const proposedScore = proposedScoreFromDifficulties(difficulties);
+    const cases = underscoredByRule.get(ruleId) ?? [];
+    const priorData = prior[ruleId];
+    const currentDifficulties = cases.map((c) => c.actualDifficulty);
+    const priorDifficulties = priorData?.underscoredDifficulties ?? [];
+    const allDifficulties = [...currentDifficulties, ...priorDifficulties];
+    const totalCases = cases.length + (priorData?.underscoredCount ?? 0);
+
+    const proposedScore = proposedScoreFromDifficulties(allDifficulties);
     const currentSeverity = ruleInfo.severity as Severity;
     const newSeverity = proposeSeverity(currentSeverity, proposedScore);
+    const priorNote = priorData?.underscoredCount
+      ? ` (+ ${priorData.underscoredCount} case(s) from prior runs)`
+      : "";
 
     adjustments.push({
       ruleId,
@@ -177,9 +218,9 @@ export function runTuningAgent(
       proposedScore,
       currentSeverity,
       proposedSeverity: newSeverity,
-      reasoning: `Underscored in ${cases.length} case(s). Actual difficulties: [${difficulties.join(", ")}]. Current score ${ruleInfo.score} is too lenient.`,
-      confidence: getConfidence(cases.length),
-      supportingCases: cases.length,
+      reasoning: `Underscored in ${cases.length} case(s)${priorNote}. Actual difficulties: [${allDifficulties.join(", ")}]. Current score ${ruleInfo.score} is too lenient.`,
+      confidence: getConfidence(totalCases),
+      supportingCases: totalCases,
     });
   }
 

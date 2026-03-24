@@ -26,10 +26,12 @@ You will receive:
    - Is it stored in `src/core/contracts/figma-node.ts`?
    - Are there existing rules that use it?
 4. Check the Figma REST API spec (`@figma/rest-api-spec`) for the field's type and availability
-5. Read accumulated gap data in `logs/calibration/*/gaps.json`:
-   - Are there recurring gaps related to this concept?
-   - How many times has this gap appeared across runs?
-   - What pixel impact does it have?
+5. Read accumulated discovery evidence from `data/discovery-evidence.json`:
+   - Filter entries whose `category` matches this concept (case-insensitive)
+   - Count occurrences across fixtures and sources (evaluation vs gap-analysis)
+   - Note impact levels (hard, moderate, easy)
+   - If discovery evidence entries were provided in your prompt, use those directly
+   - Also check `logs/calibration/*/gaps.json` if available (local session data)
 6. Question existing categories and rules:
    - Does this concept fit an existing category, or does it expose a gap in the category structure?
    - Are there existing rules that overlap with this concept? Should they be merged or split?

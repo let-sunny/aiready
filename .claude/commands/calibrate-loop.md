@@ -113,6 +113,12 @@ Proceed to Step 4.
 
 After the Gap Analyzer returns, **you** write the JSON to `$RUN_DIR/gaps.json`.
 
+**Append uncovered gaps to discovery evidence**: Read the gap analyzer output and filter to entries that are `actionable && !coveredByExistingRule`. Append them to `data/discovery-evidence.json` using this format:
+```json
+{"description":"<gap description>","category":"<gap category>","impact":"<moderate|hard>","fixture":"<fixture-name>","timestamp":"<ISO8601>","source":"gap-analysis"}
+```
+Read the existing file, parse as JSON array, push new entries, write back. This persists gap data across sessions for rule discovery.
+
 Append to `$RUN_DIR/activity.jsonl`:
 ```json
 {"step":"Gap Analyzer","timestamp":"<ISO8601>","result":"gaps=<N> actionable=<N>","durationMs":<ms>}

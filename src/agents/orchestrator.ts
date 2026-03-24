@@ -11,6 +11,12 @@ import { runAnalysisAgent, extractRuleScores } from "./analysis-agent.js";
 import { runEvaluationAgent } from "./evaluation-agent.js";
 import { runTuningAgent } from "./tuning-agent.js";
 import { generateCalibrationReport } from "./report-generator.js";
+import {
+  loadCalibrationEvidence,
+  appendCalibrationEvidence,
+  appendDiscoveryEvidence,
+} from "./evidence-collector.js";
+import type { CalibrationEvidenceEntry, DiscoveryEvidenceEntry } from "./evidence-collector.js";
 
 /**
  * Node types that are pure graphics — not useful for code conversion
@@ -185,7 +191,8 @@ export function runCalibrationEvaluate(
     issueCount: number;
   },
   conversionJson: Record<string, unknown>,
-  ruleScores: Record<string, { score: number; severity: string }>
+  ruleScores: Record<string, { score: number; severity: string }>,
+  options?: { collectEvidence?: boolean | undefined; fixtureName?: string | undefined }
 ) {
   // Support both formats:
   // Old: { records: [...], skippedNodeIds: [...] }
@@ -234,10 +241,58 @@ export function runCalibrationEvaluate(
     ruleScores,
   });
 
-  const tuningOutput = runTuningAgent({
+  // Load prior evidence if collecting
+  const priorEvidence = options?.collectEvidence
+    ? loadCalibrationEvidence()
+    : undefined;
+
+  const tuningInput = {
     mismatches: evaluationOutput.mismatches,
     ruleScores,
-  });
+    ...(priorEvidence ? { priorEvidence } : {}),
+  };
+  const tuningOutput = runTuningAgent(tuningInput);
+
+  // Collect evidence from this run
+  if (options?.collectEvidence) {
+    const timestamp = new Date().toISOString();
+    const fixture = options.fixtureName ?? analysisJson.fileKey;
+
+    // Append calibration evidence (overscored/underscored)
+    const calibrationEntries: CalibrationEvidenceEntry[] = [];
+    for (const m of evaluationOutput.mismatches) {
+      if ((m.type === "overscored" || m.type === "underscored") && m.ruleId) {
+        calibrationEntries.push({
+          ruleId: m.ruleId,
+          type: m.type,
+          actualDifficulty: m.actualDifficulty,
+          fixture,
+          timestamp,
+        });
+      }
+    }
+    appendCalibrationEvidence(calibrationEntries);
+
+    // Append discovery evidence (missing-rule)
+    const discoveryEntries: DiscoveryEvidenceEntry[] = [];
+    for (const m of evaluationOutput.mismatches) {
+      if (m.type === "missing-rule") {
+        const categoryMatch = m.reasoning.match(/category:\s*([^,)]+)/);
+        const category = categoryMatch?.[1]?.trim() ?? "unknown";
+        const descMatch = m.reasoning.match(/Uncovered struggle: "([^"]+)"/);
+        const description = descMatch?.[1] ?? m.reasoning;
+        discoveryEntries.push({
+          description,
+          category,
+          impact: m.actualDifficulty,
+          fixture,
+          timestamp,
+          source: "evaluation",
+        });
+      }
+    }
+    appendDiscoveryEvidence(discoveryEntries);
+  }
 
   const report = generateCalibrationReport({
     fileKey: analysisJson.fileKey,

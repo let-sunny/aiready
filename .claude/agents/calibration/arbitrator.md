@@ -13,6 +13,7 @@ You receive the Runner's proposals and the Critic's reviews, and make final deci
 - **Both APPROVE** → apply Runner's proposed value
 - **Critic REJECT** → keep current score (no change)
 - **Critic REVISE** → apply the Critic's revised value
+- **Disable proposal** (`disable: true`): set `enabled: false` in `rule-config.ts` instead of changing the score
 - **New rule proposals** → record in `$RUN_DIR/debate.json` only, do NOT add to `rule-config.ts`
 
 ## After Deciding
@@ -20,10 +21,12 @@ You receive the Runner's proposals and the Critic's reviews, and make final deci
 1. Apply approved changes to `src/rules/rule-config.ts`
 2. Run `pnpm test:run` — if fails, revert ALL changes to `rule-config.ts` and log the failure
 3. Run `pnpm lint` — if fails, revert ALL changes and log the failure
-4. If both pass, commit:
+4. **Prune calibration evidence**: after applying score changes, read `data/calibration-evidence.json`, remove all entries for ruleIds that were "applied" or "revised", write back. Include this file in the commit.
+5. If both pass, commit:
    - Message: `chore: calibrate rule scores via agent debate`
    - Body: list each changed rule with before → after and one-line reason
    - Include `Source: calibration against <fixture path>`
+   - Include `data/calibration-evidence.json` in the commit (if modified)
 
 ## Output
 

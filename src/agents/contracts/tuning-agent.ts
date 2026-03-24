@@ -13,6 +13,7 @@ export const ScoreAdjustmentSchema = z.object({
   reasoning: z.string(),
   confidence: ConfidenceSchema,
   supportingCases: z.number(),
+  disable: z.boolean().optional(),
 });
 
 export type ScoreAdjustment = z.infer<typeof ScoreAdjustmentSchema>;
@@ -41,6 +42,12 @@ export interface TuningAgentInput {
     reasoning: string;
   }>;
   ruleScores: Record<string, { score: number; severity: string }>;
+  priorEvidence?: Record<string, {
+    overscoredCount: number;
+    underscoredCount: number;
+    overscoredDifficulties: string[];
+    underscoredDifficulties: string[];
+  }>;
 }
 
 export interface TuningAgentOutput {

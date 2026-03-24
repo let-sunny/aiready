@@ -419,10 +419,19 @@ cli
       const analysisData = JSON.parse(await readFile(analysisPath, "utf-8"));
       const conversionData = JSON.parse(await readFile(conversionPath, "utf-8"));
 
+      // Derive fixture name from run-dir: <fixture-name>--<timestamp>
+      let fixtureName: string | undefined;
+      if (options.runDir) {
+        const dirName = resolve(options.runDir).split(/[/\\]/).pop() ?? "";
+        const idx = dirName.lastIndexOf("--");
+        fixtureName = idx === -1 ? dirName : dirName.slice(0, idx);
+      }
+
       const { evaluationOutput, tuningOutput, report } = runCalibrationEvaluate(
         analysisData,
         conversionData,
-        analysisData.ruleScores
+        analysisData.ruleScores,
+        { collectEvidence: !!options.runDir, ...(fixtureName ? { fixtureName } : {}) }
       );
 
       let outputPath: string;

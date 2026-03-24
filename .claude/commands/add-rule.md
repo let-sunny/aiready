@@ -23,9 +23,12 @@ Create `$RUN_DIR/activity.jsonl` with a session-start entry.
 
 ### Step 1 — Researcher
 
+Read `data/discovery-evidence.json` and filter entries whose `category` matches (case-insensitive) the concept being investigated.
+
 Spawn the `rule-discovery-researcher` subagent. Provide:
 - The concept to investigate
 - The fixture paths
+- Discovery evidence entries matching this concept (from `data/discovery-evidence.json`)
 - **Tell the agent: "Return your findings as JSON. Do NOT write any files."**
 
 After the Researcher returns, **you** write the JSON to `$RUN_DIR/research.json`.
@@ -125,7 +128,9 @@ Append to `$RUN_DIR/activity.jsonl`:
 
 Based on the Critic's decision:
 - **KEEP**: Commit the new rule. Message: `feat: add rule <rule-id> via discovery pipeline`
+  - **Prune discovery evidence**: Read `data/discovery-evidence.json`, remove entries whose `category` matches the implemented rule's category (case-insensitive), write back, include in commit.
 - **ADJUST**: Apply the Critic's suggested changes, run tests, then commit.
+  - **Prune discovery evidence**: same as KEEP.
 - **DROP**: Revert all changes to src/. Log the reason.
 
 ### Done
