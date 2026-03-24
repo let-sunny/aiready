@@ -30,7 +30,7 @@ export const ENVIRONMENT_NOISE_PATTERNS = [
   /\bDPI\b/,
   /\bscreenshot\s*(resolution|dimension|size|scale)\b/i,
   /\bnetwork\b/i,
-  /\bCDN\s*(block|unavailabl|fail)/i,
+  /\bCDN\s*(block|unavailabl\w*|fail)/i,
   /\bCI\s*(environment|limitation|constraint)\b/i,
 ];
 

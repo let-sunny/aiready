@@ -269,7 +269,10 @@ describe("ENVIRONMENT_NOISE_PATTERNS", () => {
   it("filters network and CI environment issues", () => {
     expect(isNoise("network timeout when fetching external assets")).toBe(true);
     expect(isNoise("CDN blocked in sandbox environment")).toBe(true);
+    expect(isNoise("CDN unavailable due to firewall")).toBe(true);
+    expect(isNoise("CDN failure during asset fetch")).toBe(true);
     expect(isNoise("CI environment has no display server")).toBe(true);
+    expect(isNoise("CI limitation prevents GPU rendering")).toBe(true);
   });
 
   it("does NOT filter legitimate design issues", () => {
