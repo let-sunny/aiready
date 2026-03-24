@@ -121,7 +121,7 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
   },
 
   // ============================================
-  // Component (8 rules)
+  // Component (6 rules)
   // ============================================
   "missing-component": {
     severity: "risk",
@@ -129,16 +129,13 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
     enabled: true,
     options: {
       minRepetitions: 3,
+      structureMinRepetitions: 2,
+      maxFingerprintDepth: 3,
     },
   },
   "detached-instance": {
     severity: "risk",
     score: -5,
-    enabled: true,
-  },
-  "nested-instance-override": {
-    severity: "missing-info",
-    score: -2,
     enabled: true,
   },
   "variant-not-used": {
@@ -160,15 +157,6 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
     severity: "missing-info",
     score: -2,
     enabled: true,
-  },
-  "repeated-frame-structure": {
-    severity: "suggestion",
-    score: -3,
-    enabled: true,
-    options: {
-      minRepetitions: 2,
-      maxFingerprintDepth: 3,
-    },
   },
 
   // ============================================

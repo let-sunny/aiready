@@ -10,7 +10,7 @@ export * from "./layout/index.js";
 // Token rules (7)
 export * from "./token/index.js";
 
-// Component rules (7)
+// Component rules (6)
 export * from "./component/index.js";
 
 // Naming rules (5)

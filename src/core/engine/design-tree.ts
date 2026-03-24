@@ -95,17 +95,29 @@ function mapAlign(figmaAlign: string): string {
 }
 
 /** Render a single node and its children as indented design-tree text. */
-function renderNode(node: AnalysisNode, indent: number, vectorDir?: string): string {
+function renderNode(
+  node: AnalysisNode,
+  indent: number,
+  vectorDir?: string,
+  components?: AnalysisFile["components"],
+): string {
   if (node.visible === false) return "";
 
   const prefix = "  ".repeat(indent);
   const lines: string[] = [];
 
-  // Header
+  // Header — annotate INSTANCE nodes with component name
   const bbox = node.absoluteBoundingBox;
   const w = bbox ? Math.round(bbox.width) : "?";
   const h = bbox ? Math.round(bbox.height) : "?";
-  lines.push(`${prefix}${node.name} (${node.type}, ${w}x${h})`);
+  let header = `${prefix}${node.name} (${node.type}, ${w}x${h})`;
+  if (node.type === "INSTANCE" && node.componentId && components) {
+    const comp = components[node.componentId];
+    if (comp) {
+      header += ` [component: ${comp.name}]`;
+    }
+  }
+  lines.push(header);
 
   // Styles
   const styles: string[] = [];
@@ -206,7 +218,7 @@ function renderNode(node: AnalysisNode, indent: number, vectorDir?: string): str
   // Children
   if (node.children) {
     for (const child of node.children) {
-      const childOutput = renderNode(child, indent + 1, vectorDir);
+      const childOutput = renderNode(child, indent + 1, vectorDir, components);
       if (childOutput) lines.push(childOutput);
     }
   }
@@ -227,7 +239,7 @@ export function generateDesignTree(file: AnalysisFile, options?: DesignTreeOptio
   const w = root.absoluteBoundingBox ? Math.round(root.absoluteBoundingBox.width) : 0;
   const h = root.absoluteBoundingBox ? Math.round(root.absoluteBoundingBox.height) : 0;
 
-  const tree = renderNode(root, 0, options?.vectorDir);
+  const tree = renderNode(root, 0, options?.vectorDir, file.components);
 
   return [
     "# Design Tree",

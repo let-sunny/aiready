@@ -64,6 +64,67 @@ describe("generateDesignTree", () => {
     });
   });
 
+  describe("INSTANCE component annotation", () => {
+    it("annotates INSTANCE nodes with component name when available", () => {
+      const file = makeFile(
+        makeNode({
+          id: "1:1",
+          name: "Container",
+          type: "FRAME",
+          absoluteBoundingBox: { x: 0, y: 0, width: 200, height: 200 },
+          children: [
+            makeNode({
+              id: "1:2",
+              name: "MyButton",
+              type: "INSTANCE",
+              componentId: "comp:1",
+              absoluteBoundingBox: { x: 0, y: 0, width: 120, height: 40 },
+            }),
+          ],
+        })
+      );
+      file.components = {
+        "comp:1": { key: "abc", name: "Button", description: "" },
+      };
+
+      const output = generateDesignTree(file);
+
+      expect(output).toContain("MyButton (INSTANCE, 120x40) [component: Button]");
+    });
+
+    it("does not annotate INSTANCE when componentId has no match", () => {
+      const file = makeFile(
+        makeNode({
+          id: "1:1",
+          name: "MyButton",
+          type: "INSTANCE",
+          componentId: "comp:999",
+          absoluteBoundingBox: { x: 0, y: 0, width: 120, height: 40 },
+        })
+      );
+
+      const output = generateDesignTree(file);
+
+      expect(output).toContain("MyButton (INSTANCE, 120x40)");
+      expect(output).not.toContain("[component:");
+    });
+
+    it("does not annotate non-INSTANCE nodes", () => {
+      const file = makeFile(
+        makeNode({
+          id: "1:1",
+          name: "Card",
+          type: "FRAME",
+          absoluteBoundingBox: { x: 0, y: 0, width: 200, height: 200 },
+        })
+      );
+
+      const output = generateDesignTree(file);
+
+      expect(output).not.toContain("[component:");
+    });
+  });
+
   describe("TEXT nodes", () => {
     it("TEXT nodes use color: not background: for fill", () => {
       const file = makeFile(

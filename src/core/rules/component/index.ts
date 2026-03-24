@@ -7,10 +7,6 @@ import { getRuleOption } from "../rule-config.js";
 // Helper functions
 // ============================================
 
-function isComponentInstance(node: AnalysisNode): boolean {
-  return node.type === "INSTANCE";
-}
-
 function isComponent(node: AnalysisNode): boolean {
   return node.type === "COMPONENT" || node.type === "COMPONENT_SET";
 }
@@ -37,40 +33,284 @@ function collectFrameNames(
   return names;
 }
 
+/**
+ * Build a structural fingerprint for a node.
+ * The fingerprint encodes type, layoutMode, and child types recursively up to maxDepth.
+ */
+function buildFingerprint(node: AnalysisNode, depth: number): string {
+  if (depth <= 0 || !node.children || node.children.length === 0) {
+    return `${node.type}:${node.layoutMode ?? "NONE"}`;
+  }
+
+  const childFingerprints = node.children
+    .map((child) => buildFingerprint(child, depth - 1))
+    .join(",");
+
+  return `${node.type}:${node.layoutMode ?? "NONE"}:[${childFingerprints}]`;
+}
+
+/**
+ * Check if the node is inside an INSTANCE subtree.
+ * Currently checks immediate parent only — RuleContext does not expose the full
+ * ancestor type chain (context.path contains names, not types).
+ * TODO: When the engine exposes ancestor types, extend to full chain check.
+ */
+function isInsideInstance(context: {
+  parent?: AnalysisNode | undefined;
+}): boolean {
+  return context.parent?.type === "INSTANCE";
+}
+
+/**
+ * Collect all INSTANCE nodes in the document tree that share a given componentId.
+ */
+function collectInstancesByComponentId(
+  root: AnalysisNode,
+  componentId: string
+): AnalysisNode[] {
+  const result: AnalysisNode[] = [];
+
+  function walk(node: AnalysisNode): void {
+    if (node.type === "INSTANCE" && node.componentId === componentId) {
+      result.push(node);
+    }
+    if (node.children) {
+      for (const child of node.children) {
+        walk(child);
+      }
+    }
+  }
+
+  walk(root);
+  return result;
+}
+
 // ============================================
-// missing-component
+// missing-component (unified 4-stage rule)
 // ============================================
+
+/**
+ * Module-level dedup Sets for missing-component stages.
+ * These prevent duplicate violations when the same pattern is encountered
+ * multiple times during a single analysis run.
+ */
+const seenStage1ComponentNames = new Set<string>();
+const seenStage4ComponentIds = new Set<string>();
+
+/**
+ * Reset deduplication state for missing-component between analysis runs.
+ * Call this at the start of each analysis if the process is long-running
+ * (e.g. MCP server mode).
+ */
+export function resetMissingComponentState(): void {
+  seenStage1ComponentNames.clear();
+  seenStage4ComponentIds.clear();
+}
 
 const missingComponentDef: RuleDefinition = {
   id: "missing-component",
   name: "Missing Component",
   category: "component",
-  why: "Repeated identical structures should be componentized",
-  impact: "Changes require manual updates in multiple places",
-  fix: "Create a component from the repeated structure",
+  why: "Repeated structures, unused components, and divergent instance overrides indicate missing or underutilized components. This inflates AI token consumption and forces manual maintenance.",
+  impact: "AI code generators reproduce each repeated frame independently instead of emitting a reusable component. Divergent instance overrides produce inconsistent implementations.",
+  fix: "Create components from repeated structures, use instances instead of duplicated frames, and create variants for instances with significantly different overrides.",
 };
 
 const missingComponentCheck: RuleCheckFn = (node, context, options) => {
-  // Only check at frame level
-  if (node.type !== "FRAME") return null;
+  // ========================================
+  // FRAME stages (1, 2, 3) — ordered by priority
+  // ========================================
+  if (node.type === "FRAME") {
+    // Stage 1: Component exists but not used — FRAME name matches a component in metadata AND frame is repeated
+    const components = context.file.components;
+    const matchingComponent = Object.values(components).find(
+      (c) => c.name.toLowerCase() === node.name.toLowerCase()
+    );
 
-  const minRepetitions = (options?.["minRepetitions"] as number) ??
-    getRuleOption("missing-component", "minRepetitions", 3);
+    if (matchingComponent) {
+      const frameNames = collectFrameNames(context.file.document);
+      const sameNameFrames = frameNames.get(node.name);
 
-  // Collect frame names in the file (cached per analysis run would be better)
-  const frameNames = collectFrameNames(context.file.document);
-  const sameNameFrames = frameNames.get(node.name);
+      if (
+        sameNameFrames &&
+        sameNameFrames.length >= 2 &&
+        !seenStage1ComponentNames.has(node.name.toLowerCase())
+      ) {
+        seenStage1ComponentNames.add(node.name.toLowerCase());
+        if (sameNameFrames[0] === node.id) {
+          return {
+            ruleId: missingComponentDef.id,
+            nodeId: node.id,
+            nodePath: context.path.join(" > "),
+            message: `Component "${matchingComponent.name}" exists — use instances instead of repeated frames (${sameNameFrames.length} found)`,
+          };
+        }
+      }
+    }
 
-  if (sameNameFrames && sameNameFrames.length >= minRepetitions) {
-    // Only report on the first occurrence to avoid duplicate issues
-    if (sameNameFrames[0] === node.id) {
+    // Stage 2: Name-based repetition (existing logic)
+    const minRepetitions =
+      (options?.["minRepetitions"] as number | undefined) ??
+      getRuleOption("missing-component", "minRepetitions", 3);
+
+    const frameNames = collectFrameNames(context.file.document);
+    const sameNameFrames = frameNames.get(node.name);
+
+    if (sameNameFrames && sameNameFrames.length >= minRepetitions) {
+      // Only report on the first occurrence to avoid duplicate issues
+      if (sameNameFrames[0] === node.id) {
+        return {
+          ruleId: missingComponentDef.id,
+          nodeId: node.id,
+          nodePath: context.path.join(" > "),
+          message: `"${node.name}" appears ${sameNameFrames.length} times — consider making it a component`,
+        };
+      }
+    }
+
+    // Stage 3: Structure-based repetition (absorbed from repeated-frame-structure)
+    // Skip if node is inside an INSTANCE subtree
+    if (isInsideInstance(context)) return null;
+
+    // Skip if parent is COMPONENT_SET
+    if (context.parent?.type === "COMPONENT_SET") return null;
+
+    // Skip if node has no children
+    if (!node.children || node.children.length === 0) return null;
+
+    const structureMinRepetitions =
+      (options?.["structureMinRepetitions"] as number | undefined) ??
+      getRuleOption("missing-component", "structureMinRepetitions", 2);
+
+    const maxFingerprintDepth =
+      (options?.["maxFingerprintDepth"] as number | undefined) ??
+      getRuleOption("missing-component", "maxFingerprintDepth", 3);
+
+    // Compute fingerprint for this node
+    const fingerprint = buildFingerprint(node, maxFingerprintDepth);
+
+    // Access siblings (may be undefined)
+    const siblings = context.siblings ?? [];
+
+    // Filter siblings to qualifying frames (type === FRAME, not inside INSTANCE, has children)
+    const qualifyingSiblings = siblings.filter(
+      (s) =>
+        s.type === "FRAME" &&
+        s.children !== undefined &&
+        s.children.length > 0
+    );
+
+    // Count siblings (including self) sharing the same fingerprint
+    const matchingNodes = qualifyingSiblings.filter(
+      (s) => buildFingerprint(s, maxFingerprintDepth) === fingerprint
+    );
+
+    // Ensure self is counted (it should be in siblings, but add a guard)
+    const selfIsInSiblings = qualifyingSiblings.some((s) => s.id === node.id);
+    const count = selfIsInSiblings
+      ? matchingNodes.length
+      : matchingNodes.length + 1;
+
+    if (count >= structureMinRepetitions) {
+      // Only emit for the first sibling (by array order) with this fingerprint
+      const firstMatch = qualifyingSiblings.find(
+        (s) => buildFingerprint(s, maxFingerprintDepth) === fingerprint
+      );
+
+      // If self is not in siblings list, treat self as first match when no earlier match exists
+      const firstMatchId = firstMatch?.id ?? node.id;
+      if (firstMatchId === node.id) {
+        return {
+          ruleId: missingComponentDef.id,
+          nodeId: node.id,
+          nodePath: context.path.join(" > "),
+          message: `"${node.name}" and ${count - 1} sibling frame(s) share the same internal structure — consider extracting a component`,
+        };
+      }
+    }
+
+    return null;
+  }
+
+  // ========================================
+  // Stage 4: Instance style divergence (absorbed from nested-instance-override)
+  // ========================================
+  if (node.type === "INSTANCE" && node.componentId) {
+    if (seenStage4ComponentIds.has(node.componentId)) return null;
+
+    // Collect all INSTANCE nodes in document with same componentId
+    const instances = collectInstancesByComponentId(
+      context.file.document,
+      node.componentId
+    );
+
+    // Need at least 2 instances to compare
+    if (instances.length < 2) return null;
+
+    // Compare componentProperties across instances
+    const instancesWithProps = instances.filter(
+      (inst) =>
+        inst.componentProperties &&
+        Object.keys(inst.componentProperties).length > 0
+    );
+
+    if (instancesWithProps.length < 2) return null;
+
+    // Get all override keys across all instances
+    const allKeys = new Set<string>();
+    for (const inst of instancesWithProps) {
+      if (inst.componentProperties) {
+        for (const key of Object.keys(inst.componentProperties)) {
+          allKeys.add(key);
+        }
+      }
+    }
+
+    // Count how many instances differ from the first instance's override values
+    const referenceInst = instancesWithProps[0];
+    if (!referenceInst) return null;
+    const referenceProps = referenceInst.componentProperties ?? {};
+
+    let differingCount = 0;
+    for (let i = 1; i < instancesWithProps.length; i++) {
+      const inst = instancesWithProps[i];
+      if (!inst) continue;
+      const instProps = inst.componentProperties ?? {};
+
+      // Check if any key has a different value
+      let hasDifference = false;
+      for (const key of allKeys) {
+        const refVal = JSON.stringify(referenceProps[key]);
+        const instVal = JSON.stringify(instProps[key]);
+        if (refVal !== instVal) {
+          hasDifference = true;
+          break;
+        }
+      }
+
+      if (hasDifference) {
+        differingCount++;
+      }
+    }
+
+    // If more than half of the instances have different overrides, flag
+    if (differingCount > Math.floor(instancesWithProps.length / 2)) {
+      seenStage4ComponentIds.add(node.componentId);
+
+      const componentMeta = context.file.components[node.componentId];
+      const componentName = componentMeta?.name ?? node.name;
+
       return {
         ruleId: missingComponentDef.id,
         nodeId: node.id,
         nodePath: context.path.join(" > "),
-        message: `"${node.name}" appears ${sameNameFrames.length} times - consider making it a component`,
+        message: `Instances of "${componentName}" have divergent overrides (${differingCount + 1} variants found) — consider creating explicit variants`,
       };
     }
+
+    // Mark as seen even if no violation — avoid re-walking the tree for every instance
+    seenStage4ComponentIds.add(node.componentId);
+    return null;
   }
 
   return null;
@@ -122,45 +362,6 @@ const detachedInstanceCheck: RuleCheckFn = (node, context) => {
 export const detachedInstance = defineRule({
   definition: detachedInstanceDef,
   check: detachedInstanceCheck,
-});
-
-// ============================================
-// nested-instance-override
-// ============================================
-
-const nestedInstanceOverrideDef: RuleDefinition = {
-  id: "nested-instance-override",
-  name: "Nested Instance Override",
-  category: "component",
-  why: "Excessive overrides in instances make components harder to maintain",
-  impact: "Component updates may not work as expected",
-  fix: "Create a variant or new component for significantly different use cases",
-};
-
-const nestedInstanceOverrideCheck: RuleCheckFn = (node, context) => {
-  if (!isComponentInstance(node)) return null;
-
-  // Check for component property overrides
-  if (!node.componentProperties) return null;
-
-  const overrideCount = Object.keys(node.componentProperties).length;
-
-  // Flag if there are too many overrides
-  if (overrideCount > 5) {
-    return {
-      ruleId: nestedInstanceOverrideDef.id,
-      nodeId: node.id,
-      nodePath: context.path.join(" > "),
-      message: `"${node.name}" has ${overrideCount} property overrides - consider creating a variant`,
-    };
-  }
-
-  return null;
-};
-
-export const nestedInstanceOverride = defineRule({
-  definition: nestedInstanceOverrideDef,
-  check: nestedInstanceOverrideCheck,
 });
 
 // ============================================
@@ -329,112 +530,3 @@ export const missingComponentDescription = defineRule({
 export function resetMissingComponentDescriptionState(): void {
   seenMissingDescriptionComponentIds.clear();
 }
-
-// ============================================
-// repeated-frame-structure
-// ============================================
-
-/**
- * Build a structural fingerprint for a node.
- * The fingerprint encodes type, layoutMode, and child types recursively up to maxDepth.
- */
-function buildFingerprint(node: AnalysisNode, depth: number): string {
-  if (depth <= 0 || !node.children || node.children.length === 0) {
-    return `${node.type}:${node.layoutMode ?? "NONE"}`;
-  }
-
-  const childFingerprints = node.children
-    .map((child) => buildFingerprint(child, depth - 1))
-    .join(",");
-
-  return `${node.type}:${node.layoutMode ?? "NONE"}:[${childFingerprints}]`;
-}
-
-/**
- * Check if the node is inside an INSTANCE subtree.
- * Currently checks immediate parent only — RuleContext does not expose the full
- * ancestor type chain (context.path contains names, not types).
- * TODO: When the engine exposes ancestor types, extend to full chain check.
- */
-function isInsideInstance(context: {
-  parent?: AnalysisNode | undefined;
-}): boolean {
-  return context.parent?.type === "INSTANCE";
-}
-
-const repeatedFrameStructureDef: RuleDefinition = {
-  id: "repeated-frame-structure",
-  name: "Repeated Frame Structure",
-  category: "component",
-  why: "Sibling frames with identical internal structure are copy-paste patterns that should be componentized. On large pages, this inflates AI token consumption — each repeated frame is described independently instead of referencing a shared component definition.",
-  impact: "AI code generators reproduce each frame independently, missing the opportunity to emit a reusable component. Maintenance cost scales linearly with repetition count.",
-  fix: "Extract the repeated frame into a Figma component and replace each occurrence with an instance. If the repetition is intentional (e.g. fixed section layout), rename frames to reflect their distinct purpose.",
-};
-
-const repeatedFrameStructureCheck: RuleCheckFn = (node, context, options) => {
-  // Only activate for FRAME nodes
-  if (node.type !== "FRAME") return null;
-
-  // Skip if node is inside an INSTANCE subtree
-  if (isInsideInstance(context)) return null;
-
-  // Skip if parent is COMPONENT_SET
-  if (context.parent?.type === "COMPONENT_SET") return null;
-
-  // Skip if node has no children
-  if (!node.children || node.children.length === 0) return null;
-
-  const minRepetitions =
-    (options?.["minRepetitions"] as number | undefined) ??
-    getRuleOption("repeated-frame-structure", "minRepetitions", 2);
-
-  const maxFingerprintDepth =
-    (options?.["maxFingerprintDepth"] as number | undefined) ??
-    getRuleOption("repeated-frame-structure", "maxFingerprintDepth", 3);
-
-  // Compute fingerprint for this node
-  const fingerprint = buildFingerprint(node, maxFingerprintDepth);
-
-  // Access siblings (may be undefined)
-  const siblings = context.siblings ?? [];
-
-  // Filter siblings to qualifying frames (type === FRAME, not inside INSTANCE, has children)
-  const qualifyingSiblings = siblings.filter(
-    (s) =>
-      s.type === "FRAME" &&
-      s.children !== undefined &&
-      s.children.length > 0
-  );
-
-  // Count siblings (including self) sharing the same fingerprint
-  const matchingNodes = qualifyingSiblings.filter(
-    (s) => buildFingerprint(s, maxFingerprintDepth) === fingerprint
-  );
-
-  // Ensure self is counted (it should be in siblings, but add a guard)
-  const selfIsInSiblings = qualifyingSiblings.some((s) => s.id === node.id);
-  const count = selfIsInSiblings ? matchingNodes.length : matchingNodes.length + 1;
-
-  if (count < minRepetitions) return null;
-
-  // Only emit for the first sibling (by array order) with this fingerprint
-  const firstMatch = qualifyingSiblings.find(
-    (s) => buildFingerprint(s, maxFingerprintDepth) === fingerprint
-  );
-
-  // If self is not in siblings list, treat self as first match when no earlier match exists
-  const firstMatchId = firstMatch?.id ?? node.id;
-  if (firstMatchId !== node.id) return null;
-
-  return {
-    ruleId: repeatedFrameStructureDef.id,
-    nodeId: node.id,
-    nodePath: context.path.join(" > "),
-    message: `"${node.name}" and ${count - 1} sibling frame(s) share the same internal structure — consider extracting a component`,
-  };
-};
-
-export const repeatedFrameStructure = defineRule({
-  definition: repeatedFrameStructureDef,
-  check: repeatedFrameStructureCheck,
-});

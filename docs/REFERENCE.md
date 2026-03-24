@@ -125,10 +125,10 @@ Override score, severity, or enable/disable individual rules:
 |---------|--------------|-----------------|
 | `missing-component` | -7 | risk |
 | `detached-instance` | -5 | risk |
-| `nested-instance-override` | -3 | missing-info |
 | `variant-not-used` | -3 | suggestion |
 | `component-property-unused` | -2 | suggestion |
 | `single-use-component` | -2 | suggestion |
+| `missing-component-description` | -2 | missing-info |
 
 **Naming (5 rules)**
 

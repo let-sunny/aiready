@@ -95,15 +95,13 @@ export type RuleId =
   | "raw-shadow"
   | "raw-opacity"
   | "multiple-fill-colors"
-  // Component (8)
+  // Component (6)
   | "missing-component"
   | "detached-instance"
-  | "nested-instance-override"
   | "variant-not-used"
   | "component-property-unused"
   | "single-use-component"
   | "missing-component-description"
-  | "repeated-frame-structure"
   // Naming (5)
   | "default-name"
   | "non-semantic-name"
