@@ -3,25 +3,21 @@
 This prompt is used by all code generation pipelines:
 - Calibration Converter
 - Rule Discovery A/B Validation
-- User-facing `canicode implement` command
-- design-to-code GitHub Action (via `canicode prompt`)
+- User-facing `canicode implement` command (default prompt)
 
-## Stack Selection
+## Stack
+- HTML + CSS (single file)
+- No frameworks, no build step
 
-Choose the stack that matches the target project. Default is `html-css`.
-
-Available stacks:
-- `html-css` — Standalone HTML + CSS (default, no build step)
-- `react-tailwind` — React + Tailwind CSS
-- `react-css-modules` — React + CSS Modules
-- `vue-css` — Vue 3 + scoped CSS
-
-Stack-specific conventions are in `stacks/<stack-name>.md`. The rules below apply to ALL stacks.
+## Conventions
+- Semantic HTML elements
+- CSS variables for colors
+- Flexbox / Grid for layout
 
 ## CRITICAL: Do NOT Interpret. Reproduce Exactly.
 
 Every pixel in the Figma file is intentional. A designer made each decision deliberately.
-Your job is to translate the Figma data to code — nothing more.
+Your job is to translate the Figma data to HTML+CSS — nothing more.
 
 ### Rules
 - Do NOT add any value that isn't in the Figma data (no extra padding, margin, gap, transition, hover effect)
@@ -30,7 +26,7 @@ Your job is to translate the Figma data to code — nothing more.
 - Do NOT add responsive behavior unless the Figma data explicitly shows it
 - Do NOT use min-height or min-width — use exact height and width from the data
 - Do NOT add overflow: auto or scroll unless specified
-- Fonts: load via Google Fonts CDN. Do NOT use system font fallbacks as primary.
+- Fonts: load via Google Fonts CDN (`<link>` tag). Do NOT use system font fallbacks as primary — the exact font from the data must render.
 
 ### Image Assets
 - If the design tree shows `background-image: url(images/...)`, use that path directly
@@ -43,7 +39,12 @@ Do not silently guess — always declare what you assumed.
 ## Output
 
 ### 1. Code
-Output as a code block with filename (varies by stack).
+Output as a code block with filename:
+```html
+// filename: index.html
+<!DOCTYPE html>
+...
+```
 
 ### 2. Interpretations
 After the code block, output a section listing every value you had to guess or assume:

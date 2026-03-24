@@ -118,8 +118,8 @@ Hitting 429 errors? Make sure the file is in a paid workspace. Or use MCP (no to
 <summary><strong>Design to Code</strong> (prepare implementation package)</summary>
 
 ```bash
-canicode implement ./fixtures/my-design --stack react-tailwind
-canicode implement "https://www.figma.com/design/ABC/File?node-id=1-234" --stack vue-css --image-scale 3
+canicode implement ./fixtures/my-design
+canicode implement "https://www.figma.com/design/ABC/File?node-id=1-234" --prompt ./my-react-prompt.md --image-scale 3
 ```
 
 Outputs a ready-to-use package for AI code generation:
@@ -127,11 +127,11 @@ Outputs a ready-to-use package for AI code generation:
 - `design-tree.txt` — DOM-like tree with CSS styles + token estimate
 - `images/` — PNG assets with human-readable names (`hero-banner@2x.png`)
 - `vectors/` — SVG assets
-- `PROMPT.md` — stack-specific code generation prompt
+- `PROMPT.md` — code generation prompt (default: HTML+CSS, or your custom prompt)
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `--stack` | `html-css` | Target: `html-css`, `react-tailwind`, `react-css-modules`, `vue-css` |
+| `--prompt` | built-in HTML+CSS | Path to your custom prompt file for any stack |
 | `--image-scale` | `2` | Image export scale: `2` for PC, `3` for mobile |
 | `--output` | `./canicode-implement/` | Output directory |
 

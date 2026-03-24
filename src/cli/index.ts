@@ -995,12 +995,10 @@ cli
 // Implement command — design-to-code package
 // ============================================
 
-const VALID_STACKS = ["html-css", "react-tailwind", "react-css-modules", "vue-css"] as const;
-
 interface ImplementOptions {
   token?: string;
   output?: string;
-  stack?: string;
+  prompt?: string;
   imageScale?: string;
 }
 
@@ -1011,17 +1009,12 @@ cli
   )
   .option("--token <token>", "Figma API token (or use FIGMA_TOKEN env var)")
   .option("--output <dir>", "Output directory (default: ./canicode-implement/)")
-  .option("--stack <name>", "Target stack: html-css (default), react-tailwind, react-css-modules, vue-css")
+  .option("--prompt <path>", "Custom prompt file (default: built-in HTML+CSS prompt)")
   .option("--image-scale <n>", "Image export scale: 2 for PC (default), 3 for mobile")
-  .example("  canicode implement ./fixtures/my-design --stack react-tailwind")
-  .example("  canicode implement https://www.figma.com/design/ABC/File?node-id=1-234 --stack vue-css --image-scale 3")
+  .example("  canicode implement ./fixtures/my-design")
+  .example("  canicode implement ./fixtures/my-design --prompt ./my-react-prompt.md --image-scale 3")
   .action(async (input: string, options: ImplementOptions) => {
     try {
-      const stack = options.stack ?? "html-css";
-      if (!(VALID_STACKS as readonly string[]).includes(stack)) {
-        console.error(`Error: --stack must be one of: ${VALID_STACKS.join(", ")}`);
-        process.exit(1);
-      }
 
       const outputDir = resolve(options.output ?? "canicode-implement");
       mkdirSync(outputDir, { recursive: true });
@@ -1178,53 +1171,41 @@ cli
       }
 
       // 7. Assemble prompt
-      const { readFile: rf } = await import("node:fs/promises");
-      const { dirname: dirnameFn, resolve: resolveFn } = await import("node:path");
-      const { fileURLToPath } = await import("node:url");
-      const cliDir = dirnameFn(fileURLToPath(import.meta.url));
-      // cli/ → project root: up two levels (cli/index.js → dist/ → root OR src/ → root)
-      const projectRoot = resolveFn(cliDir, "../..");
-
-      const basePromptPath = resolveFn(projectRoot, ".claude/skills/design-to-code/PROMPT.md");
-      const stackPromptPath = resolveFn(projectRoot, `.claude/skills/design-to-code/stacks/${stack}.md`);
-
-      // Also try one level up for npm-installed location
-      const altRoot = resolveFn(cliDir, "..");
-      const altBasePromptPath = resolveFn(altRoot, ".claude/skills/design-to-code/PROMPT.md");
-      const altStackPromptPath = resolveFn(altRoot, `.claude/skills/design-to-code/stacks/${stack}.md`);
-
-      let basePrompt = "";
-      for (const p of [basePromptPath, altBasePromptPath]) {
-        try {
-          basePrompt = await rf(p, "utf-8");
-          break;
-        } catch { /* try next */ }
-      }
-
-      let stackPrompt = "";
-      for (const p of [stackPromptPath, altStackPromptPath]) {
-        try {
-          stackPrompt = await rf(p, "utf-8");
-          break;
-        } catch { /* try next */ }
-      }
-
-      if (basePrompt || stackPrompt) {
-        let prompt = basePrompt;
-        if (stackPrompt) {
-          prompt += "\n\n---\n\n";
-          prompt += stackPrompt;
-        }
-        await writeFile(resolve(outputDir, "PROMPT.md"), prompt, "utf-8");
-        console.log(`  PROMPT.md: ${stack} stack`);
+      if (options.prompt) {
+        // Custom prompt: copy user's file
+        const { readFile: rf } = await import("node:fs/promises");
+        const customPrompt = await rf(resolve(options.prompt), "utf-8");
+        await writeFile(resolve(outputDir, "PROMPT.md"), customPrompt, "utf-8");
+        console.log(`  PROMPT.md: custom (${options.prompt})`);
       } else {
-        console.warn("  PROMPT.md: prompt files not found (skipped)");
+        // Default: built-in HTML+CSS prompt
+        const { readFile: rf } = await import("node:fs/promises");
+        const { dirname: dirnameFn, resolve: resolveFn } = await import("node:path");
+        const { fileURLToPath } = await import("node:url");
+        const cliDir = dirnameFn(fileURLToPath(import.meta.url));
+        const projectRoot = resolveFn(cliDir, "../..");
+        const altRoot = resolveFn(cliDir, "..");
+
+        let prompt = "";
+        for (const root of [projectRoot, altRoot]) {
+          const p = resolveFn(root, ".claude/skills/design-to-code/PROMPT.md");
+          try {
+            prompt = await rf(p, "utf-8");
+            break;
+          } catch { /* try next */ }
+        }
+
+        if (prompt) {
+          await writeFile(resolve(outputDir, "PROMPT.md"), prompt, "utf-8");
+          console.log(`  PROMPT.md: default (html-css)`);
+        } else {
+          console.warn("  PROMPT.md: built-in prompt not found (skipped)");
+        }
       }
 
       // Summary
       console.log(`\n${"=".repeat(50)}`);
       console.log(`Implementation package ready: ${outputDir}/`);
-      console.log(`  Stack: ${stack}`);
       console.log(`  Grade: ${scores.overall.grade} (${scores.overall.percentage}%)`);
       console.log(`  Issues: ${result.issues.length}`);
       console.log(`  Design tree: ~${stats.estimatedTokens} tokens`);

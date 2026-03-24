@@ -283,8 +283,7 @@ USAGE
   canicode implement <figma-url-or-fixture> [options]
 
 OPTIONS
-  --stack <name>       Target stack (default: html-css)
-                       Available: html-css, react-tailwind, react-css-modules, vue-css
+  --prompt <path>      Custom prompt file (default: built-in HTML+CSS)
   --image-scale <n>    Image export scale: 2 for PC (default), 3 for mobile
   --output <dir>       Output directory (default: ./canicode-implement/)
   --token <token>      Figma API token (for live URLs)
@@ -303,11 +302,12 @@ WORKFLOW
   3. AI generates code matching the design pixel-perfectly
   4. Verify with: canicode visual-compare ./output.html --figma-url <url>
 
-STACKS
-  html-css            Standalone HTML + CSS (no build step)
-  react-tailwind      React + Tailwind CSS utility classes
-  react-css-modules   React + CSS Modules (scoped styles)
-  vue-css             Vue 3 + scoped CSS
+CUSTOM PROMPT
+  Default prompt generates HTML+CSS. For your own stack:
+  1. Write a prompt file (e.g. my-react-prompt.md)
+  2. Pass it: canicode implement ./fixture --prompt ./my-react-prompt.md
+  The design-tree.txt format is stack-agnostic — your prompt just needs
+  to describe how to convert it to your target framework.
 
 IMAGE SCALE
   --image-scale 2     PC/desktop (default) — @2x retina
