@@ -663,11 +663,6 @@ cli
   )
   .action((category: string | string[]) => {
     const categories = Array.isArray(category) ? category : [category];
-    if (categories.length === 0) {
-      console.log("No categories specified — nothing to prune.");
-      return;
-    }
-
     pruneDiscoveryEvidence(categories);
     console.log(`Pruned discovery evidence for categories: ${categories.join(", ")}`);
   });
