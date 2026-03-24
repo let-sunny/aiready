@@ -149,26 +149,29 @@ export async function renderCodeScreenshot(
   // Dynamic import — playwright is an optional dependency
   const { chromium } = await import("playwright");
   const browser = await chromium.launch();
-  const context = await browser.newContext({
-    viewport: logicalViewport,
-    deviceScaleFactor,
-  });
-  const page = await context.newPage();
+  try {
+    const context = await browser.newContext({
+      viewport: logicalViewport,
+      deviceScaleFactor,
+    });
+    const page = await context.newPage();
 
-  await page.goto(`file://${resolve(codePath)}`, {
-    waitUntil: "networkidle",
-    timeout: 30_000,
-  });
-  await page.waitForTimeout(1000);
+    await page.goto(`file://${resolve(codePath)}`, {
+      waitUntil: "networkidle",
+      timeout: 30_000,
+    });
+    await page.waitForTimeout(1000);
 
-  // Capture only the first child element (the design root), not the full body/viewport
-  const root = page.locator("body > *:first-child");
-  if (await root.count() > 0) {
-    await root.screenshot({ path: outputPath });
-  } else {
-    await page.screenshot({ path: outputPath });
+    // Capture only the first child element (the design root), not the full body/viewport
+    const root = page.locator("body > *:first-child");
+    if (await root.count() > 0) {
+      await root.screenshot({ path: outputPath });
+    } else {
+      await page.screenshot({ path: outputPath });
+    }
+  } finally {
+    await browser.close();
   }
-  await browser.close();
 }
 
 /**
@@ -262,10 +265,10 @@ export async function visualCompare(options: VisualCompareOptions): Promise<Visu
 
   const exportScale = options.figmaExportScale ?? 2;
 
-  // Step 1: Fetch Figma screenshot (skip if already cached in output dir)
-  if (existsSync(figmaScreenshotPath)) {
-    // Reuse cached figma.png — same design, no need to re-fetch
-  } else {
+  // Step 1: Fetch Figma screenshot
+  // figma.png in outputDir may come from a previous run with a different scale.
+  // Always re-fetch unless the file was placed by the caller (e.g. converter copying fixture screenshot).
+  if (!existsSync(figmaScreenshotPath)) {
     await fetchFigmaScreenshot(fileKey, nodeId, options.figmaToken, figmaScreenshotPath, exportScale);
     if (!existsSync(figmaScreenshotPath)) {
       throw new Error(`Figma screenshot was not created at expected path: ${figmaScreenshotPath}`);

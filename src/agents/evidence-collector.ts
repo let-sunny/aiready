@@ -86,10 +86,12 @@ export function appendCalibrationEvidence(
   if (entries.length === 0) return;
   const existing = readValidatedArray(evidencePath, CalibrationEvidenceEntrySchema);
   // Same batch can repeat (ruleId, fixture); last entry wins (matches cross-call behavior)
+  // Normalize ruleId/fixture to prevent bucket splitting from whitespace differences
   const incomingByKey = new Map<string, CalibrationEvidenceEntry>();
   for (const e of entries) {
-    const k = `${e.ruleId.trim()}\0${e.fixture.trim()}`;
-    incomingByKey.set(k, e);
+    const normalized = { ...e, ruleId: e.ruleId.trim(), fixture: e.fixture.trim() };
+    const k = `${normalized.ruleId}\0${normalized.fixture}`;
+    incomingByKey.set(k, normalized);
   }
   const mergedIncoming = [...incomingByKey.values()];
   const keys = new Set(incomingByKey.keys());

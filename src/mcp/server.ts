@@ -298,12 +298,15 @@ canicode visual-compare ./index.html --figma-url 'https://www.figma.com/design/A
 | --figma-url <url> | (required) | Figma URL with node-id |
 | --token <token> | FIGMA_TOKEN env | Figma API token |
 | --output <dir> | /tmp/canicode-visual-compare | Output directory |
-| --width <px> | (from Figma screenshot) | Viewport width override |
-| --height <px> | (from Figma screenshot) | Viewport height override |
+| --width <px> | (inferred from Figma PNG ÷ scale) | Logical viewport width in CSS px |
+| --height <px> | (inferred from Figma PNG ÷ scale) | Logical viewport height in CSS px |
+| --figma-scale <n> | 2 | Figma export scale (matches @2x fixture PNGs) |
+
+Viewport and device pixel ratio are auto-inferred from the Figma PNG dimensions and export scale. Override only when needed.
 
 ## Output Files
 /tmp/canicode-visual-compare/
-  figma.png — Figma screenshot (scale=2)
+  figma.png — Figma screenshot (at export scale, default @2x)
   code.png — Playwright render of your HTML
   diff.png — Pixel diff (red = different)
 

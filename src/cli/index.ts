@@ -939,6 +939,15 @@ cli
         process.exit(1);
       }
 
+      if (options.width !== undefined && (!Number.isFinite(options.width) || options.width <= 0)) {
+        console.error("Error: --width must be a positive number");
+        process.exit(1);
+      }
+      if (options.height !== undefined && (!Number.isFinite(options.height) || options.height <= 0)) {
+        console.error("Error: --height must be a positive number");
+        process.exit(1);
+      }
+
       const hasViewportOverride = options.width !== undefined || options.height !== undefined;
 
       console.log("Comparing...");
