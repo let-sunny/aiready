@@ -121,7 +121,7 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
   },
 
   // ============================================
-  // Component (7 rules)
+  // Component (8 rules)
   // ============================================
   "missing-component": {
     severity: "risk",
