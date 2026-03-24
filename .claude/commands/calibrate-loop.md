@@ -187,6 +187,16 @@ Append to `$RUN_DIR/activity.jsonl`:
 {"step":"Arbitrator","timestamp":"<ISO8601>","result":"applied=<N> rejected=<N>","durationMs":<ms>}
 ```
 
+### Step 6.5 — Prune evidence
+
+After the Arbitrator applies changes, prune calibration evidence for the applied rules:
+
+```bash
+npx canicode calibrate-prune-evidence $RUN_DIR
+```
+
+This reads `debate.json`, extracts applied/revised ruleIds, and removes their entries from `data/calibration-evidence.json`.
+
 ### Step 7 — Generate Report
 
 ```

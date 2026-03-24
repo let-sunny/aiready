@@ -128,7 +128,7 @@ Append to `$RUN_DIR/activity.jsonl`:
 
 Based on the Critic's decision:
 - **KEEP**: Commit the new rule. Message: `feat: add rule <rule-id> via discovery pipeline`
-  - **Prune discovery evidence**: Read `data/discovery-evidence.json`, remove entries whose `category` matches the implemented rule's category (case-insensitive), write back, include in commit.
+  - **Prune discovery evidence**: `npx canicode discovery-prune-evidence <category>` (the implemented rule's category). Include the pruned file in the commit.
 - **ADJUST**: Apply the Critic's suggested changes, run tests, then commit.
   - **Prune discovery evidence**: same as KEEP.
 - **DROP**: Revert all changes to src/. Log the reason.

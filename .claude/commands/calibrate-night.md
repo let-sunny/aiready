@@ -8,15 +8,11 @@ You are the nightly orchestrator. Scan for active fixtures, run `/calibrate-loop
 
 ### Step 0 — Discover fixtures
 
-Determine the fixture directory from the input (default: `fixtures`).
-
 ```bash
-ls <fixture-dir>/*/data.json
+npx canicode fixture-list <fixture-dir> --json
 ```
 
-These are the **active** fixture directories to calibrate. Fixtures in `<fixture-dir>/done/` have already converged and are skipped.
-
-If no fixture directories found, stop with a message: "No active fixtures found."
+This returns `{ "active": [...], "done": [...] }`. Use the `active` list. If empty, stop with: "No active fixtures found."
 
 ### Step 1 — Run calibration for each fixture
 
@@ -35,16 +31,13 @@ After each fixture, briefly report:
 
 ### Step 2 — Move converged fixtures
 
-After each successful run, check the run's `debate.json` for the Arbitrator's summary.
-
-A fixture has converged ONLY when `applied=0` AND `rejected=0` (no changes and no disagreements):
+After each successful run, use the CLI to check convergence and move:
 
 ```bash
-mkdir -p <fixture-dir>/done
-mv <fixture-path> <fixture-dir>/done/
+npx canicode fixture-done <fixture-path> --run-dir $RUN_DIR
 ```
 
-If `applied=0` but `rejected>0`, the fixture is still **active** — proposals are being debated. Do NOT move it to `done/`.
+This checks `debate.json` for convergence (`applied=0 AND rejected=0`) and moves the fixture to `done/`. If the fixture hasn't converged, the command exits with an error — that's expected, just skip and continue.
 
 Report which fixtures were moved to `done/`.
 
@@ -90,4 +83,4 @@ Report:
 - If a fixture fails, continue to the next — don't stop the whole run.
 - Each `/calibrate-loop` creates its own run directory under `logs/calibration/`.
 - Do NOT modify source files yourself — `/calibrate-loop` handles that via its agent pipeline.
-- Only move a fixture to `done/` when `applied=0 AND rejected=0` — meaning all proposals were validated with no disagreements.
+- Use `npx canicode fixture-done` for convergence checks and moves — do NOT use `mv` directly.

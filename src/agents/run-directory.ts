@@ -1,5 +1,5 @@
-import { existsSync, mkdirSync, readdirSync } from "node:fs";
-import { resolve, join } from "node:path";
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync } from "node:fs";
+import { resolve, join, basename } from "node:path";
 
 const CALIBRATION_DIR = "logs/calibration";
 const RULE_DISCOVERY_DIR = "logs/rule-discovery";
@@ -108,4 +108,124 @@ export function listRuleDiscoveryRuns(): string[] {
     .filter((e) => e.isDirectory() && e.name.includes("--"))
     .map((e) => join(dir, e.name))
     .sort();
+}
+
+// --- Fixture discovery ---
+
+const DEFAULT_FIXTURES_DIR = "fixtures";
+const DONE_DIR = "done";
+
+/**
+ * List active fixture directories (those containing data.json, excluding done/).
+ * Returns absolute paths sorted alphabetically.
+ */
+export function listActiveFixtures(fixturesDir: string = DEFAULT_FIXTURES_DIR): string[] {
+  const dir = resolve(fixturesDir);
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir, { withFileTypes: true })
+    .filter((e) => e.isDirectory() && e.name !== DONE_DIR)
+    .map((e) => join(dir, e.name))
+    .filter((p) => existsSync(join(p, "data.json")))
+    .sort();
+}
+
+/**
+ * List done fixture directories.
+ */
+export function listDoneFixtures(fixturesDir: string = DEFAULT_FIXTURES_DIR): string[] {
+  const doneDir = resolve(fixturesDir, DONE_DIR);
+  if (!existsSync(doneDir)) return [];
+  return readdirSync(doneDir, { withFileTypes: true })
+    .filter((e) => e.isDirectory())
+    .map((e) => join(doneDir, e.name))
+    .filter((p) => existsSync(join(p, "data.json")))
+    .sort();
+}
+
+/**
+ * Move a fixture to done/.
+ * Returns the new path, or null if the fixture doesn't exist.
+ */
+export function moveFixtureToDone(fixturePath: string, fixturesDir: string = DEFAULT_FIXTURES_DIR): string | null {
+  const src = resolve(fixturePath);
+  if (!existsSync(src)) return null;
+  const name = basename(src);
+  const doneDir = resolve(fixturesDir, DONE_DIR);
+  mkdirSync(doneDir, { recursive: true });
+  const dest = join(doneDir, name);
+  renameSync(src, dest);
+  return dest;
+}
+
+// --- Debate result parsing ---
+
+export interface DebateDecision {
+  ruleId: string;
+  decision: string;
+  before?: number | undefined;
+  after?: number | undefined;
+  reason?: string | undefined;
+}
+
+export interface DebateResult {
+  critic: {
+    summary: string;
+    reviews: Array<{
+      ruleId: string;
+      decision: string;
+      reason?: string | undefined;
+      revised?: number | undefined;
+    }>;
+  } | null;
+  arbitrator: {
+    summary: string;
+    decisions: DebateDecision[];
+    newRuleProposals?: unknown[];
+  } | null;
+  skipped?: string | undefined;
+}
+
+/**
+ * Parse a debate.json file from a run directory.
+ * Returns null if the file doesn't exist or is malformed.
+ */
+export function parseDebateResult(runDir: string): DebateResult | null {
+  const debatePath = join(runDir, "debate.json");
+  if (!existsSync(debatePath)) return null;
+  try {
+    const raw = JSON.parse(readFileSync(debatePath, "utf-8")) as Record<string, unknown>;
+    return {
+      critic: raw["critic"] as DebateResult["critic"] ?? null,
+      arbitrator: raw["arbitrator"] as DebateResult["arbitrator"] ?? null,
+      ...(typeof raw["skipped"] === "string" ? { skipped: raw["skipped"] } : {}),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Extract ruleIds that were applied or revised by the Arbitrator.
+ */
+export function extractAppliedRuleIds(debate: DebateResult): string[] {
+  if (!debate.arbitrator) return [];
+  return debate.arbitrator.decisions
+    .filter((d) => d.decision === "applied" || d.decision === "revised")
+    .map((d) => d.ruleId);
+}
+
+/**
+ * Check if a calibration run has converged.
+ * Converged = debate exists AND applied=0 AND rejected=0.
+ * This means all proposals were validated — no changes and no disagreements.
+ */
+export function isConverged(runDir: string): boolean {
+  const debate = parseDebateResult(runDir);
+  if (!debate) return false;
+  if (debate.skipped) return true; // zero proposals = converged
+  if (!debate.arbitrator) return false;
+  const decisions = debate.arbitrator.decisions;
+  const applied = decisions.filter((d) => d.decision === "applied" || d.decision === "revised").length;
+  const rejected = decisions.filter((d) => d.decision === "rejected").length;
+  return applied === 0 && rejected === 0;
 }

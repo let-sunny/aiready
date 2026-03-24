@@ -557,6 +557,116 @@ cli
     }
   });
 
+// ============================================
+// Fixture management commands
+// ============================================
+
+import {
+  listActiveFixtures,
+  listDoneFixtures,
+  moveFixtureToDone,
+  isConverged,
+  parseDebateResult,
+  extractAppliedRuleIds,
+} from "../agents/run-directory.js";
+import {
+  pruneCalibrationEvidence,
+  pruneDiscoveryEvidence,
+} from "../agents/evidence-collector.js";
+
+cli
+  .command(
+    "fixture-list [fixturesDir]",
+    "List active and done fixtures"
+  )
+  .option("--json", "Output as JSON")
+  .action((fixturesDir: string | undefined, options: { json?: boolean }) => {
+    const dir = fixturesDir ?? "fixtures";
+    const active = listActiveFixtures(dir);
+    const done = listDoneFixtures(dir);
+
+    if (options.json) {
+      console.log(JSON.stringify({ active, done }, null, 2));
+    } else {
+      console.log(`Active fixtures (${active.length}):`);
+      for (const p of active) {
+        console.log(`  ${p}`);
+      }
+      console.log(`\nDone fixtures (${done.length}):`);
+      for (const p of done) {
+        console.log(`  ${p}`);
+      }
+    }
+  });
+
+cli
+  .command(
+    "fixture-done <fixturePath>",
+    "Move a converged fixture to done/"
+  )
+  .option("--fixtures-dir <path>", "Fixtures root directory", { default: "fixtures" })
+  .option("--force", "Skip convergence check")
+  .option("--run-dir <path>", "Run directory to check for convergence")
+  .action((fixturePath: string, options: { fixturesDir?: string; force?: boolean; runDir?: string }) => {
+    if (!options.force) {
+      if (!options.runDir) {
+        console.error("Error: --run-dir required to check convergence (or use --force to skip check)");
+        process.exit(1);
+      }
+      if (!isConverged(resolve(options.runDir))) {
+        const debate = parseDebateResult(resolve(options.runDir));
+        const summary = debate?.arbitrator?.summary ?? debate?.skipped ?? "no debate.json found";
+        console.error(`Error: fixture has not converged (${summary}). Use --force to override.`);
+        process.exit(1);
+      }
+    }
+
+    const dest = moveFixtureToDone(fixturePath, options.fixturesDir ?? "fixtures");
+    if (dest) {
+      console.log(`Moved to: ${dest}`);
+    } else {
+      console.error(`Error: fixture not found: ${fixturePath}`);
+      process.exit(1);
+    }
+  });
+
+cli
+  .command(
+    "calibrate-prune-evidence <runDir>",
+    "Prune evidence for rules applied by the Arbitrator in the given run"
+  )
+  .action((runDir: string) => {
+    const debate = parseDebateResult(resolve(runDir));
+    if (!debate) {
+      console.log("No debate.json found — nothing to prune.");
+      return;
+    }
+
+    const appliedIds = extractAppliedRuleIds(debate);
+    if (appliedIds.length === 0) {
+      console.log("No applied/revised rules — nothing to prune.");
+      return;
+    }
+
+    pruneCalibrationEvidence(appliedIds);
+    console.log(`Pruned calibration evidence for ${appliedIds.length} rule(s): ${appliedIds.join(", ")}`);
+  });
+
+cli
+  .command(
+    "discovery-prune-evidence <categories...>",
+    "Prune discovery evidence for categories addressed by /add-rule"
+  )
+  .action((categories: string[]) => {
+    if (categories.length === 0) {
+      console.log("No categories specified — nothing to prune.");
+      return;
+    }
+
+    pruneDiscoveryEvidence(categories);
+    console.log(`Pruned discovery evidence for categories: ${categories.join(", ")}`);
+  });
+
 interface CalibrateRunOptions {
   output?: string;
   token?: string;
