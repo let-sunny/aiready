@@ -1,6 +1,7 @@
 import { existsSync, statSync } from "node:fs";
 import { resolve, join } from "node:path";
 import { FigmaClient } from "../adapters/figma-client.js";
+import { resolveComponentDefinitions } from "../adapters/component-resolver.js";
 import { loadFigmaFileFromJson } from "../adapters/figma-file-loader.js";
 import { transformFigmaResponse, transformFileNodesResponse } from "../adapters/figma-transformer.js";
 import { parseFigmaUrl } from "../adapters/figma-url-parser.js";
@@ -88,15 +89,25 @@ async function loadFromApi(
   if (nodeId) {
     // Fetch only the target node subtree — faster, less rate limit impact
     const response = await client.getFileNodes(fileKey, [nodeId.replace(/-/g, ":")]);
-    return {
-      file: transformFileNodesResponse(fileKey, response),
-      nodeId,
-    };
+    const file = transformFileNodesResponse(fileKey, response);
+
+    // Resolve component master node trees for accurate analysis
+    const componentDefs = await resolveComponentDefinitions(client, fileKey, file.document);
+    if (Object.keys(componentDefs).length > 0) {
+      file.componentDefinitions = componentDefs;
+    }
+
+    return { file, nodeId };
   }
 
   const response = await client.getFile(fileKey);
-  return {
-    file: transformFigmaResponse(fileKey, response),
-    nodeId,
-  };
+  const file = transformFigmaResponse(fileKey, response);
+
+  // Full file fetch may still miss component masters from external libraries
+  const componentDefs = await resolveComponentDefinitions(client, fileKey, file.document);
+  if (Object.keys(componentDefs).length > 0) {
+    file.componentDefinitions = componentDefs;
+  }
+
+  return { file, nodeId };
 }
