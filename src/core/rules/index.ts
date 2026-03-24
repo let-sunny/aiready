@@ -7,7 +7,7 @@ export * from "./rule-config.js";
 // Layout rules (11)
 export * from "./layout/index.js";
 
-// Token rules (8)
+// Token rules (7)
 export * from "./token/index.js";
 
 // Component rules (7)

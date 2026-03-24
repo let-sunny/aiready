@@ -87,7 +87,7 @@ export type RuleId =
   | "deep-nesting"
   | "overflow-hidden-abuse"
   | "inconsistent-sibling-layout-direction"
-  // Token (8)
+  // Token (7)
   | "raw-color"
   | "raw-font"
   | "inconsistent-spacing"
@@ -95,7 +95,6 @@ export type RuleId =
   | "raw-shadow"
   | "raw-opacity"
   | "multiple-fill-colors"
-  | "inconsistent-border-radius"
   // Component (7)
   | "missing-component"
   | "detached-instance"

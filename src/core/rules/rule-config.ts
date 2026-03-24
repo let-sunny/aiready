@@ -73,7 +73,7 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
   },
 
   // ============================================
-  // Token (8 rules)
+  // Token (7 rules)
   // ============================================
   "raw-color": {
     severity: "missing-info",
@@ -117,15 +117,6 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
     enabled: true,
     options: {
       tolerance: 10,
-    },
-  },
-  "inconsistent-border-radius": {
-    severity: "missing-info",
-    score: -2,
-    enabled: true,
-    options: {
-      circleIdiomThreshold: 100,
-      radiusTolerance: 0,
     },
   },
 
