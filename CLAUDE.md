@@ -52,6 +52,8 @@ app/                          # Browser runtime
 - Output: HTML report (opens in browser)
 - Options: `--preset`, `--token`, `--output`, `--custom-rules`, `--config`
 - Also: `canicode save-fixture` to save Figma data as JSON for offline analysis
+- Component master resolution: fetches `componentDefinitions` for accurate component analysis
+- Annotations: NOT available (REST API annotations field is private beta)
 
 **2. MCP Server (`canicode-mcp`)**
 - Install: `claude mcp add canicode -- npx -y -p canicode canicode-mcp`
@@ -61,6 +63,23 @@ app/                          # Browser runtime
   - canicode MCP `analyze(designData: XML, designContext: code)` — hybrid enrichment
   - No FIGMA_TOKEN needed when using Figma MCP
 - Also works standalone with FIGMA_TOKEN (REST API fallback via `input` param)
+
+**CLI vs MCP Feature Comparison**
+
+| Feature | CLI (REST API) | MCP (Figma MCP) |
+|---------|:-:|:-:|
+| Node structure | ✅ Full tree | ✅ XML metadata |
+| Style values | ✅ Raw Figma JSON | ✅ React+Tailwind code |
+| Component metadata (name, desc) | ✅ | ❌ |
+| Component master trees | ✅ `componentDefinitions` | ❌ |
+| Annotations (dev mode) | ❌ private beta | ✅ `data-annotations` |
+| Screenshots | ✅ via API | ✅ `get_screenshot` |
+| FIGMA_TOKEN required | ✅ | ❌ |
+
+**When to use which:**
+- Accurate component analysis (style overrides, missing-component) → **CLI with FIGMA_TOKEN**
+- Quick structure/style check, annotation-aware workflows → **MCP**
+- Offline/CI analysis → **CLI with saved fixtures**
 
 **3. Claude Code Skill (`/canicode`)**
 - Location: `.claude/skills/canicode/SKILL.md` (copy to any project)

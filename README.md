@@ -70,6 +70,28 @@ The rules themselves run deterministically on every analysis — no tokens consu
 | Full control | **CLI** |
 
 <details>
+<summary><strong>CLI vs MCP</strong> (feature comparison)</summary>
+
+Same detail as in [`CLAUDE.md`](CLAUDE.md); summarized here for quick reference.
+
+| Feature | CLI (REST API) | MCP (Figma MCP) |
+|---------|:-:|:-:|
+| Node structure | ✅ Full tree | ✅ XML metadata |
+| Style values | ✅ Raw Figma JSON | ✅ React+Tailwind code |
+| Component metadata (name, desc) | ✅ | ❌ |
+| Component master trees | ✅ `componentDefinitions` | ❌ |
+| Annotations (dev mode) | ❌ private beta | ✅ `data-annotations` |
+| Screenshots | ✅ via API | ✅ `get_screenshot` |
+| FIGMA_TOKEN required | ✅ | ❌ |
+
+**When to use which:**
+- Accurate component analysis (style overrides, missing-component rules) → **CLI with FIGMA_TOKEN**
+- Quick structure/style checks or annotation-aware flows → **MCP**
+- Offline/CI → **CLI with saved fixtures** (`save-fixture`)
+
+</details>
+
+<details>
 <summary><strong>CLI</strong></summary>
 
 ```bash
