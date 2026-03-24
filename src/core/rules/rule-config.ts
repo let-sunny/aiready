@@ -138,7 +138,7 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
   },
   "nested-instance-override": {
     severity: "risk",
-    score: -3,
+    score: -2,
     enabled: true,
   },
   "variant-not-used": {
