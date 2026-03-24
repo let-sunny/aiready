@@ -658,15 +658,11 @@ cli
 
 cli
   .command(
-    "discovery-prune-evidence <categories...>",
-    "Prune discovery evidence for categories addressed by /add-rule"
+    "discovery-prune-evidence <category>",
+    "Prune discovery evidence for a category addressed by /add-rule"
   )
-  .action((categories: string[]) => {
-    if (categories.length === 0) {
-      console.log("No categories specified — nothing to prune.");
-      return;
-    }
-
+  .action((category: string | string[]) => {
+    const categories = Array.isArray(category) ? category : [category];
     pruneDiscoveryEvidence(categories);
     console.log(`Pruned discovery evidence for categories: ${categories.join(", ")}`);
   });

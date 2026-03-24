@@ -329,3 +329,112 @@ export const missingComponentDescription = defineRule({
 export function resetMissingComponentDescriptionState(): void {
   seenMissingDescriptionComponentIds.clear();
 }
+
+// ============================================
+// repeated-frame-structure
+// ============================================
+
+/**
+ * Build a structural fingerprint for a node.
+ * The fingerprint encodes type, layoutMode, and child types recursively up to maxDepth.
+ */
+function buildFingerprint(node: AnalysisNode, depth: number): string {
+  if (depth <= 0 || !node.children || node.children.length === 0) {
+    return `${node.type}:${node.layoutMode ?? "NONE"}`;
+  }
+
+  const childFingerprints = node.children
+    .map((child) => buildFingerprint(child, depth - 1))
+    .join(",");
+
+  return `${node.type}:${node.layoutMode ?? "NONE"}:[${childFingerprints}]`;
+}
+
+/**
+ * Check if the node is inside an INSTANCE subtree.
+ * Currently checks immediate parent only — RuleContext does not expose the full
+ * ancestor type chain (context.path contains names, not types).
+ * TODO: When the engine exposes ancestor types, extend to full chain check.
+ */
+function isInsideInstance(context: {
+  parent?: AnalysisNode | undefined;
+}): boolean {
+  return context.parent?.type === "INSTANCE";
+}
+
+const repeatedFrameStructureDef: RuleDefinition = {
+  id: "repeated-frame-structure",
+  name: "Repeated Frame Structure",
+  category: "component",
+  why: "Sibling frames with identical internal structure are copy-paste patterns that should be componentized. On large pages, this inflates AI token consumption — each repeated frame is described independently instead of referencing a shared component definition.",
+  impact: "AI code generators reproduce each frame independently, missing the opportunity to emit a reusable component. Maintenance cost scales linearly with repetition count.",
+  fix: "Extract the repeated frame into a Figma component and replace each occurrence with an instance. If the repetition is intentional (e.g. fixed section layout), rename frames to reflect their distinct purpose.",
+};
+
+const repeatedFrameStructureCheck: RuleCheckFn = (node, context, options) => {
+  // Only activate for FRAME nodes
+  if (node.type !== "FRAME") return null;
+
+  // Skip if node is inside an INSTANCE subtree
+  if (isInsideInstance(context)) return null;
+
+  // Skip if parent is COMPONENT_SET
+  if (context.parent?.type === "COMPONENT_SET") return null;
+
+  // Skip if node has no children
+  if (!node.children || node.children.length === 0) return null;
+
+  const minRepetitions =
+    (options?.["minRepetitions"] as number | undefined) ??
+    getRuleOption("repeated-frame-structure", "minRepetitions", 2);
+
+  const maxFingerprintDepth =
+    (options?.["maxFingerprintDepth"] as number | undefined) ??
+    getRuleOption("repeated-frame-structure", "maxFingerprintDepth", 3);
+
+  // Compute fingerprint for this node
+  const fingerprint = buildFingerprint(node, maxFingerprintDepth);
+
+  // Access siblings (may be undefined)
+  const siblings = context.siblings ?? [];
+
+  // Filter siblings to qualifying frames (type === FRAME, not inside INSTANCE, has children)
+  const qualifyingSiblings = siblings.filter(
+    (s) =>
+      s.type === "FRAME" &&
+      s.children !== undefined &&
+      s.children.length > 0
+  );
+
+  // Count siblings (including self) sharing the same fingerprint
+  const matchingNodes = qualifyingSiblings.filter(
+    (s) => buildFingerprint(s, maxFingerprintDepth) === fingerprint
+  );
+
+  // Ensure self is counted (it should be in siblings, but add a guard)
+  const selfIsInSiblings = qualifyingSiblings.some((s) => s.id === node.id);
+  const count = selfIsInSiblings ? matchingNodes.length : matchingNodes.length + 1;
+
+  if (count < minRepetitions) return null;
+
+  // Only emit for the first sibling (by array order) with this fingerprint
+  const firstMatch = qualifyingSiblings.find(
+    (s) => buildFingerprint(s, maxFingerprintDepth) === fingerprint
+  );
+
+  // If self is not in siblings list, treat self as first match when no earlier match exists
+  const firstMatchId = firstMatch?.id ?? node.id;
+  if (firstMatchId !== node.id) return null;
+
+  return {
+    ruleId: repeatedFrameStructureDef.id,
+    nodeId: node.id,
+    nodePath: context.path.join(" > "),
+    message: `"${node.name}" and ${count - 1} sibling frame(s) share the same internal structure — consider extracting a component`,
+  };
+};
+
+export const repeatedFrameStructure = defineRule({
+  definition: repeatedFrameStructureDef,
+  check: repeatedFrameStructureCheck,
+});

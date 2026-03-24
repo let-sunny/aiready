@@ -21,8 +21,8 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
     enabled: true,
   },
   "fixed-width-in-responsive-context": {
-    severity: "risk",
-    score: -4,
+    severity: "missing-info",
+    score: -2,
     depthWeight: 1.3,
     enabled: true,
   },
@@ -121,7 +121,7 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
   },
 
   // ============================================
-  // Component (7 rules)
+  // Component (8 rules)
   // ============================================
   "missing-component": {
     severity: "risk",
@@ -137,8 +137,8 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
     enabled: true,
   },
   "nested-instance-override": {
-    severity: "risk",
-    score: -5,
+    severity: "missing-info",
+    score: -2,
     enabled: true,
   },
   "variant-not-used": {
@@ -160,6 +160,15 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
     severity: "missing-info",
     score: -2,
     enabled: true,
+  },
+  "repeated-frame-structure": {
+    severity: "suggestion",
+    score: -3,
+    enabled: true,
+    options: {
+      minRepetitions: 2,
+      maxFingerprintDepth: 3,
+    },
   },
 
   // ============================================
@@ -221,7 +230,7 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
   },
   "empty-frame": {
     severity: "missing-info",
-    score: -2,
+    score: -3,
     enabled: true,
   },
 
