@@ -161,6 +161,15 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
     score: -2,
     enabled: true,
   },
+  "repeated-frame-structure": {
+    severity: "suggestion",
+    score: -3,
+    enabled: true,
+    options: {
+      minRepetitions: 2,
+      maxFingerprintDepth: 3,
+    },
+  },
 
   // ============================================
   // Naming (5 rules)
