@@ -116,6 +116,14 @@ describe("extractAppliedRuleIds", () => {
     });
     expect(ids).toEqual(["my-rule", "b"]);
   });
+
+  it("returns empty array when decisions is not an array", () => {
+    const bad = {
+      critic: null,
+      arbitrator: { summary: "x", decisions: null },
+    } as unknown as Parameters<typeof extractAppliedRuleIds>[0];
+    expect(extractAppliedRuleIds(bad)).toEqual([]);
+  });
 });
 
 describe("isConverged", () => {
@@ -153,6 +161,19 @@ describe("isConverged", () => {
       }),
     );
     expect(isConverged(tempDir, { lenient: true })).toBe(true);
+  });
+
+  it("returns false when arbitrator exists but decisions is not an array", () => {
+    writeFileSync(
+      join(tempDir, "debate.json"),
+      JSON.stringify({
+        arbitrator: {
+          summary: "incomplete",
+        },
+      }),
+    );
+    expect(isConverged(tempDir)).toBe(false);
+    expect(isConverged(tempDir, { lenient: true })).toBe(false);
   });
 });
 

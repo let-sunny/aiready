@@ -85,8 +85,10 @@ export function appendCalibrationEvidence(
 ): void {
   if (entries.length === 0) return;
   const existing = readValidatedArray(evidencePath, CalibrationEvidenceEntrySchema);
-  const keys = new Set(entries.map((e) => `${e.ruleId.trim()}\0${e.fixture}`));
-  const withoutDupes = existing.filter((e) => !keys.has(`${e.ruleId.trim()}\0${e.fixture}`));
+  const keys = new Set(entries.map((e) => `${e.ruleId.trim()}\0${e.fixture.trim()}`));
+  const withoutDupes = existing.filter(
+    (e) => !keys.has(`${e.ruleId.trim()}\0${e.fixture.trim()}`),
+  );
   withoutDupes.push(...entries);
   writeJsonArray(evidencePath, withoutDupes);
 }

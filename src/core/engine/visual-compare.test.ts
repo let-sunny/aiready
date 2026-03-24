@@ -20,7 +20,7 @@
  * For (3)–(6) we build small PNGs in memory with pngjs and write them to a temp dir,
  * then call compareScreenshots through a minimal re-export shim declared in this file.
  * Because the module does not export the private functions we reproduce the exact same
- * logic (8 lines of resizePng + ~25 lines of compareScreenshots) so the tests validate
+ * logic (padPng + compareScreenshots) so the tests validate
  * the algorithm rather than just the export boundary.
  */
 

@@ -209,7 +209,9 @@ export function parseDebateResult(runDir: string): DebateResult | null {
  */
 export function extractAppliedRuleIds(debate: DebateResult): string[] {
   if (!debate.arbitrator) return [];
-  return debate.arbitrator.decisions
+  const decisions = debate.arbitrator.decisions;
+  if (!Array.isArray(decisions)) return [];
+  return decisions
     .filter((d) => {
       const dec = (d.decision ?? "").trim().toLowerCase();
       return dec === "applied" || dec === "revised";
@@ -237,6 +239,7 @@ export function isConverged(runDir: string, options?: ConvergenceOptions): boole
   if (debate.skipped) return true; // zero proposals = converged
   if (!debate.arbitrator) return false;
   const decisions = debate.arbitrator.decisions;
+  if (!Array.isArray(decisions)) return false;
   const changed = decisions.filter((d) => {
     const dec = (d.decision ?? "").trim().toLowerCase();
     return dec === "applied" || dec === "revised";
