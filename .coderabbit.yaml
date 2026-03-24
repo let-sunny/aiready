@@ -6,12 +6,6 @@ reviews:
   # Review profile — aggressively flag issues
   profile: "assertive"
 
-  # Auto-review on PR creation
-  auto_review:
-    enabled: true
-    # Skip draft PRs
-    drafts: false
-
   # Exclude paths that don't need review
   path_filters:
     - "!dist/**"
@@ -25,9 +19,13 @@ reviews:
     - "!**/*.png"
     - "!**/*.jpg"
 
-  # Disable auto-labeling to reduce noise
-  suggested_labels: false
-  auto_apply_labels: false
+  # Auto-review on PR creation
+  auto_review:
+    enabled: true
+    # Skip draft PRs
+    drafts: false
+    # Disable auto-labeling
+    labels: []
 
   # Static analysis tools
   tools:
