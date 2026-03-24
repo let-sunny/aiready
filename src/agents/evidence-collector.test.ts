@@ -116,6 +116,17 @@ describe("evidence-collector", () => {
       expect(raw[0]!.type).toBe("underscored");
     });
 
+    it("dedupes within a single append call (last row for same ruleId and fixture wins)", () => {
+      appendCalibrationEvidence([
+        { ruleId: "rule-a", type: "overscored", actualDifficulty: "easy", fixture: "fx1", timestamp: "t1" },
+        { ruleId: "rule-a", type: "underscored", actualDifficulty: "hard", fixture: "fx1", timestamp: "t2" },
+      ], calPath);
+
+      const raw = JSON.parse(readFileSync(calPath, "utf-8")) as CalibrationEvidenceEntry[];
+      expect(raw).toHaveLength(1);
+      expect(raw[0]!.type).toBe("underscored");
+    });
+
     it("does nothing for empty entries", () => {
       writeFileSync(calPath, "[]", "utf-8");
       appendCalibrationEvidence([], calPath);

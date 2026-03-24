@@ -48,7 +48,7 @@ fixtures/<name>/data.json (+ screenshot.png)
   Gap analyzer ──► gaps.json ──► discovery-evidence (filtered) + gap-rule-report
         │
         ▼
-  calibrate-evaluate ──► proposals + calibration-evidence (overscore/underscore)
+  calibrate-evaluate ──► proposals + calibration-evidence (overscored/underscored)
         │
         ▼
   debate.json (critic + arbitrator) ──► rule-config.ts edits, calibrate-prune-evidence
@@ -97,7 +97,7 @@ Orchestrator-side **noise filters** (regex) prevent font CDN, retina/DPI, screen
 
 | Mode | Condition | Use case |
 |------|-----------|----------|
-| **Strict** (default) | `applied === 0` **and** `revised === 0` **and** `rejected === 0` | True “quiet” arbitration: no pending controversy |
+| **Strict** (default) | `applied === 0` **and** `revised === 0` **and** `rejected === 0` (and `decisions` is an array) | True “quiet” arbitration: no pending controversy |
 | **Lenient** | `applied === 0` **and** `revised === 0` (rejects ignored) | Stable scores but Critic still rejecting proposals; unblocks `fixture-done` / nightlies |
 
 **Skipped debates** (`debate.skipped`) count as converged—zero proposals is a valid terminal state.
@@ -199,3 +199,17 @@ The next leap is not more rules by count, but **tighter coupling between visual 
 - Evidence: `src/agents/evidence-collector.ts`
 - Noise filters + orchestration: `src/agents/orchestrator.ts` (`ENVIRONMENT_NOISE_PATTERNS`)
 - Nightly note: `.claude/commands/calibrate-night.md`
+
+---
+
+## Appendix A: Post-commit self-review (what was re-checked)
+
+This section records a deliberate second pass over the same design—what was assumed, what was wrong, and what was tightened.
+
+1. **Typo in the artifact diagram** — “overscore/underscore” conflated wording with schema enum values; corrected to **overscored/underscored**.
+2. **Calibration evidence batch semantics** — Original dedupe only avoided collisions between *existing file* rows and *new* rows. A single `appendCalibrationEvidence` call could still write **duplicate keys**. Resolved by folding the incoming batch through a `Map` so **last row wins within the batch** as well as across calls.
+3. **Malformed `debate.json`** — Real runs are supposed to emit objects, but hand-edited or partially written files could put `null` or primitives inside `decisions`. **Strict type assumptions** would throw at runtime and break `fixture-done` / prune flows. **Guard** with `isDecisionRecord` and string coercion on `decision` / `ruleId`.
+4. **Documentation vs implementation** — Strict convergence implicitly requires `decisions` to be an array; non-array continues to yield **not converged**. The table now states that explicitly.
+5. **What was not “fixed” on purpose** — `parseDebateResult` still trusts overall JSON shape for `critic` / `arbitrator`; deeper validation would belong in a Zod schema if we ever expose debate files as a public API. **Lenient convergence** still ignores rejected rows by design—that is a product trade-off, not a bug; operators should skim `debate.json` before relying on it long term.
+
+**Limitation (honest):** Waiting “three hours” in wall-clock time does not change correctness; it mainly reduces the chance of missing edge cases. This appendix is the recorded output of that kind of review, done immediately and in code.

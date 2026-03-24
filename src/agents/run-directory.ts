@@ -207,16 +207,21 @@ export function parseDebateResult(runDir: string): DebateResult | null {
 /**
  * Extract ruleIds that were applied or revised by the Arbitrator.
  */
+function isDecisionRecord(d: unknown): d is { decision?: unknown; ruleId?: unknown } {
+  return d !== null && typeof d === "object";
+}
+
 export function extractAppliedRuleIds(debate: DebateResult): string[] {
   if (!debate.arbitrator) return [];
   const decisions = debate.arbitrator.decisions;
   if (!Array.isArray(decisions)) return [];
   return decisions
     .filter((d) => {
-      const dec = (d.decision ?? "").trim().toLowerCase();
+      if (!isDecisionRecord(d)) return false;
+      const dec = String(d.decision ?? "").trim().toLowerCase();
       return dec === "applied" || dec === "revised";
     })
-    .map((d) => d.ruleId.trim())
+    .map((d) => String(d.ruleId ?? "").trim())
     .filter((id) => id.length > 0);
 }
 
@@ -241,11 +246,13 @@ export function isConverged(runDir: string, options?: ConvergenceOptions): boole
   const decisions = debate.arbitrator.decisions;
   if (!Array.isArray(decisions)) return false;
   const changed = decisions.filter((d) => {
-    const dec = (d.decision ?? "").trim().toLowerCase();
+    if (!isDecisionRecord(d)) return false;
+    const dec = String(d.decision ?? "").trim().toLowerCase();
     return dec === "applied" || dec === "revised";
   }).length;
   const rejected = decisions.filter((d) => {
-    const dec = (d.decision ?? "").trim().toLowerCase();
+    if (!isDecisionRecord(d)) return false;
+    const dec = String(d.decision ?? "").trim().toLowerCase();
     return dec === "rejected";
   }).length;
   if (options?.lenient) {

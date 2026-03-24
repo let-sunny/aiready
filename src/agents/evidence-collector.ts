@@ -85,11 +85,18 @@ export function appendCalibrationEvidence(
 ): void {
   if (entries.length === 0) return;
   const existing = readValidatedArray(evidencePath, CalibrationEvidenceEntrySchema);
-  const keys = new Set(entries.map((e) => `${e.ruleId.trim()}\0${e.fixture.trim()}`));
+  // Same batch can repeat (ruleId, fixture); last entry wins (matches cross-call behavior)
+  const incomingByKey = new Map<string, CalibrationEvidenceEntry>();
+  for (const e of entries) {
+    const k = `${e.ruleId.trim()}\0${e.fixture.trim()}`;
+    incomingByKey.set(k, e);
+  }
+  const mergedIncoming = [...incomingByKey.values()];
+  const keys = new Set(incomingByKey.keys());
   const withoutDupes = existing.filter(
     (e) => !keys.has(`${e.ruleId.trim()}\0${e.fixture.trim()}`),
   );
-  withoutDupes.push(...entries);
+  withoutDupes.push(...mergedIncoming);
   writeJsonArray(evidencePath, withoutDupes);
 }
 

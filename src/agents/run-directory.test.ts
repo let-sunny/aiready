@@ -124,6 +124,21 @@ describe("extractAppliedRuleIds", () => {
     } as unknown as Parameters<typeof extractAppliedRuleIds>[0];
     expect(extractAppliedRuleIds(bad)).toEqual([]);
   });
+
+  it("ignores null and non-object entries in decisions", () => {
+    const ids = extractAppliedRuleIds({
+      critic: null,
+      arbitrator: {
+        summary: "x",
+        decisions: [
+          null,
+          "not-an-object" as unknown as { ruleId: string; decision: string },
+          { ruleId: "ok", decision: "applied" },
+        ],
+      },
+    });
+    expect(ids).toEqual(["ok"]);
+  });
 });
 
 describe("isConverged", () => {
@@ -174,6 +189,20 @@ describe("isConverged", () => {
     );
     expect(isConverged(tempDir)).toBe(false);
     expect(isConverged(tempDir, { lenient: true })).toBe(false);
+  });
+
+  it("ignores null entries when counting applied and rejected", () => {
+    writeFileSync(
+      join(tempDir, "debate.json"),
+      JSON.stringify({
+        arbitrator: {
+          summary: "mixed",
+          decisions: [null, { ruleId: "x", decision: "rejected" }],
+        },
+      }),
+    );
+    expect(isConverged(tempDir)).toBe(false);
+    expect(isConverged(tempDir, { lenient: true })).toBe(true);
   });
 });
 
