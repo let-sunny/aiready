@@ -40,7 +40,17 @@ Append to `$RUN_DIR/activity.jsonl`:
 
 ### Step 2 — Converter
 
-Read the analysis JSON to extract `fileKey`. Parse the root nodeId from the Figma URL.
+Read the analysis JSON to extract `fileKey`. Parse the root nodeId from the Figma URL. Extract a short fixture name from the URL for cache lookup.
+
+**Cache figma.png**: Check if a previous run for the same design already has a figma.png:
+
+```bash
+PREV_FIGMA=$(ls -t logs/calibration/<name>--*/figma.png 2>/dev/null | head -1)
+if [ -n "$PREV_FIGMA" ] && [ "$PREV_FIGMA" != "$RUN_DIR/figma.png" ]; then
+  cp "$PREV_FIGMA" "$RUN_DIR/figma.png"
+  echo "Cached figma.png from previous run"
+fi
+```
 
 Spawn a `general-purpose` subagent. In the prompt, include the full converter instructions from `.claude/agents/calibration/converter.md` and add:
 
@@ -50,6 +60,7 @@ Figma URL: <paste input URL here>
 fileKey: <extracted fileKey>
 Root nodeId: <extracted nodeId>
 Run directory: <paste RUN_DIR here>
+Cached figma.png: <yes|no>
 ```
 
 After the Converter returns, **verify** files exist in $RUN_DIR:

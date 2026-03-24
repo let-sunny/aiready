@@ -42,6 +42,19 @@ Append to `$RUN_DIR/activity.jsonl`:
 
 Read the analysis JSON to extract `fileKey`. Also determine the root nodeId — if the input was a Figma URL, parse the node-id from it. If it was a fixture, use the document root id.
 
+**Cache figma.png**: Before spawning the Converter, check if a previous run for the same fixture already has a figma.png. The Figma design doesn't change between runs, so we can reuse it:
+
+```bash
+# Find the most recent previous run for the same fixture
+PREV_FIGMA=$(ls -t logs/calibration/<fixture-name>--*/figma.png 2>/dev/null | head -1)
+if [ -n "$PREV_FIGMA" ] && [ "$PREV_FIGMA" != "$RUN_DIR/figma.png" ]; then
+  cp "$PREV_FIGMA" "$RUN_DIR/figma.png"
+  echo "Cached figma.png from previous run"
+fi
+```
+
+If cached, tell the Converter to skip the Figma screenshot and only render the code screenshot + diff.
+
 Spawn a `general-purpose` subagent. In the prompt, include the full converter instructions from `.claude/agents/calibration/converter.md` and add:
 
 ```
@@ -49,9 +62,12 @@ Fixture path: <paste input path here>
 fileKey: <extracted fileKey>
 Root nodeId: <extracted nodeId>
 Run directory: <paste RUN_DIR here>
+Cached figma.png: <yes|no>
 ```
 
-The Converter writes `output.html`, `conversion.json`, `design-tree.txt` to $RUN_DIR and runs `visual-compare --output $RUN_DIR` which creates `figma.png`, `code.png`, `diff.png`.
+If `Cached figma.png: yes`, tell the Converter: "figma.png already exists in the run directory. Run visual-compare with --output $RUN_DIR — it will reuse the existing figma.png for comparison."
+
+The Converter writes `output.html`, `conversion.json`, `design-tree.txt` to $RUN_DIR and runs `visual-compare --output $RUN_DIR` which creates `figma.png` (or reuses cached), `code.png`, `diff.png`.
 
 After the Converter returns, **verify** these files exist in $RUN_DIR:
 ```bash
