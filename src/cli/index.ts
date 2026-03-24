@@ -752,6 +752,7 @@ interface SaveFixtureOptions {
   output?: string;
   api?: boolean;
   token?: string;
+  imageScale?: string;
 }
 
 cli
@@ -762,8 +763,9 @@ cli
   .option("--output <path>", "Output directory (default: fixtures/<name>/)")
   .option("--name <name>", "Fixture name (default: extracted from URL)")
   .option("--token <token>", "Figma API token (or use FIGMA_TOKEN env var)")
+  .option("--image-scale <n>", "Image export scale: 2 for PC (default), 3 for mobile")
   .example("  canicode save-fixture https://www.figma.com/design/ABC123/MyDesign?node-id=1-234")
-  .example("  canicode save-fixture https://www.figma.com/design/ABC123/MyDesign?node-id=1-234 --name my-design")
+  .example("  canicode save-fixture https://www.figma.com/design/ABC123/MyDesign?node-id=1-234 --image-scale 3")
   .action(async (input: string, options: SaveFixtureOptions & { name?: string }) => {
     try {
       if (!isFigmaUrl(input)) {
@@ -858,13 +860,19 @@ cli
         // 4. Download PNGs for IMAGE fill nodes
         const imageNodes = collectImageNodes(file.document);
         if (imageNodes.length > 0) {
+          const imgScale = options.imageScale !== undefined ? Number(options.imageScale) : 2;
+          if (!Number.isFinite(imgScale) || imgScale < 1 || imgScale > 4) {
+            console.error("Error: --image-scale must be 1-4 (2 for PC, 3 for mobile)");
+            process.exit(1);
+          }
+
           const imageDir = resolve(fixtureDir, "images");
           mkdirSync(imageDir, { recursive: true });
 
           const imageUrls = await client.getNodeImages(
             file.fileKey,
             imageNodes.map((n) => n.id),
-            { format: "png", scale: 2 }
+            { format: "png", scale: imgScale }
           );
 
           const usedNames = new Map<string, number>();
@@ -874,7 +882,7 @@ cli
             const count = usedNames.get(base) ?? 0;
             usedNames.set(base, count + 1);
             if (count > 0) base = `${base}-${count + 1}`;
-            nodeIdToFilename.set(id, `${base}@2x.png`);
+            nodeIdToFilename.set(id, `${base}@${imgScale}x.png`);
           }
 
           let imgDownloaded = 0;
@@ -904,7 +912,7 @@ cli
             "utf-8"
           );
 
-          console.log(`  images/: ${imgDownloaded}/${imageNodes.length} PNGs (@2x)`);
+          console.log(`  images/: ${imgDownloaded}/${imageNodes.length} PNGs (@${imgScale}x)`);
         }
       }
     } catch (error) {
