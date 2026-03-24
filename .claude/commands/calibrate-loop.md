@@ -197,6 +197,11 @@ npx canicode calibrate-prune-evidence $RUN_DIR
 
 This reads `debate.json`, extracts applied/revised ruleIds, and removes their entries from `data/calibration-evidence.json`.
 
+Append to `$RUN_DIR/activity.jsonl`:
+```json
+{"step":"PruneEvidence","timestamp":"<ISO8601>","result":"pruned=<N> ruleIds","durationMs":<ms>}
+```
+
 ### Step 7 — Generate Report
 
 ```
