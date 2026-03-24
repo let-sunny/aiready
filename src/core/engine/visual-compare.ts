@@ -94,7 +94,7 @@ async function fetchFigmaScreenshot(
 /**
  * Render HTML file with Playwright and take a screenshot.
  */
-async function renderCodeScreenshot(
+export async function renderCodeScreenshot(
   codePath: string,
   outputPath: string,
   viewport: { width: number; height: number },
@@ -121,23 +121,31 @@ async function renderCodeScreenshot(
 }
 
 /**
- * Resize a PNG to target dimensions (nearest neighbor).
+ * Pad a PNG to target dimensions with a high-contrast fill color (magenta).
+ * Unlike resize, padding preserves original pixels 1:1 and guarantees that
+ * any size difference is counted as mismatched pixels by pixelmatch.
  */
-function resizePng(png: PNG, targetWidth: number, targetHeight: number): PNG {
-  const resized = new PNG({ width: targetWidth, height: targetHeight });
-  for (let y = 0; y < targetHeight; y++) {
-    for (let x = 0; x < targetWidth; x++) {
-      const srcX = Math.floor((x / targetWidth) * png.width);
-      const srcY = Math.floor((y / targetHeight) * png.height);
-      const srcIdx = (srcY * png.width + srcX) * 4;
+function padPng(png: PNG, targetWidth: number, targetHeight: number): PNG {
+  const padded = new PNG({ width: targetWidth, height: targetHeight });
+  // Fill entire canvas with magenta (FF00FF) — guaranteed to differ from any real content
+  for (let i = 0; i < padded.data.length; i += 4) {
+    padded.data[i] = 255;     // R
+    padded.data[i + 1] = 0;   // G
+    padded.data[i + 2] = 255; // B
+    padded.data[i + 3] = 255; // A
+  }
+  // Copy original pixels into top-left corner
+  for (let y = 0; y < png.height; y++) {
+    for (let x = 0; x < png.width; x++) {
+      const srcIdx = (y * png.width + x) * 4;
       const dstIdx = (y * targetWidth + x) * 4;
-      resized.data[dstIdx] = png.data[srcIdx]!;
-      resized.data[dstIdx + 1] = png.data[srcIdx + 1]!;
-      resized.data[dstIdx + 2] = png.data[srcIdx + 2]!;
-      resized.data[dstIdx + 3] = png.data[srcIdx + 3]!;
+      padded.data[dstIdx] = png.data[srcIdx]!;
+      padded.data[dstIdx + 1] = png.data[srcIdx + 1]!;
+      padded.data[dstIdx + 2] = png.data[srcIdx + 2]!;
+      padded.data[dstIdx + 3] = png.data[srcIdx + 3]!;
     }
   }
-  return resized;
+  return padded;
 }
 
 /**
@@ -151,25 +159,21 @@ function compareScreenshots(
   const raw1 = PNG.sync.read(readFileSync(path1));
   const raw2 = PNG.sync.read(readFileSync(path2));
 
-  // Size mismatch = implementation failure
+  // Size mismatch — pad smaller image with magenta so extra area counts as diff pixels
   if (raw1.width !== raw2.width || raw1.height !== raw2.height) {
-    // Still generate a diff image for debugging (resize to larger)
     const width = Math.max(raw1.width, raw2.width);
     const height = Math.max(raw1.height, raw2.height);
-    const img1 = resizePng(raw1, width, height);
-    const img2 = resizePng(raw2, width, height);
+    const img1 = padPng(raw1, width, height);
+    const img2 = padPng(raw2, width, height);
     const diff = new PNG({ width, height });
-    pixelmatch(img1.data, img2.data, diff.data, width, height, { threshold: 0.1 });
+    const diffPixels = pixelmatch(img1.data, img2.data, diff.data, width, height, { threshold: 0.1 });
     mkdirSync(dirname(diffOutputPath), { recursive: true });
     writeFileSync(diffOutputPath, PNG.sync.write(diff));
 
-    return {
-      similarity: 0,
-      diffPixels: width * height,
-      totalPixels: width * height,
-      width,
-      height,
-    };
+    const totalPixels = width * height;
+    const similarity = Math.round((1 - diffPixels / totalPixels) * 100);
+
+    return { similarity, diffPixels, totalPixels, width, height };
   }
 
   const { width, height } = raw1;

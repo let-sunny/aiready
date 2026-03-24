@@ -12,8 +12,8 @@
  *  1. Path generation logic (getFigmaCachePath) — verified by inspecting the cache
  *     path written during a cached run.
  *  2. isCacheFresh — returns false for a non-existent file.
- *  3. compareScreenshots size-mismatch branch — similarity === 0.
- *  4. resizePng — output dimensions match the requested target.
+ *  3. compareScreenshots size-mismatch branch — padded area counts as diff.
+ *  4. padPng — output dimensions match, original preserved, padding is magenta.
  *  5. Same-image comparison → 100% similarity.
  *  6. Different-image comparison → < 100% similarity.
  *
@@ -52,22 +52,28 @@ function isCacheFresh(cachePath: string): boolean {
   return Date.now() - stats.mtimeMs < FIGMA_CACHE_TTL_MS;
 }
 
-/** Mirror of the private resizePng in visual-compare.ts */
-function resizePng(png: PNG, targetWidth: number, targetHeight: number): PNG {
-  const resized = new PNG({ width: targetWidth, height: targetHeight });
-  for (let y = 0; y < targetHeight; y++) {
-    for (let x = 0; x < targetWidth; x++) {
-      const srcX = Math.floor((x / targetWidth) * png.width);
-      const srcY = Math.floor((y / targetHeight) * png.height);
-      const srcIdx = (srcY * png.width + srcX) * 4;
+/** Mirror of the private padPng in visual-compare.ts */
+function padPng(png: PNG, targetWidth: number, targetHeight: number): PNG {
+  const padded = new PNG({ width: targetWidth, height: targetHeight });
+  // Fill with magenta
+  for (let i = 0; i < padded.data.length; i += 4) {
+    padded.data[i] = 255;
+    padded.data[i + 1] = 0;
+    padded.data[i + 2] = 255;
+    padded.data[i + 3] = 255;
+  }
+  // Copy original pixels into top-left corner
+  for (let y = 0; y < png.height; y++) {
+    for (let x = 0; x < png.width; x++) {
+      const srcIdx = (y * png.width + x) * 4;
       const dstIdx = (y * targetWidth + x) * 4;
-      resized.data[dstIdx] = png.data[srcIdx]!;
-      resized.data[dstIdx + 1] = png.data[srcIdx + 1]!;
-      resized.data[dstIdx + 2] = png.data[srcIdx + 2]!;
-      resized.data[dstIdx + 3] = png.data[srcIdx + 3]!;
+      padded.data[dstIdx] = png.data[srcIdx]!;
+      padded.data[dstIdx + 1] = png.data[srcIdx + 1]!;
+      padded.data[dstIdx + 2] = png.data[srcIdx + 2]!;
+      padded.data[dstIdx + 3] = png.data[srcIdx + 3]!;
     }
   }
-  return resized;
+  return padded;
 }
 
 /** Mirror of the private compareScreenshots in visual-compare.ts */
@@ -85,13 +91,15 @@ function compareScreenshots(
   if (raw1.width !== raw2.width || raw1.height !== raw2.height) {
     const width = Math.max(raw1.width, raw2.width);
     const height = Math.max(raw1.height, raw2.height);
-    const img1 = resizePng(raw1, width, height);
-    const img2 = resizePng(raw2, width, height);
+    const img1 = padPng(raw1, width, height);
+    const img2 = padPng(raw2, width, height);
     const diff = new PNG({ width, height });
-    pixelmatch(img1.data, img2.data, diff.data, width, height, { threshold: 0.1 });
+    const diffPixels = pixelmatch(img1.data, img2.data, diff.data, width, height, { threshold: 0.1 });
     mkdirSync(dirname(diffOutputPath), { recursive: true });
     writeFileSync(diffOutputPath, PNG.sync.write(diff));
-    return { similarity: 0, diffPixels: width * height, totalPixels: width * height, width, height };
+    const totalPixels = width * height;
+    const similarity = Math.round((1 - diffPixels / totalPixels) * 100);
+    return { similarity, diffPixels, totalPixels, width, height };
   }
 
   const { width, height } = raw1;
@@ -161,30 +169,19 @@ describe("isCacheFresh", () => {
   });
 });
 
-describe("resizePng", () => {
+describe("padPng", () => {
   it("output dimensions match the requested target size", () => {
     const src = new PNG({ width: 10, height: 10 });
     src.data.fill(255);
 
-    const result = resizePng(src, 20, 30);
+    const result = padPng(src, 20, 30);
 
     expect(result.width).toBe(20);
     expect(result.height).toBe(30);
   });
 
-  it("downscaling produces correct output dimensions", () => {
-    const src = new PNG({ width: 100, height: 200 });
-    src.data.fill(128);
-
-    const result = resizePng(src, 10, 20);
-
-    expect(result.width).toBe(10);
-    expect(result.height).toBe(20);
-  });
-
-  it("1x1 resize of a solid color image preserves the color", () => {
+  it("preserves original pixels in top-left corner", () => {
     const src = new PNG({ width: 4, height: 4 });
-    // Fill with red
     for (let i = 0; i < 4 * 4; i++) {
       src.data[i * 4] = 200;
       src.data[i * 4 + 1] = 0;
@@ -192,14 +189,32 @@ describe("resizePng", () => {
       src.data[i * 4 + 3] = 255;
     }
 
-    const result = resizePng(src, 2, 2);
+    const result = padPng(src, 8, 8);
 
-    // All pixels in the output should be red
-    for (let i = 0; i < 2 * 2; i++) {
-      expect(result.data[i * 4]).toBe(200);
-      expect(result.data[i * 4 + 1]).toBe(0);
-      expect(result.data[i * 4 + 2]).toBe(0);
+    // Original region (top-left 4x4) should be red
+    for (let y = 0; y < 4; y++) {
+      for (let x = 0; x < 4; x++) {
+        const idx = (y * 8 + x) * 4;
+        expect(result.data[idx]).toBe(200);
+        expect(result.data[idx + 1]).toBe(0);
+        expect(result.data[idx + 2]).toBe(0);
+      }
     }
+  });
+
+  it("fills padded region with magenta", () => {
+    const src = new PNG({ width: 2, height: 2 });
+    src.data.fill(0); // black
+    for (let i = 0; i < 4; i++) src.data[i * 4 + 3] = 255; // opaque
+
+    const result = padPng(src, 4, 4);
+
+    // Bottom-right corner (3,3) should be magenta
+    const idx = (3 * 4 + 3) * 4;
+    expect(result.data[idx]).toBe(255);     // R
+    expect(result.data[idx + 1]).toBe(0);   // G
+    expect(result.data[idx + 2]).toBe(255); // B
+    expect(result.data[idx + 3]).toBe(255); // A
   });
 });
 
@@ -241,7 +256,7 @@ describe("compareScreenshots", () => {
     expect(result.similarity).toBeLessThan(100);
   });
 
-  it("size mismatch → similarity is 0", () => {
+  it("size mismatch with same color → padded area counts as diff", () => {
     const path1 = join(tempDir, "small.png");
     const path2 = join(tempDir, "large.png");
     const diff = join(tempDir, "diff.png");
@@ -250,8 +265,10 @@ describe("compareScreenshots", () => {
 
     const result = compareScreenshots(path1, path2, diff);
 
-    expect(result.similarity).toBe(0);
-    expect(result.diffPixels).toBe(result.totalPixels);
+    // Small image padded with magenta → 300 out of 400 pixels differ (the padding area)
+    // Overlapping 10x10 region matches (white vs white), rest is white vs magenta
+    expect(result.similarity).toBeLessThan(100);
+    expect(result.diffPixels).toBeGreaterThan(0);
   });
 
   it("size mismatch → width and height reflect the larger image dimensions", () => {
