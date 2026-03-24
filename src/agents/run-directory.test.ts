@@ -117,27 +117,22 @@ describe("extractAppliedRuleIds", () => {
     expect(ids).toEqual(["my-rule", "b"]);
   });
 
-  it("returns empty array when decisions is not an array", () => {
-    const bad = {
-      critic: null,
-      arbitrator: { summary: "x", decisions: null },
-    } as unknown as Parameters<typeof extractAppliedRuleIds>[0];
-    expect(extractAppliedRuleIds(bad)).toEqual([]);
+  it("returns empty array when arbitrator is null", () => {
+    expect(extractAppliedRuleIds({ critic: null, arbitrator: null })).toEqual([]);
   });
 
-  it("ignores null and non-object entries in decisions", () => {
+  it("returns empty array when no applied/revised decisions", () => {
     const ids = extractAppliedRuleIds({
       critic: null,
       arbitrator: {
         summary: "x",
         decisions: [
-          null,
-          "not-an-object" as unknown as { ruleId: string; decision: string },
-          { ruleId: "ok", decision: "applied" },
+          { ruleId: "a", decision: "rejected" },
+          { ruleId: "b", decision: "kept" },
         ],
       },
     });
-    expect(ids).toEqual(["ok"]);
+    expect(ids).toEqual([]);
   });
 });
 
@@ -178,7 +173,7 @@ describe("isConverged", () => {
     expect(isConverged(tempDir, { lenient: true })).toBe(true);
   });
 
-  it("returns false when arbitrator exists but decisions is not an array", () => {
+  it("returns false when debate.json has missing decisions field (Zod rejects)", () => {
     writeFileSync(
       join(tempDir, "debate.json"),
       JSON.stringify({
@@ -191,7 +186,7 @@ describe("isConverged", () => {
     expect(isConverged(tempDir, { lenient: true })).toBe(false);
   });
 
-  it("ignores null entries when counting applied and rejected", () => {
+  it("returns false when decisions array has malformed entries (Zod rejects)", () => {
     writeFileSync(
       join(tempDir, "debate.json"),
       JSON.stringify({
@@ -201,8 +196,9 @@ describe("isConverged", () => {
         },
       }),
     );
+    // Zod rejects null in decisions array → parseDebateResult returns null
     expect(isConverged(tempDir)).toBe(false);
-    expect(isConverged(tempDir, { lenient: true })).toBe(true);
+    expect(isConverged(tempDir, { lenient: true })).toBe(false);
   });
 });
 

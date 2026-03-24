@@ -30,6 +30,22 @@ Note: The first time you connect, Figma OAuth will prompt you to authorize in th
 
 Do NOT proceed with analysis if Figma MCP is not available. Do NOT fall back to CLI `--mcp` mode.
 
+## CLI vs this skill (Figma MCP)
+
+This skill is the **MCP path** only. For some goals, `canicode analyze` with **FIGMA_TOKEN** (CLI) is a better fit:
+
+| Feature | CLI (REST API) | This skill (Figma MCP) |
+|---------|:-:|:-:|
+| Node structure | ✅ Full tree | ✅ XML metadata |
+| Style values | ✅ Raw Figma JSON | ✅ React+Tailwind from design context |
+| Component metadata (name, desc) | ✅ | ❌ |
+| Component master trees | ✅ `componentDefinitions` | ❌ |
+| Annotations (dev mode) | ❌ private beta | ✅ `data-annotations` in code |
+| Screenshots | ✅ via API | ✅ `get_screenshot` |
+| FIGMA_TOKEN | Required for live API | Not required when Figma MCP is connected |
+
+Use **CLI + token** when the user needs accurate component analysis. Use **this skill** for fast checks and workflows that rely on dev annotations.
+
 ## How to Analyze a Figma URL
 
 When the user provides a Figma URL, follow these steps:

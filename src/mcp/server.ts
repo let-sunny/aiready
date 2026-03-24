@@ -281,7 +281,18 @@ claude mcp add -s project -t http figma https://mcp.figma.com/mcp
 With Figma API token (no Figma MCP needed):
 \`\`\`bash
 claude mcp add canicode -e FIGMA_TOKEN=figd_xxxxxxxxxxxxx -- npx -y -p canicode canicode-mcp
-\`\`\``,
+\`\`\`
+
+## CLI vs MCP
+
+| Feature | CLI (FIGMA_TOKEN) | MCP (Figma MCP) |
+|---------|:-:|:-:|
+| Component master trees | ✅ | ❌ |
+| Component metadata | ✅ | ❌ |
+| Annotations (dev mode) | ❌ private beta | ✅ data-annotations |
+| FIGMA_TOKEN required | ✅ | ❌ |
+
+Use CLI for accurate component analysis. Use MCP for quick checks and annotation-aware workflows.`,
 
       "visual-compare": `# Visual Compare
 

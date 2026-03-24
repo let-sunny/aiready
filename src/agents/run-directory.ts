@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync } from "node:fs";
 import { resolve, join, basename } from "node:path";
+import { z } from "zod";
 
 const CALIBRATION_DIR = "logs/calibration";
 const RULE_DISCOVERY_DIR = "logs/rule-discovery";
@@ -157,93 +158,76 @@ export function moveFixtureToDone(fixturePath: string, fixturesDir: string = DEF
   return dest;
 }
 
-// --- Debate result parsing ---
+// --- Debate result parsing (Zod-validated) ---
+
+const DebateDecisionSchema = z.object({
+  ruleId: z.string(),
+  decision: z.string(),
+  before: z.number().optional(),
+  after: z.number().optional(),
+  reason: z.string().optional(),
+}).passthrough();
+
+const CriticSchema = z.object({
+  summary: z.string(),
+  reviews: z.array(z.object({
+    ruleId: z.string(),
+    decision: z.string(),
+    reason: z.string().optional(),
+    revised: z.number().optional(),
+  }).passthrough()),
+}).passthrough();
+
+const ArbitratorSchema = z.object({
+  summary: z.string(),
+  decisions: z.array(DebateDecisionSchema),
+  newRuleProposals: z.array(z.unknown()).optional(),
+}).passthrough();
+
+const DebateResultSchema = z.object({
+  critic: CriticSchema.nullable().default(null),
+  arbitrator: ArbitratorSchema.nullable().default(null),
+  skipped: z.string().optional(),
+}).passthrough();
 
 /** A single decision from the Arbitrator in debate.json. */
-export interface DebateDecision {
-  ruleId: string;
-  decision: string;
-  before?: number | undefined;
-  after?: number | undefined;
-  reason?: string | undefined;
-}
+export type DebateDecision = z.infer<typeof DebateDecisionSchema>;
 
 /** Parsed debate.json structure from a calibration run. */
-export interface DebateResult {
-  critic: {
-    summary: string;
-    reviews: Array<{
-      ruleId: string;
-      decision: string;
-      reason?: string | undefined;
-      revised?: number | undefined;
-    }>;
-  } | null;
-  arbitrator: {
-    summary: string;
-    decisions: DebateDecision[];
-    newRuleProposals?: unknown[];
-  } | null;
-  skipped?: string | undefined;
-}
+export type DebateResult = z.infer<typeof DebateResultSchema>;
 
 /**
  * Parse a debate.json file from a run directory.
- * Returns null if the file doesn't exist or is malformed.
- * Treats debate.json as external input — validates shape defensively.
+ * Validates with Zod schema — returns null if file is missing or malformed.
  */
 export function parseDebateResult(runDir: string): DebateResult | null {
   const debatePath = join(runDir, "debate.json");
   if (!existsSync(debatePath)) return null;
   try {
     const raw: unknown = JSON.parse(readFileSync(debatePath, "utf-8"));
-    if (raw === null || typeof raw !== "object") {
-      console.debug(`[parseDebateResult] invalid debate format in ${runDir}: expected object, got ${typeof raw}`);
+    const result = DebateResultSchema.safeParse(raw);
+    if (!result.success) {
+      console.debug(`[parseDebateResult] invalid debate.json in ${runDir}:`, result.error.issues);
       return null;
     }
-    const obj = raw as Record<string, unknown>;
-    return {
-      critic: (obj["critic"] as DebateResult["critic"]) ?? null,
-      arbitrator: (obj["arbitrator"] as DebateResult["arbitrator"]) ?? null,
-      ...(typeof obj["skipped"] === "string" ? { skipped: obj["skipped"] } : {}),
-    };
+    return result.data;
   } catch (err) {
-    console.debug(`[parseDebateResult] failed to parse debate.json in ${runDir}:`, err);
+    console.debug(`[parseDebateResult] failed to read debate.json in ${runDir}:`, err);
     return null;
   }
 }
-
-/** Type guard for debate decision records (defensive against malformed JSON). */
-function isDecisionRecord(d: unknown): d is { decision?: unknown; ruleId?: unknown } {
-  return d !== null && typeof d === "object";
-}
-
-/** Normalize a decision field value to lowercase trimmed string. */
-function normalizeDecision(d: { decision?: unknown }): string {
-  return String(d.decision ?? "").trim().toLowerCase();
-}
-
-/** Count decisions matching a set of decision types. */
-function countDecisions(decisions: unknown[], types: Set<string>): number {
-  return decisions.filter((d) => {
-    if (!isDecisionRecord(d)) return false;
-    return types.has(normalizeDecision(d));
-  }).length;
-}
-
-const APPLIED_TYPES = new Set(["applied", "revised"]);
-const REJECTED_TYPES = new Set(["rejected"]);
 
 /**
  * Extract ruleIds that were applied or revised by the Arbitrator.
  */
 export function extractAppliedRuleIds(debate: DebateResult): string[] {
   if (!debate.arbitrator) return [];
-  const decisions = debate.arbitrator.decisions;
-  if (!Array.isArray(decisions)) return [];
-  return decisions
-    .filter((d) => isDecisionRecord(d) && APPLIED_TYPES.has(normalizeDecision(d)))
-    .map((d) => String((d as { ruleId?: unknown }).ruleId ?? "").trim())
+  return debate.arbitrator.decisions
+    .filter((d) => {
+      const dec = d.decision.trim().toLowerCase();
+      return dec === "applied" || dec === "revised";
+    })
+    .map((d) => d.ruleId.trim())
     .filter((id) => id.length > 0);
 }
 
@@ -267,11 +251,13 @@ export function isConverged(runDir: string, options?: ConvergenceOptions): boole
   if (debate.skipped) return true; // zero proposals = converged
   if (!debate.arbitrator) return false;
   const decisions = debate.arbitrator.decisions;
-  if (!Array.isArray(decisions)) return false;
-  const changed = countDecisions(decisions, APPLIED_TYPES);
-  const rejected = countDecisions(decisions, REJECTED_TYPES);
+  const applied = decisions.filter((d) => {
+    const dec = d.decision.trim().toLowerCase();
+    return dec === "applied" || dec === "revised";
+  }).length;
+  const rejected = decisions.filter((d) => d.decision.trim().toLowerCase() === "rejected").length;
   if (options?.lenient) {
-    return changed === 0;
+    return applied === 0;
   }
-  return changed === 0 && rejected === 0;
+  return applied === 0 && rejected === 0;
 }
