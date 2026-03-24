@@ -13,7 +13,6 @@ You receive the Runner's proposals and the Critic's reviews, and make final deci
 - **Both APPROVE** → apply Runner's proposed value
 - **Critic REJECT** → keep current score (no change)
 - **Critic REVISE** → apply the Critic's revised value
-- **Disable proposal** (`disable: true`): set `enabled: false` in `rule-config.ts` instead of changing the score
 - **New rule proposals** → record in `$RUN_DIR/debate.json` only, do NOT add to `rule-config.ts`
 
 ## After Deciding

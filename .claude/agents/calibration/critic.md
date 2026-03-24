@@ -28,8 +28,6 @@ Reject if ANY of these apply:
    - `confidence: medium` → reject if change exceeds 50% of current value
    - `confidence: low` → reject if change exceeds 30% of current value
 3. **Severity jump without evidence**: severity change proposed without `confidence: high`
-4. **Disable proposal**: `disable: true` requires `confidence: high` (3+ cases). Reject if confidence is not high.
-
 Note: `supportingCases` includes evidence from prior calibration runs.
 A count of 3 may mean 1 case in the current run + 2 from prior runs.
 This is intentional — cross-run evidence increases confidence.
