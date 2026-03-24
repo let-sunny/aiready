@@ -40,6 +40,8 @@ export interface TuningAgentInput {
     currentSeverity?: string | undefined;
     actualDifficulty: string;
     reasoning: string;
+    category?: string | undefined;
+    description?: string | undefined;
   }>;
   ruleScores: Record<string, { score: number; severity: string }>;
   priorEvidence?: CrossRunEvidence;

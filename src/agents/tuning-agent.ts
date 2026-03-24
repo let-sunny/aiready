@@ -226,9 +226,7 @@ export function runTuningAgent(
   const missingGrouped = new Map<string, typeof input.mismatches>();
 
   for (const c of missingRuleCases) {
-    // Extract category from reasoning pattern: "category: <value>"
-    const categoryMatch = c.reasoning.match(/category:\s*([^,)]+)/);
-    const category = categoryMatch?.[1]?.trim() ?? "unknown";
+    const category = c.category ?? "unknown";
 
     const existing = missingGrouped.get(category);
     if (existing) {
@@ -241,10 +239,7 @@ export function runTuningAgent(
   for (const [category, cases] of missingGrouped) {
     const difficulties = cases.map((c) => c.actualDifficulty);
     const dominantDifficulty = getDominantDifficulty(difficulties);
-    const descriptions = cases.map((c) => {
-      const descMatch = c.reasoning.match(/Uncovered struggle: "([^"]+)"/);
-      return descMatch?.[1] ?? c.reasoning;
-    });
+    const descriptions = cases.map((c) => c.description ?? c.reasoning);
 
     newRuleProposals.push({
       suggestedId: `new-${category}-rule`,

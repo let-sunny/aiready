@@ -161,6 +161,8 @@ export function runEvaluationAgent(
         nodePath: record.nodePath,
         actualDifficulty: estimatedDifficulty,
         reasoning: `Uncovered struggle: "${uncovered.description}" (category: ${uncovered.suggestedCategory}, impact: ${estimatedDifficulty}).`,
+        category: uncovered.suggestedCategory,
+        description: uncovered.description,
       });
     }
   }

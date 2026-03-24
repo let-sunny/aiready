@@ -19,6 +19,8 @@ export const MismatchCaseSchema = z.object({
   currentSeverity: SeveritySchema.optional(),
   actualDifficulty: DifficultySchema,
   reasoning: z.string(),
+  category: z.string().optional(),
+  description: z.string().optional(),
 });
 
 export type MismatchCase = z.infer<typeof MismatchCaseSchema>;
