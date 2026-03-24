@@ -106,6 +106,14 @@ function transformNode(node: Node): AnalysisNode {
     base.cornerRadius = node.cornerRadius;
   }
 
+  // Vector geometry (available with ?geometry=paths)
+  if ("fillGeometry" in node && Array.isArray(node.fillGeometry)) {
+    base.fillGeometry = node.fillGeometry as Array<{ path: string; windingRule: string }>;
+  }
+  if ("strokeGeometry" in node && Array.isArray(node.strokeGeometry)) {
+    base.strokeGeometry = node.strokeGeometry as Array<{ path: string; windingRule: string }>;
+  }
+
   // Variable bindings
   if ("boundVariables" in node && node.boundVariables) {
     base.boundVariables = node.boundVariables as Record<string, unknown>;

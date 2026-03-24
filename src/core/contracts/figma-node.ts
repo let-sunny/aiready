@@ -107,6 +107,10 @@ const BaseAnalysisNodeSchema = z.object({
     })
     .optional(),
 
+  // Vector geometry (available when fetched with ?geometry=paths)
+  fillGeometry: z.array(z.object({ path: z.string(), windingRule: z.string() })).optional(),
+  strokeGeometry: z.array(z.object({ path: z.string(), windingRule: z.string() })).optional(),
+
   // Naming analysis metadata
   isAsset: z.boolean().optional(),
 });
