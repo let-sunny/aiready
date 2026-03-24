@@ -2,7 +2,7 @@ import type { Category } from "../contracts/category.js";
 import { CATEGORIES } from "../contracts/category.js";
 import type { Severity } from "../contracts/severity.js";
 import type { AnalysisResult } from "./rule-engine.js";
-import { VERSION } from "../../index.js";
+import { version as VERSION } from "../../../package.json";
 
 /**
  * Score breakdown for a single category

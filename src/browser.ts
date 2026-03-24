@@ -1,6 +1,7 @@
 // Browser entry point — exports analysis functions for client-side use
 // All imports here must be pure functions with no Node.js dependencies
 
+export { version as VERSION } from "../package.json";
 export { analyzeFile } from "./core/engine/rule-engine.js";
 export type { AnalysisResult, AnalysisIssue, RuleEngineOptions } from "./core/engine/rule-engine.js";
 export { calculateScores, formatScoreSummary, getCategoryLabel, getSeverityLabel, gradeToClassName } from "./core/engine/scoring.js";
