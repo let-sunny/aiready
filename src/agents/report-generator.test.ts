@@ -188,6 +188,29 @@ describe("generateCalibrationReport", () => {
     expect(report).not.toContain("DISABLE");
   });
 
+  it("omits severity line when proposedDisable is true even with proposedSeverity", () => {
+    const adjustment: ScoreAdjustment = {
+      ruleId: "raw-color",
+      currentScore: -3,
+      proposedScore: -1,
+      currentSeverity: "risk",
+      proposedSeverity: "suggestion",
+      reasoning: "Converged to zero impact. Recommend disabling.",
+      confidence: "high",
+      supportingCases: 3,
+      proposedDisable: true,
+    };
+
+    const data = buildReportData({ adjustments: [adjustment] });
+    const report = generateCalibrationReport(data);
+
+    // Should show disable indicator
+    expect(report).toContain("⛔ YES");
+    expect(report).toContain("// raw-color: DISABLE (high confidence, 3 cases)");
+    // Should NOT show severity change line in application guide
+    expect(report).not.toContain('severity: "risk" -> "suggestion"');
+  });
+
   it("renders 'No adjustments proposed' when adjustments are empty", () => {
     const data = buildReportData({ adjustments: [] });
     const report = generateCalibrationReport(data);

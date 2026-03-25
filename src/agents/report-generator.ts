@@ -205,7 +205,7 @@ function renderApplicationGuide(adjustments: ScoreAdjustment[]): string {
       } else {
         lines.push(`// ${adj.ruleId}: ${adj.currentScore} -> ${adj.proposedScore} (${adj.confidence} confidence)`);
       }
-      if (adj.proposedSeverity) {
+      if (adj.proposedSeverity && !adj.proposedDisable) {
         lines.push(`//   severity: "${adj.currentSeverity}" -> "${adj.proposedSeverity}"`);
       }
     }
