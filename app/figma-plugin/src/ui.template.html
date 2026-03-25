@@ -264,10 +264,6 @@
       document.querySelectorAll('.filter-tab').forEach(function(tab) {
         tab.classList.toggle('active', tab.dataset.cat === cat);
       });
-      // Update category card highlights
-      document.querySelectorAll('.cat-card').forEach(function(card) {
-        card.classList.toggle('active', card.dataset.cat === cat);
-      });
       if (currentResult) {
         renderIssues(currentResult.issues, cat);
       }
@@ -377,6 +373,7 @@
         arrow.style.top = (above ? rect.top - 14 : rect.bottom + 6) + 'px';
         arrow.classList.add('visible');
       });
+      document.addEventListener('mouseleave', hide);
       document.addEventListener('mouseout', function(e) {
         if (!e.target.closest('[data-tip]')) hide();
       });
