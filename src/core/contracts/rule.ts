@@ -90,16 +90,16 @@ export interface Rule {
  * Rule ID type for type safety
  */
 export type RuleId =
-  // Layout (11)
+  // Structure (9)
   | "no-auto-layout"
   | "absolute-position-in-auto-layout"
-  | "fixed-width-in-responsive-context"
+  | "fixed-size-in-auto-layout"
+  | "missing-size-constraint"
   | "missing-responsive-behavior"
   | "group-usage"
-  | "fixed-size-in-auto-layout"
-  | "missing-min-width"
-  | "missing-max-width"
   | "deep-nesting"
+  | "z-index-dependent-layout"
+  | "unnecessary-node"
   // Token (7)
   | "raw-color"
   | "raw-font"
@@ -112,27 +112,23 @@ export type RuleId =
   | "missing-component"
   | "detached-instance"
   | "missing-component-description"
+  | "variant-structure-mismatch"
   // Naming (5)
   | "default-name"
   | "non-semantic-name"
   | "inconsistent-naming-convention"
   | "numeric-suffix-name"
   | "too-long-name"
-  // AI Readability (5)
-  | "ambiguous-structure"
-  | "z-index-dependent-layout"
-  | "missing-layout-hint"
-  | "invisible-layer"
-  | "empty-frame"
-  // Handoff Risk (5)
-  | "hardcode-risk"
+  // Behavior (4)
   | "text-truncation-unhandled"
-  | "prototype-link-in-design";
+  | "prototype-link-in-design"
+  | "overflow-behavior-unknown"
+  | "wrap-behavior-unknown";
 
 /**
  * Categories that support depthWeight
  */
-export const DEPTH_WEIGHT_CATEGORIES: Category[] = ["layout", "handoff-risk"];
+export const DEPTH_WEIGHT_CATEGORIES: Category[] = ["structure", "behavior"];
 
 /**
  * Check if a category supports depth weighting

@@ -26,7 +26,7 @@ describe("generateGapRuleReport", () => {
         fileKey: "fx-a",
         gaps: [
           {
-            category: "layout",
+            category: "structure",
             area: "Title",
             description: "Alignment mismatch",
             coveredByExistingRule: false,
@@ -44,7 +44,7 @@ describe("generateGapRuleReport", () => {
         fileKey: "fx-b",
         gaps: [
           {
-            category: "layout",
+            category: "structure",
             area: "Title",
             description: "Alignment mismatch",
             coveredByExistingRule: false,
@@ -63,7 +63,7 @@ describe("generateGapRuleReport", () => {
 
     expect(gapRunCount).toBe(2);
     expect(runCount).toBe(0); // No analysis.json + conversion.json in these dirs
-    expect(markdown).toContain("layout");
+    expect(markdown).toContain("structure");
     expect(markdown).toContain("text-alignment-mismatch");
     expect(markdown).toContain("Repeating patterns");
   });

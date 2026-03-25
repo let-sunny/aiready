@@ -73,12 +73,11 @@ const SEVERITY_DENSITY_WEIGHT: Record<Severity, number> = {
  * Must be updated when rules are added/removed from a category.
  */
 const TOTAL_RULES_PER_CATEGORY: Record<Category, number> = {
-  layout: 8,
+  structure: 9,
   token: 7,
-  component: 3,
+  component: 4,
   naming: 5,
-  "ai-readability": 5,
-  "handoff-risk": 4,
+  behavior: 4,
 };
 
 /**
@@ -89,12 +88,11 @@ const TOTAL_RULES_PER_CATEGORY: Record<Category, number> = {
  * more strongly with visual-compare similarity, these weights can be adjusted.
  */
 const CATEGORY_WEIGHT: Record<Category, number> = {
-  layout: 1.0,
+  structure: 1.0,
   token: 1.0,
   component: 1.0,
   naming: 1.0,
-  "ai-readability": 1.0,
-  "handoff-risk": 1.0,
+  behavior: 1.0,
 };
 
 /**
@@ -335,12 +333,11 @@ export function formatScoreSummary(report: ScoreReport): string {
  */
 export function getCategoryLabel(category: Category): string {
   const labels: Record<Category, string> = {
-    layout: "Layout",
+    structure: "Structure",
     token: "Design Token",
     component: "Component",
     naming: "Naming",
-    "ai-readability": "AI Readability",
-    "handoff-risk": "Handoff Risk",
+    behavior: "Behavior",
   };
   return labels[category];
 }

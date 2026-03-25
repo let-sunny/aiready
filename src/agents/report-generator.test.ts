@@ -8,12 +8,11 @@ import {
 } from "./report-generator.js";
 
 const ALL_CATEGORIES: Category[] = [
-  "layout",
+  "structure",
   "token",
   "component",
   "naming",
-  "ai-readability",
-  "handoff-risk",
+  "behavior",
 ];
 
 function buildCategoryScore(
@@ -222,7 +221,7 @@ describe("generateCalibrationReport", () => {
   it("renders new rule proposals when they exist", () => {
     const proposal: NewRuleProposal = {
       suggestedId: "shadow-complexity",
-      category: "layout",
+      category: "structure",
       description: "Detects complex shadow configurations",
       suggestedSeverity: "risk",
       suggestedScore: -4,
@@ -234,7 +233,7 @@ describe("generateCalibrationReport", () => {
     const report = generateCalibrationReport(data);
 
     expect(report).toContain("### shadow-complexity");
-    expect(report).toContain("layout");
+    expect(report).toContain("structure");
     expect(report).toContain("Detects complex shadow configurations");
     expect(report).toContain("risk");
     expect(report).toContain("-4");

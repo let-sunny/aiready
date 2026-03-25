@@ -12,15 +12,14 @@ export const GAUGE_R = 54;
 export const GAUGE_C = Math.round(2 * Math.PI * GAUGE_R); // ~339
 
 export const CATEGORY_DESCRIPTIONS: Record<Category, string> = {
-  layout:
-    "Auto Layout, responsive constraints, nesting depth, absolute positioning",
+  structure:
+    "Auto Layout, responsive constraints, nesting depth, positioning, structure clarity",
   token: "Design token binding for colors, fonts, shadows, spacing grid",
-  component: "Component reuse, detached instances, variant coverage",
+  component:
+    "Component reuse, detached instances, variant coverage and structure",
   naming: "Semantic layer names, naming conventions, default names",
-  "ai-readability":
-    "Structure clarity for AI code generation, z-index, empty frames",
-  "handoff-risk":
-    "Hardcoded values, text truncation, image placeholders, dev status",
+  behavior:
+    "Overflow handling, text truncation, wrap behavior, dynamic interactions",
 };
 
 export const SEVERITY_ORDER: Severity[] = [

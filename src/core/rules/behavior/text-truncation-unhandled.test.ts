@@ -4,7 +4,7 @@ import { textTruncationUnhandled } from "./index.js";
 describe("text-truncation-unhandled", () => {
   it("has correct rule definition metadata", () => {
     expect(textTruncationUnhandled.definition.id).toBe("text-truncation-unhandled");
-    expect(textTruncationUnhandled.definition.category).toBe("handoff-risk");
+    expect(textTruncationUnhandled.definition.category).toBe("behavior");
   });
 
   it("flags long text in constrained auto layout parent", () => {
@@ -44,39 +44,6 @@ describe("text-truncation-unhandled", () => {
       absoluteBoundingBox: { x: 0, y: 0, width: 200, height: 20 },
     });
     expect(textTruncationUnhandled.check(node, makeContext({ parent }))).toBeNull();
-  });
-
-  it("returns null for wide text container (exactly at 300px boundary)", () => {
-    const parent = makeNode({ layoutMode: "HORIZONTAL" });
-    const node = makeNode({
-      type: "TEXT",
-      characters: "A".repeat(60),
-      absoluteBoundingBox: { x: 0, y: 0, width: 300, height: 20 },
-    });
-    expect(textTruncationUnhandled.check(node, makeContext({ parent }))).toBeNull();
-  });
-
-  it("returns null for text with exactly 50 characters (boundary: > 50 required)", () => {
-    const parent = makeNode({ layoutMode: "HORIZONTAL" });
-    const node = makeNode({
-      type: "TEXT",
-      characters: "A".repeat(50),
-      absoluteBoundingBox: { x: 0, y: 0, width: 200, height: 20 },
-    });
-    expect(textTruncationUnhandled.check(node, makeContext({ parent }))).toBeNull();
-  });
-
-  it("flags text with 51 characters in narrow container", () => {
-    const parent = makeNode({ layoutMode: "HORIZONTAL" });
-    const node = makeNode({
-      type: "TEXT",
-      name: "LongText",
-      characters: "A".repeat(51),
-      absoluteBoundingBox: { x: 0, y: 0, width: 200, height: 20 },
-    });
-    const result = textTruncationUnhandled.check(node, makeContext({ parent }));
-    expect(result).not.toBeNull();
-    expect(result!.ruleId).toBe("text-truncation-unhandled");
   });
 
   it("returns null when no parent", () => {

@@ -6,7 +6,7 @@ import type { RuleConfig, RuleId } from "../contracts/rule.js";
  */
 export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
   // ============================================
-  // Layout (11 rules)
+  // Structure (9 rules)
   // ============================================
   "no-auto-layout": {
     severity: "blocking",
@@ -20,10 +20,14 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
     depthWeight: 1.3,
     enabled: true,
   },
-  "fixed-width-in-responsive-context": {
-    severity: "missing-info",
-    score: -2,
-    depthWeight: 1.3,
+  "fixed-size-in-auto-layout": {
+    severity: "risk",
+    score: -5,
+    enabled: true,
+  },
+  "missing-size-constraint": {
+    severity: "risk",
+    score: -5,
     enabled: true,
   },
   "missing-responsive-behavior": {
@@ -38,27 +42,26 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
     depthWeight: 1.2,
     enabled: true,
   },
-  "fixed-size-in-auto-layout": {
-    severity: "risk",
-    score: -5,
-    enabled: true,
-  },
-  "missing-min-width": {
-    severity: "risk",
-    score: -5,
-    enabled: true,
-  },
-  "missing-max-width": {
-    severity: "risk",
-    score: -4,
-    enabled: true,
-  },
   "deep-nesting": {
     severity: "risk",
     score: -4,
     enabled: true,
     options: {
       maxDepth: 5,
+    },
+  },
+  "z-index-dependent-layout": {
+    severity: "risk",
+    score: -5,
+    depthWeight: 1.3,
+    enabled: true,
+  },
+  "unnecessary-node": {
+    severity: "suggestion",
+    score: -2,
+    enabled: true,
+    options: {
+      slotRecommendationThreshold: 3,
     },
   },
 
@@ -111,7 +114,7 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
   },
 
   // ============================================
-  // Component (6 rules)
+  // Component (4 rules)
   // ============================================
   "missing-component": {
     severity: "risk",
@@ -131,6 +134,11 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
   "missing-component-description": {
     severity: "missing-info",
     score: -2,
+    enabled: true,
+  },
+  "variant-structure-mismatch": {
+    severity: "risk",
+    score: -4,
     enabled: true,
   },
 
@@ -167,48 +175,8 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
   },
 
   // ============================================
-  // AI Readability (5 rules)
+  // Behavior (4 rules)
   // ============================================
-  "ambiguous-structure": {
-    severity: "blocking",
-    score: -10,
-    depthWeight: 1.3,
-    enabled: true,
-  },
-  "z-index-dependent-layout": {
-    severity: "risk",
-    score: -5,
-    depthWeight: 1.3,
-    enabled: true,
-  },
-  "missing-layout-hint": {
-    severity: "risk",
-    score: -5,
-    enabled: true,
-  },
-  "invisible-layer": {
-    severity: "suggestion",
-    score: -1,
-    enabled: true,
-    options: {
-      slotRecommendationThreshold: 3,
-    },
-  },
-  "empty-frame": {
-    severity: "missing-info",
-    score: -3,
-    enabled: true,
-  },
-
-  // ============================================
-  // Handoff Risk (5 rules)
-  // ============================================
-  "hardcode-risk": {
-    severity: "risk",
-    score: -5,
-    depthWeight: 1.5,
-    enabled: true,
-  },
   "text-truncation-unhandled": {
     severity: "risk",
     score: -5,
@@ -217,6 +185,16 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
   "prototype-link-in-design": {
     severity: "missing-info",
     score: -2,
+    enabled: true,
+  },
+  "overflow-behavior-unknown": {
+    severity: "missing-info",
+    score: -3,
+    enabled: true,
+  },
+  "wrap-behavior-unknown": {
+    severity: "missing-info",
+    score: -3,
     enabled: true,
   },
 };
@@ -249,13 +227,16 @@ export function getConfigsWithPreset(
       break;
 
     case "dev-friendly":
-      // Focus on layout and handoff issues
+      // Focus on structure and behavior issues
       for (const [id, config] of Object.entries(configs)) {
         const ruleId = id as RuleId;
         if (
-          !ruleId.includes("layout") &&
-          !ruleId.includes("handoff") &&
-          !ruleId.includes("responsive")
+          !ruleId.includes("auto-layout") &&
+          !ruleId.includes("responsive") &&
+          !ruleId.includes("truncation") &&
+          !ruleId.includes("overflow") &&
+          !ruleId.includes("wrap") &&
+          !ruleId.includes("size")
         ) {
           configs[ruleId] = { ...config, enabled: false };
         }
@@ -263,13 +244,14 @@ export function getConfigsWithPreset(
       break;
 
     case "ai-ready":
-      // Boost AI readability and naming rules
+      // Boost structure and naming rules
       for (const [id, config] of Object.entries(configs)) {
         const ruleId = id as RuleId;
         if (
-          ruleId.includes("ambiguous") ||
+          ruleId.includes("auto-layout") ||
           ruleId.includes("structure") ||
-          ruleId.includes("name")
+          ruleId.includes("name") ||
+          ruleId.includes("unnecessary")
         ) {
           configs[ruleId] = {
             ...config,

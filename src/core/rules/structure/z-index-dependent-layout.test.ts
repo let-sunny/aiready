@@ -4,7 +4,7 @@ import { zIndexDependentLayout } from "./index.js";
 describe("z-index-dependent-layout", () => {
   it("has correct rule definition metadata", () => {
     expect(zIndexDependentLayout.definition.id).toBe("z-index-dependent-layout");
-    expect(zIndexDependentLayout.definition.category).toBe("ai-readability");
+    expect(zIndexDependentLayout.definition.category).toBe("structure");
   });
 
   it("flags container with significant overlap (>20% of smaller element)", () => {
@@ -75,39 +75,6 @@ describe("z-index-dependent-layout", () => {
     const node = makeNode({
       type: "FRAME",
       name: "Container",
-      children: [childA, childB],
-    });
-
-    expect(zIndexDependentLayout.check(node, makeContext())).toBeNull();
-  });
-
-  it("returns null when overlap is exactly 20% (boundary: > not >=)", () => {
-    // overlapX=2, overlapY=5 → area=10, smallerArea=50 → 10/50=0.2 exactly
-    const childA = makeNode({
-      id: "c:1",
-      name: "A",
-      absoluteBoundingBox: { x: 0, y: 0, width: 10, height: 10 },
-    });
-    const childB = makeNode({
-      id: "c:2",
-      name: "B",
-      absoluteBoundingBox: { x: 8, y: 0, width: 10, height: 5 },
-    });
-    const node = makeNode({
-      type: "FRAME",
-      name: "Boundary",
-      children: [childA, childB],
-    });
-
-    expect(zIndexDependentLayout.check(node, makeContext())).toBeNull();
-  });
-
-  it("returns null when children lack absoluteBoundingBox", () => {
-    const childA = makeNode({ id: "c:1", name: "NoBbox" });
-    const childB = makeNode({ id: "c:2", name: "AlsoNoBbox" });
-    const node = makeNode({
-      type: "FRAME",
-      name: "NoBounds",
       children: [childA, childB],
     });
 

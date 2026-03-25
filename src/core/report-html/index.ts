@@ -114,7 +114,7 @@ export function generateHtmlReport(
 
     <!-- Category Gauges -->
     <section class="bg-card border border-border rounded-lg shadow-sm p-6 mb-6">
-      <div class="grid grid-cols-3 sm:grid-cols-6 gap-4">
+      <div class="grid grid-cols-3 sm:grid-cols-5 gap-4">
 ${CATEGORIES.map(cat => {
     const cs = scores.byCategory[cat];
     const desc = CATEGORY_DESCRIPTIONS[cat];

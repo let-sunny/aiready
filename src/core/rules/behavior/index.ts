@@ -10,50 +10,9 @@ function hasAutoLayout(node: AnalysisNode): boolean {
   return node.layoutMode !== undefined && node.layoutMode !== "NONE";
 }
 
-function isContainerNode(node: AnalysisNode): boolean {
-  return node.type === "FRAME" || node.type === "GROUP" || node.type === "COMPONENT";
-}
-
 function isTextNode(node: AnalysisNode): boolean {
   return node.type === "TEXT";
 }
-
-// ============================================
-// hardcode-risk
-// ============================================
-
-const hardcodeRiskDef: RuleDefinition = {
-  id: "hardcode-risk",
-  name: "Hardcode Risk",
-  category: "handoff-risk",
-  why: "Hardcoded position/size values force AI to use magic numbers instead of computed layouts",
-  impact: "Generated code is brittle — any content change (longer text, different image) breaks the layout",
-  fix: "Use Auto Layout with relative positioning so AI generates flexible CSS",
-};
-
-const hardcodeRiskCheck: RuleCheckFn = (node, context) => {
-  if (!isContainerNode(node)) return null;
-
-  // Check for absolute positioning
-  if (node.layoutPositioning !== "ABSOLUTE") return null;
-
-  // Check if parent has Auto Layout
-  if (context.parent && hasAutoLayout(context.parent)) {
-    return {
-      ruleId: hardcodeRiskDef.id,
-      nodeId: node.id,
-      nodePath: context.path.join(" > "),
-      message: `"${node.name}" uses absolute positioning with fixed values`,
-    };
-  }
-
-  return null;
-};
-
-export const hardcodeRisk = defineRule({
-  definition: hardcodeRiskDef,
-  check: hardcodeRiskCheck,
-});
 
 // ============================================
 // text-truncation-unhandled
@@ -62,7 +21,7 @@ export const hardcodeRisk = defineRule({
 const textTruncationUnhandledDef: RuleDefinition = {
   id: "text-truncation-unhandled",
   name: "Text Truncation Unhandled",
-  category: "handoff-risk",
+  category: "behavior",
   why: "Long text in a narrow container without truncation rules — AI doesn't know if it should clip, ellipsis, or grow",
   impact: "AI may generate code where text overflows the container, breaking the visual layout",
   fix: "Set text truncation (ellipsis) or ensure the container uses 'Hug' so the intent is explicit",
@@ -75,15 +34,8 @@ const textTruncationUnhandledCheck: RuleCheckFn = (node, context) => {
   if (!context.parent) return null;
   if (!hasAutoLayout(context.parent)) return null;
 
-  // Check if text has fixed width in the Auto Layout direction
-  // This is a heuristic - would need more Figma API data for accuracy
-  // Parent direction would be: context.parent.layoutMode
-
-  // If parent is horizontal and text doesn't have truncation configured
-  // Simplified check - full implementation would examine text truncation property
   if (node.absoluteBoundingBox) {
     const { width } = node.absoluteBoundingBox;
-    // Flag if text is in a constrained space but long
     if (node.characters && node.characters.length > 50 && width < 300) {
       return {
         ruleId: textTruncationUnhandledDef.id,
@@ -109,7 +61,7 @@ export const textTruncationUnhandled = defineRule({
 const prototypeLinkInDesignDef: RuleDefinition = {
   id: "prototype-link-in-design",
   name: "Missing Prototype Interaction",
-  category: "handoff-risk",
+  category: "behavior",
   why: "Interactive-looking elements without prototype interactions force developers to guess behavior",
   impact: "Developers cannot know the intended interaction (hover state, navigation, etc.)",
   fix: "Add prototype interactions to interactive elements, or use naming to clarify non-interactive intent",
@@ -189,3 +141,92 @@ export const prototypeLinkInDesign = defineRule({
   check: prototypeLinkInDesignCheck,
 });
 
+// ============================================
+// overflow-behavior-unknown
+// ============================================
+
+const overflowBehaviorUnknownDef: RuleDefinition = {
+  id: "overflow-behavior-unknown",
+  name: "Overflow Behavior Unknown",
+  category: "behavior",
+  why: "Children overflowing parent bounds without explicit clip/scroll behavior forces AI to guess overflow handling",
+  impact: "AI may generate incorrect overflow: hidden, scroll, or visible — breaking the intended design",
+  fix: "Enable 'Clip content' or set an explicit overflow/scroll behavior on the container",
+};
+
+const overflowBehaviorUnknownCheck: RuleCheckFn = (node, context) => {
+  // Only check container nodes
+  if (!["FRAME", "COMPONENT", "COMPONENT_SET", "INSTANCE"].includes(node.type)) return null;
+  // Must have children
+  if (!node.children?.length) return null;
+  // Check parent bounds
+  const parentBox = node.absoluteBoundingBox;
+  if (!parentBox) return null;
+  // If clipsContent is true, behavior is explicit — skip
+  if (node.clipsContent === true) return null;
+  // Check if any visible child overflows
+  const hasOverflow = node.children.some(child => {
+    if (child.visible === false) return false;
+    const childBox = child.absoluteBoundingBox;
+    if (!childBox) return false;
+    return (
+      childBox.x < parentBox.x ||
+      childBox.y < parentBox.y ||
+      childBox.x + childBox.width > parentBox.x + parentBox.width + 1 ||
+      childBox.y + childBox.height > parentBox.y + parentBox.height + 1
+    );
+  });
+  if (!hasOverflow) return null;
+  return {
+    ruleId: overflowBehaviorUnknownDef.id,
+    nodeId: node.id,
+    nodePath: context.path.join(" > "),
+    message: `"${node.name}" has children overflowing bounds without explicit clip/scroll behavior — AI must guess overflow handling`,
+  };
+};
+
+export const overflowBehaviorUnknown = defineRule({
+  definition: overflowBehaviorUnknownDef,
+  check: overflowBehaviorUnknownCheck,
+});
+
+// ============================================
+// wrap-behavior-unknown
+// ============================================
+
+const wrapBehaviorUnknownDef: RuleDefinition = {
+  id: "wrap-behavior-unknown",
+  name: "Wrap Behavior Unknown",
+  category: "behavior",
+  why: "Horizontal children exceeding container width without wrap behavior forces AI to guess if content should wrap or scroll",
+  impact: "AI may generate incorrect flex-wrap or overflow behavior, breaking the layout on narrow screens",
+  fix: "Set layoutWrap to WRAP if children should flow to the next line, or add explicit overflow/scroll behavior",
+};
+
+const wrapBehaviorUnknownCheck: RuleCheckFn = (node, context) => {
+  // Only horizontal Auto Layout
+  if (node.layoutMode !== "HORIZONTAL") return null;
+  // Need 3+ visible children
+  const visibleChildren = (node.children ?? []).filter(c => c.visible !== false);
+  if (visibleChildren.length < 3) return null;
+  // layoutWrap must be unset or NO_WRAP
+  if (node.layoutWrap === "WRAP") return null;
+  // Check if children total width exceeds parent
+  const parentBox = node.absoluteBoundingBox;
+  if (!parentBox) return null;
+  const totalChildWidth = visibleChildren.reduce((sum, child) => {
+    return sum + (child.absoluteBoundingBox?.width ?? 0);
+  }, 0);
+  if (totalChildWidth <= parentBox.width) return null;
+  return {
+    ruleId: wrapBehaviorUnknownDef.id,
+    nodeId: node.id,
+    nodePath: context.path.join(" > "),
+    message: `"${node.name}" has ${visibleChildren.length} horizontal children exceeding container width without wrap behavior — AI cannot determine if content should wrap or scroll`,
+  };
+};
+
+export const wrapBehaviorUnknown = defineRule({
+  definition: wrapBehaviorUnknownDef,
+  check: wrapBehaviorUnknownCheck,
+});

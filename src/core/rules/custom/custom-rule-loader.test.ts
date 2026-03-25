@@ -43,7 +43,7 @@ describe("loadCustomRules", () => {
     const rules = [
       {
         id: "my-custom-rule",
-        category: "layout",
+        category: "structure",
         severity: "risk",
         score: -3,
         match: { type: ["FRAME"] },
@@ -61,7 +61,7 @@ describe("loadCustomRules", () => {
     const rule = result.rules[0];
     expect(rule).toBeDefined();
     expect(rule!.definition.id).toBe("my-custom-rule");
-    expect(rule!.definition.category).toBe("layout");
+    expect(rule!.definition.category).toBe("structure");
     expect(rule!.definition.why).toBe("Because it matters");
     expect(rule!.definition.impact).toBe("Causes confusion");
     expect(rule!.definition.fix).toBe("Fix the thing");
@@ -147,7 +147,7 @@ describe("loadCustomRules", () => {
     const invalid = [
       {
         id: "bad-rule",
-        category: "layout",
+        category: "structure",
         severity: "risk",
         score: 5, // must be <= 0
         match: { type: ["FRAME"] },
@@ -172,7 +172,7 @@ describe("loadCustomRules", () => {
     const rules = [
       {
         id: "old-rule",
-        category: "layout",
+        category: "structure",
         severity: "risk",
         score: -2,
         match: { type: ["FRAME"] },
@@ -194,7 +194,7 @@ describe("loadCustomRules", () => {
     const rules = [
       {
         id: "test-rule",
-        category: "layout",
+        category: "structure",
         severity: "risk",
         score: -2,
         match: { type: ["FRAME"] },
@@ -241,7 +241,7 @@ describe("pattern matching - type conditions", () => {
     const rules = [
       {
         id: "type-match",
-        category: "layout",
+        category: "structure",
         severity: "risk",
         score: -2,
         match: { type: ["FRAME", "GROUP"] },
@@ -266,7 +266,7 @@ describe("pattern matching - type conditions", () => {
     const rules = [
       {
         id: "not-type-match",
-        category: "layout",
+        category: "structure",
         severity: "risk",
         score: -2,
         match: { notType: ["TEXT", "VECTOR"] },
@@ -389,7 +389,7 @@ describe("pattern matching - size conditions", () => {
     const rules = [
       {
         id: "size-match",
-        category: "layout",
+        category: "structure",
         severity: "risk",
         score: -2,
         match: { minWidth: 100, maxWidth: 300, minHeight: 50 },
@@ -449,7 +449,7 @@ describe("pattern matching - layout conditions", () => {
     const rules = [
       {
         id: "auto-layout-check",
-        category: "layout",
+        category: "structure",
         severity: "risk",
         score: -2,
         match: { hasAutoLayout: false },
@@ -475,7 +475,7 @@ describe("pattern matching - layout conditions", () => {
     const rules = [
       {
         id: "children-check",
-        category: "layout",
+        category: "structure",
         severity: "risk",
         score: -2,
         match: { hasChildren: true, minChildren: 2, maxChildren: 5 },
@@ -606,7 +606,7 @@ describe("pattern matching - visibility conditions", () => {
     const rules = [
       {
         id: "visibility-check",
-        category: "ai-readability",
+        category: "structure",
         severity: "blocking",
         score: -5,
         match: { isVisible: false },
@@ -687,7 +687,7 @@ describe("pattern matching - depth conditions", () => {
     const rules = [
       {
         id: "depth-check",
-        category: "layout",
+        category: "structure",
         severity: "risk",
         score: -2,
         match: { minDepth: 2, maxDepth: 5 },
@@ -723,7 +723,7 @@ describe("pattern matching - message template", () => {
     const rules = [
       {
         id: "msg-template",
-        category: "layout",
+        category: "structure",
         severity: "risk",
         score: -2,
         match: { type: ["FRAME"] },
@@ -748,7 +748,7 @@ describe("pattern matching - message template", () => {
     const rules = [
       {
         id: "no-msg",
-        category: "layout",
+        category: "structure",
         severity: "risk",
         score: -2,
         match: { type: ["FRAME"] },

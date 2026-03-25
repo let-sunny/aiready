@@ -72,8 +72,8 @@ describe("calculateScores", () => {
 
   it("counts issues by severity correctly", () => {
     const issues = [
-      makeIssue({ ruleId: "no-auto-layout", category: "layout", severity: "blocking" }),
-      makeIssue({ ruleId: "group-usage", category: "layout", severity: "risk" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking" }),
+      makeIssue({ ruleId: "group-usage", category: "structure", severity: "risk" }),
       makeIssue({ ruleId: "raw-color", category: "token", severity: "missing-info" }),
       makeIssue({ ruleId: "numeric-suffix-name", category: "naming", severity: "suggestion" }),
     ];
@@ -87,125 +87,111 @@ describe("calculateScores", () => {
   });
 
   it("applies severity density weights (blocking=3.0 > risk=2.0 > missing-info=1.0 > suggestion=0.5)", () => {
-    // Single blocking issue on 100 nodes
     const blocking = calculateScores(makeResult([
-      makeIssue({ ruleId: "no-auto-layout", category: "layout", severity: "blocking" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking" }),
     ], 100));
 
-    // Single suggestion issue on 100 nodes
     const suggestion = calculateScores(makeResult([
       makeIssue({ ruleId: "numeric-suffix-name", category: "naming", severity: "suggestion" }),
     ], 100));
 
-    // Blocking issue should reduce layout category score more than suggestion reduces naming
-    expect(blocking.byCategory.layout.densityScore).toBeLessThan(
+    expect(blocking.byCategory.structure.densityScore).toBeLessThan(
       suggestion.byCategory.naming.densityScore
     );
   });
 
   it("density score decreases as weighted issue count increases relative to node count", () => {
     const few = calculateScores(makeResult([
-      makeIssue({ ruleId: "no-auto-layout", category: "layout", severity: "blocking" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking" }),
     ], 100));
 
     const many = calculateScores(makeResult([
-      makeIssue({ ruleId: "no-auto-layout", category: "layout", severity: "blocking" }),
-      makeIssue({ ruleId: "no-auto-layout", category: "layout", severity: "blocking" }),
-      makeIssue({ ruleId: "no-auto-layout", category: "layout", severity: "blocking" }),
-      makeIssue({ ruleId: "no-auto-layout", category: "layout", severity: "blocking" }),
-      makeIssue({ ruleId: "no-auto-layout", category: "layout", severity: "blocking" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking" }),
     ], 100));
 
-    expect(many.byCategory.layout.densityScore).toBeLessThan(
-      few.byCategory.layout.densityScore
+    expect(many.byCategory.structure.densityScore).toBeLessThan(
+      few.byCategory.structure.densityScore
     );
   });
 
   it("diversity score penalizes more unique rules being triggered", () => {
-    // 3 issues from 1 rule (low diversity = high diversity score)
     const concentrated = calculateScores(makeResult([
-      makeIssue({ ruleId: "no-auto-layout", category: "layout", severity: "risk" }),
-      makeIssue({ ruleId: "no-auto-layout", category: "layout", severity: "risk" }),
-      makeIssue({ ruleId: "no-auto-layout", category: "layout", severity: "risk" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "risk" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "risk" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "risk" }),
     ], 100));
 
-    // 3 issues from 3 different rules (high diversity = low diversity score)
     const spread = calculateScores(makeResult([
-      makeIssue({ ruleId: "no-auto-layout", category: "layout", severity: "risk" }),
-      makeIssue({ ruleId: "group-usage", category: "layout", severity: "risk" }),
-      makeIssue({ ruleId: "deep-nesting", category: "layout", severity: "risk" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "risk" }),
+      makeIssue({ ruleId: "group-usage", category: "structure", severity: "risk" }),
+      makeIssue({ ruleId: "deep-nesting", category: "structure", severity: "risk" }),
     ], 100));
 
-    expect(concentrated.byCategory.layout.diversityScore).toBeGreaterThan(
-      spread.byCategory.layout.diversityScore
+    expect(concentrated.byCategory.structure.diversityScore).toBeGreaterThan(
+      spread.byCategory.structure.diversityScore
     );
   });
 
   it("combined score = density * 0.7 + diversity * 0.3", () => {
     const issues = [
-      makeIssue({ ruleId: "no-auto-layout", category: "layout", severity: "blocking" }),
-      makeIssue({ ruleId: "group-usage", category: "layout", severity: "risk" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking" }),
+      makeIssue({ ruleId: "group-usage", category: "structure", severity: "risk" }),
     ];
     const scores = calculateScores(makeResult(issues, 100));
-    const layout = scores.byCategory.layout;
+    const structure = scores.byCategory.structure;
 
-    const expected = Math.round(layout.densityScore * 0.7 + layout.diversityScore * 0.3);
-    // Floor is 5, so clamp
+    const expected = Math.round(structure.densityScore * 0.7 + structure.diversityScore * 0.3);
     const clamped = Math.max(5, Math.min(100, expected));
-    expect(layout.percentage).toBe(clamped);
+    expect(structure.percentage).toBe(clamped);
   });
 
   it("score never goes below SCORE_FLOOR (5) when issues exist", () => {
-    // To hit the floor, we need both density→0 AND diversity→0
-    // Use many issues from many different rules to maximize both penalties
-    const layoutRules = [
+    const structureRules = [
       "no-auto-layout", "group-usage", "deep-nesting", "fixed-size-in-auto-layout",
       "missing-responsive-behavior", "absolute-position-in-auto-layout",
-      "fixed-width-in-responsive-context", "missing-min-width", "missing-max-width",
+      "missing-size-constraint", "z-index-dependent-layout", "unnecessary-node",
     ] as const;
 
     const issues: AnalysisIssue[] = [];
-    for (const ruleId of layoutRules) {
+    for (const ruleId of structureRules) {
       for (let i = 0; i < 50; i++) {
-        issues.push(makeIssue({ ruleId, category: "layout", severity: "blocking" }));
+        issues.push(makeIssue({ ruleId, category: "structure", severity: "blocking" }));
       }
     }
 
     const scores = calculateScores(makeResult(issues, 10));
-
-    // With density near 0 and diversity near 0, combined should clamp to floor
-    expect(scores.byCategory.layout.percentage).toBe(5);
+    expect(scores.byCategory.structure.percentage).toBe(5);
   });
 
   it("categories without issues get 100%", () => {
-    // Issues only in layout category
     const scores = calculateScores(makeResult([
-      makeIssue({ ruleId: "no-auto-layout", category: "layout", severity: "blocking" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking" }),
     ]));
 
     expect(scores.byCategory.token.percentage).toBe(100);
     expect(scores.byCategory.component.percentage).toBe(100);
     expect(scores.byCategory.naming.percentage).toBe(100);
-    expect(scores.byCategory["ai-readability"].percentage).toBe(100);
-    expect(scores.byCategory["handoff-risk"].percentage).toBe(100);
+    expect(scores.byCategory.behavior.percentage).toBe(100);
   });
 
-  it("overall score is weighted average of all 6 categories", () => {
-    // With equal weights (all 1.0), overall = average of all category percentages
+  it("overall score is weighted average of all 5 categories", () => {
     const scores = calculateScores(makeResult([
-      makeIssue({ ruleId: "no-auto-layout", category: "layout", severity: "blocking" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking" }),
     ], 100));
 
     const categoryPercentages = [
-      scores.byCategory.layout.percentage,
+      scores.byCategory.structure.percentage,
       scores.byCategory.token.percentage,
       scores.byCategory.component.percentage,
       scores.byCategory.naming.percentage,
-      scores.byCategory["ai-readability"].percentage,
-      scores.byCategory["handoff-risk"].percentage,
+      scores.byCategory.behavior.percentage,
     ];
     const expectedOverall = Math.round(
-      categoryPercentages.reduce((a, b) => a + b, 0) / 6
+      categoryPercentages.reduce((a, b) => a + b, 0) / 5
     );
     expect(scores.overall.percentage).toBe(expectedOverall);
   });
@@ -215,8 +201,6 @@ describe("calculateScores", () => {
       makeIssue({ ruleId: "raw-color", category: "token", severity: "missing-info" }),
     ], 0));
 
-    // With nodeCount 0, density stays at 100 (no density penalty applied)
-    // But diversity still applies since there are issues
     expect(scores.byCategory.token.densityScore).toBe(100);
     expect(scores.byCategory.token.percentage).toBeLessThan(100);
     expect(Number.isFinite(scores.overall.percentage)).toBe(true);
@@ -234,29 +218,28 @@ describe("calculateScores", () => {
 
   it("tracks uniqueRuleCount per category", () => {
     const issues = [
-      makeIssue({ ruleId: "no-auto-layout", category: "layout", severity: "blocking" }),
-      makeIssue({ ruleId: "no-auto-layout", category: "layout", severity: "blocking" }),
-      makeIssue({ ruleId: "group-usage", category: "layout", severity: "risk" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking" }),
+      makeIssue({ ruleId: "group-usage", category: "structure", severity: "risk" }),
     ];
     const scores = calculateScores(makeResult(issues));
 
-    // 2 unique rules in layout, despite 3 issues
-    expect(scores.byCategory.layout.uniqueRuleCount).toBe(2);
-    expect(scores.byCategory.layout.issueCount).toBe(3);
+    expect(scores.byCategory.structure.uniqueRuleCount).toBe(2);
+    expect(scores.byCategory.structure.issueCount).toBe(3);
   });
 
   it("bySeverity counts are accurate per category", () => {
     const issues = [
-      makeIssue({ ruleId: "no-auto-layout", category: "layout", severity: "blocking" }),
-      makeIssue({ ruleId: "group-usage", category: "layout", severity: "risk" }),
-      makeIssue({ ruleId: "group-usage", category: "layout", severity: "risk" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking" }),
+      makeIssue({ ruleId: "group-usage", category: "structure", severity: "risk" }),
+      makeIssue({ ruleId: "group-usage", category: "structure", severity: "risk" }),
     ];
     const scores = calculateScores(makeResult(issues));
 
-    expect(scores.byCategory.layout.bySeverity.blocking).toBe(1);
-    expect(scores.byCategory.layout.bySeverity.risk).toBe(2);
-    expect(scores.byCategory.layout.bySeverity["missing-info"]).toBe(0);
-    expect(scores.byCategory.layout.bySeverity.suggestion).toBe(0);
+    expect(scores.byCategory.structure.bySeverity.blocking).toBe(1);
+    expect(scores.byCategory.structure.bySeverity.risk).toBe(2);
+    expect(scores.byCategory.structure.bySeverity["missing-info"]).toBe(0);
+    expect(scores.byCategory.structure.bySeverity.suggestion).toBe(0);
   });
 });
 
@@ -269,16 +252,14 @@ describe("calculateGrade (via calculateScores)", () => {
   });
 
   it("score < 50% -> F", () => {
-    // Many blocking issues in all categories to push overall below 50%
     const issues: AnalysisIssue[] = [];
-    const categories: Category[] = ["layout", "token", "component", "naming", "ai-readability", "handoff-risk"];
+    const categories: Category[] = ["structure", "token", "component", "naming", "behavior"];
     const rulesPerCat: Record<Category, string[]> = {
-      layout: ["no-auto-layout", "group-usage", "deep-nesting", "fixed-size-in-auto-layout", "missing-responsive-behavior"],
+      structure: ["no-auto-layout", "group-usage", "deep-nesting", "fixed-size-in-auto-layout", "missing-responsive-behavior", "absolute-position-in-auto-layout", "missing-size-constraint", "z-index-dependent-layout", "unnecessary-node"],
       token: ["raw-color", "raw-font", "inconsistent-spacing", "magic-number-spacing", "raw-shadow"],
-      component: ["missing-component", "detached-instance", "missing-component-description"],
+      component: ["missing-component", "detached-instance", "missing-component-description", "variant-structure-mismatch"],
       naming: ["default-name", "non-semantic-name", "inconsistent-naming-convention", "numeric-suffix-name", "too-long-name"],
-      "ai-readability": ["ambiguous-structure", "z-index-dependent-layout", "missing-layout-hint", "invisible-layer", "empty-frame"],
-      "handoff-risk": ["hardcode-risk", "text-truncation-unhandled", "prototype-link-in-design"],
+      behavior: ["text-truncation-unhandled", "prototype-link-in-design", "overflow-behavior-unknown", "wrap-behavior-unknown"],
     };
 
     for (const cat of categories) {
@@ -315,21 +296,20 @@ describe("formatScoreSummary", () => {
     expect(summary).toContain("Overall: S (100%)");
   });
 
-  it("includes all 6 categories", () => {
+  it("includes all 5 categories", () => {
     const scores = calculateScores(makeResult([]));
     const summary = formatScoreSummary(scores);
 
-    expect(summary).toContain("layout:");
+    expect(summary).toContain("structure:");
     expect(summary).toContain("token:");
     expect(summary).toContain("component:");
     expect(summary).toContain("naming:");
-    expect(summary).toContain("ai-readability:");
-    expect(summary).toContain("handoff-risk:");
+    expect(summary).toContain("behavior:");
   });
 
   it("includes severity breakdown", () => {
     const scores = calculateScores(makeResult([
-      makeIssue({ ruleId: "no-auto-layout", category: "layout", severity: "blocking" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking" }),
     ]));
     const summary = formatScoreSummary(scores);
 
@@ -342,12 +322,11 @@ describe("formatScoreSummary", () => {
 
 describe("getCategoryLabel", () => {
   it("returns correct labels for all categories", () => {
-    expect(getCategoryLabel("layout")).toBe("Layout");
+    expect(getCategoryLabel("structure")).toBe("Structure");
     expect(getCategoryLabel("token")).toBe("Design Token");
     expect(getCategoryLabel("component")).toBe("Component");
     expect(getCategoryLabel("naming")).toBe("Naming");
-    expect(getCategoryLabel("ai-readability")).toBe("AI Readability");
-    expect(getCategoryLabel("handoff-risk")).toBe("Handoff Risk");
+    expect(getCategoryLabel("behavior")).toBe("Behavior");
   });
 });
 
@@ -365,8 +344,8 @@ describe("getSeverityLabel", () => {
 describe("buildResultJson", () => {
   it("includes all expected fields", () => {
     const result = makeResult([
-      makeIssue({ ruleId: "no-auto-layout", category: "layout", severity: "blocking" }),
-      makeIssue({ ruleId: "no-auto-layout", category: "layout", severity: "blocking" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking" }),
       makeIssue({ ruleId: "raw-color", category: "token", severity: "missing-info" }),
     ]);
     const scores = calculateScores(result);
@@ -383,8 +362,8 @@ describe("buildResultJson", () => {
 
   it("aggregates issuesByRule correctly", () => {
     const result = makeResult([
-      makeIssue({ ruleId: "no-auto-layout", category: "layout", severity: "blocking" }),
-      makeIssue({ ruleId: "no-auto-layout", category: "layout", severity: "blocking" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking" }),
       makeIssue({ ruleId: "raw-color", category: "token", severity: "missing-info" }),
     ]);
     const scores = calculateScores(result);

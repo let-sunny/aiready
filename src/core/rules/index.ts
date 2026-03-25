@@ -4,20 +4,17 @@
 export * from "./rule-registry.js";
 export * from "./rule-config.js";
 
-// Layout rules (11)
-export * from "./layout/index.js";
+// Structure rules (9)
+export * from "./structure/index.js";
 
 // Token rules (7)
 export * from "./token/index.js";
 
-// Component rules (6)
+// Component rules (4)
 export * from "./component/index.js";
 
 // Naming rules (5)
 export * from "./naming/index.js";
 
-// AI Readability rules (5)
-export * from "./ai-readability/index.js";
-
-// Handoff Risk rules (5)
-export * from "./handoff-risk/index.js";
+// Behavior rules (4)
+export * from "./behavior/index.js";

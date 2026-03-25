@@ -1,12 +1,11 @@
 import { z } from "zod";
 
 export const CategorySchema = z.enum([
-  "layout",
+  "structure",
   "token",
   "component",
   "naming",
-  "ai-readability",
-  "handoff-risk",
+  "behavior",
 ]);
 
 export type Category = z.infer<typeof CategorySchema>;
@@ -14,10 +13,9 @@ export type Category = z.infer<typeof CategorySchema>;
 export const CATEGORIES = CategorySchema.options;
 
 export const CATEGORY_LABELS: Record<Category, string> = {
-  layout: "Layout",
+  structure: "Structure",
   token: "Design Token",
   component: "Component",
   naming: "Naming",
-  "ai-readability": "AI Readability",
-  "handoff-risk": "Handoff Risk",
+  behavior: "Behavior",
 };

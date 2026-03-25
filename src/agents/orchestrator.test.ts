@@ -85,8 +85,8 @@ describe("runCalibrationEvaluate", () => {
       scoreReport: {
         overall: { score: 75, maxScore: 100, percentage: 75, grade: "B" as const },
         byCategory: {
-          layout: {
-            category: "layout" as const,
+          structure: {
+            category: "structure" as const,
             score: 70,
             maxScore: 100,
             percentage: 70,
@@ -133,20 +133,8 @@ describe("runCalibrationEvaluate", () => {
             diversityScore: 100,
             bySeverity: { blocking: 0, risk: 0, "missing-info": 0, suggestion: 0 },
           },
-          "ai-readability": {
-            category: "ai-readability" as const,
-            score: 100,
-            maxScore: 100,
-            percentage: 100,
-            issueCount: 0,
-            uniqueRuleCount: 0,
-            weightedIssueCount: 0,
-            densityScore: 100,
-            diversityScore: 100,
-            bySeverity: { blocking: 0, risk: 0, "missing-info": 0, suggestion: 0 },
-          },
-          "handoff-risk": {
-            category: "handoff-risk" as const,
+          behavior: {
+            category: "behavior" as const,
             score: 100,
             maxScore: 100,
             percentage: 100,

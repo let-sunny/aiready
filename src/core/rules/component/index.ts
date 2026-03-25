@@ -363,3 +363,50 @@ export const missingComponentDescription = defineRule({
   check: missingComponentDescriptionCheck,
 });
 
+// ============================================
+// variant-structure-mismatch
+// ============================================
+
+const variantStructureMismatchDef: RuleDefinition = {
+  id: "variant-structure-mismatch",
+  name: "Variant Structure Mismatch",
+  category: "component",
+  why: "Variants with different child structures prevent AI from creating a unified component template",
+  impact: "AI must generate separate implementations for each variant instead of a single parameterized component",
+  fix: "Ensure all variants share the same child structure, using visibility toggles for optional elements",
+};
+
+const variantStructureMismatchCheck: RuleCheckFn = (node, context) => {
+  // Only COMPONENT_SET
+  if (node.type !== "COMPONENT_SET") return null;
+  if (!node.children?.length || node.children.length < 2) return null;
+
+  // Build fingerprint for each variant child
+  const fingerprints = node.children
+    .filter(child => child.type === "COMPONENT")
+    .map(child => buildFingerprint(child, 2));
+
+  if (fingerprints.length < 2) return null;
+
+  // Compare all fingerprints to the first one
+  const base = fingerprints[0];
+  const mismatched = fingerprints.filter(fp => fp !== base);
+
+  if (mismatched.length === 0) return null;
+
+  const mismatchCount = mismatched.length;
+  const totalVariants = fingerprints.length;
+
+  return {
+    ruleId: variantStructureMismatchDef.id,
+    nodeId: node.id,
+    nodePath: context.path.join(" > "),
+    message: `"${node.name}" has ${mismatchCount}/${totalVariants} variants with different child structures — AI cannot create a unified component template`,
+  };
+};
+
+export const variantStructureMismatch = defineRule({
+  definition: variantStructureMismatchDef,
+  check: variantStructureMismatchCheck,
+});
+

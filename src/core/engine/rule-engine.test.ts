@@ -290,7 +290,7 @@ describe("RuleEngine.analyze — depth weight calculation", () => {
     });
 
     const file = makeFile({ document: root });
-    // Use only no-auto-layout which has depthWeight: 1.5 and is in "layout" (supports depth weight)
+    // Use only no-auto-layout which has depthWeight: 1.5 and is in "structure" (supports depth weight)
     const result = analyzeFile(file, { enabledRules: ["no-auto-layout"] });
 
     // Find issues at different depths — assert they exist to avoid vacuous pass

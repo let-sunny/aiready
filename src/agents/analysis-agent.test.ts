@@ -36,7 +36,7 @@ function createMockIssue(overrides: {
       definition: {
         id: overrides.ruleId,
         name: `Rule ${overrides.ruleId}`,
-        category: "layout",
+        category: "structure",
         why: "test reason",
         impact: "test impact",
         fix: "test fix",
