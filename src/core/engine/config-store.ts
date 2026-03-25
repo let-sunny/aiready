@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -19,6 +19,7 @@ function ensureDir(dir: string): void {
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true, mode: 0o700 });
   }
+  chmodSync(dir, 0o700);
 }
 
 export function readConfig(): AireadyConfig {
@@ -39,6 +40,7 @@ export function writeConfig(config: AireadyConfig): void {
     encoding: "utf-8",
     mode: 0o600,
   });
+  chmodSync(CONFIG_PATH, 0o600);
 }
 
 export function getFigmaToken(): string | undefined {
