@@ -76,6 +76,31 @@ describe("prototype-link-in-design (missing prototype interaction)", () => {
     expect(prototypeLinkInDesign.check(container, makeContext())).toBeNull();
   });
 
+  it("does not throw on malformed variantOptions (not an array)", () => {
+    const node = makeNode({
+      type: "COMPONENT",
+      name: "Card",
+      componentPropertyDefinitions: {
+        State: { type: "VARIANT", variantOptions: "not-an-array" },
+      },
+    });
+    // "Card" is not an interactive name, malformed variantOptions should not match
+    expect(prototypeLinkInDesign.check(node, makeContext())).toBeNull();
+  });
+
+  it("does not throw on variantOptions with non-string entries", () => {
+    const node = makeNode({
+      type: "COMPONENT",
+      name: "Button",
+      componentPropertyDefinitions: {
+        State: { type: "VARIANT", variantOptions: [123, null, "hover"] },
+      },
+    });
+    const result = prototypeLinkInDesign.check(node, makeContext());
+    // "hover" matches STATE_VARIANT_PATTERNS, so should flag (no interactions)
+    expect(result).not.toBeNull();
+  });
+
   it("returns null for component with non-state variants", () => {
     const node = makeNode({
       type: "COMPONENT",

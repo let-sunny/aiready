@@ -55,12 +55,24 @@ describe("multiple-fill-colors", () => {
     expect(multipleFillColors.check(node, makeContext())).toBeNull();
   });
 
-  it("respects tolerance option", () => {
+  it("respects default tolerance", () => {
     const nodeA = makeNode({ id: "a:1", fills: [solidFill(100, 100, 100)] });
     const nodeB = makeNode({ id: "b:1", fills: [solidFill(105, 100, 100)] }); // distance ~5
     const siblings = [nodeA, nodeB];
 
     // Default tolerance 10 → should flag (distance 5 < 10)
     expect(multipleFillColors.check(nodeA, makeContext({ siblings }))).not.toBeNull();
+  });
+
+  it("respects custom tolerance via options", () => {
+    const nodeA = makeNode({ id: "a:1", fills: [solidFill(100, 100, 100)] });
+    const nodeB = makeNode({ id: "b:1", fills: [solidFill(105, 100, 100)] }); // distance ~5
+    const siblings = [nodeA, nodeB];
+
+    // Custom tolerance 3 → distance 5 exceeds it, should NOT flag
+    expect(multipleFillColors.check(nodeA, makeContext({ siblings }), { tolerance: 3 })).toBeNull();
+
+    // Custom tolerance 10 → distance 5 within it, should flag
+    expect(multipleFillColors.check(nodeA, makeContext({ siblings }), { tolerance: 10 })).not.toBeNull();
   });
 });
