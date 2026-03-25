@@ -71,14 +71,11 @@ describe("Integration: fixture → analyze → score", () => {
     expect(scores.overall.score).toBe(scores.overall.percentage);
     expect(scores.overall.maxScore).toBe(100);
 
-    // All 6 categories present
-    const categories = Object.keys(scores.byCategory);
-    expect(categories).toContain("layout");
-    expect(categories).toContain("token");
-    expect(categories).toContain("component");
-    expect(categories).toContain("naming");
-    expect(categories).toContain("ai-readability");
-    expect(categories).toContain("handoff-risk");
+    // Exactly 6 categories present
+    const categories = Object.keys(scores.byCategory).sort();
+    expect(categories).toEqual(
+      ["ai-readability", "component", "handoff-risk", "layout", "naming", "token"],
+    );
 
     // Each category has valid percentages
     for (const cat of Object.values(scores.byCategory)) {
