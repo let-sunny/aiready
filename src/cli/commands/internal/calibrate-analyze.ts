@@ -78,7 +78,7 @@ export function registerCalibrateAnalyze(cli: CAC): void {
           "\nError:",
           error instanceof Error ? error.message : String(error)
         );
-        process.exit(1);
+        process.exitCode = 1;
       }
     });
 }

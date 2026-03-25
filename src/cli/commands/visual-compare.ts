@@ -29,13 +29,13 @@ export function registerVisualCompare(cli: CAC): void {
       try {
         if (!options.figmaUrl) {
           console.error("Error: --figma-url is required");
-          process.exit(1);
+          process.exitCode = 1; return;
         }
 
         const token = options.token ?? getFigmaToken();
         if (!token) {
           console.error("Error: Figma token required. Use --token or set FIGMA_TOKEN env var.");
-          process.exit(1);
+          process.exitCode = 1; return;
         }
 
         const { visualCompare } = await import("../../core/engine/visual-compare.js");
@@ -44,7 +44,7 @@ export function registerVisualCompare(cli: CAC): void {
           options.figmaScale !== undefined ? Number(options.figmaScale) : undefined;
         if (exportScale !== undefined && (!Number.isFinite(exportScale) || exportScale < 1)) {
           console.error("Error: --figma-scale must be a number >= 1");
-          process.exit(1);
+          process.exitCode = 1; return;
         }
 
         // CAC passes option values as strings — coerce to numbers before validation
@@ -53,11 +53,11 @@ export function registerVisualCompare(cli: CAC): void {
 
         if (width !== undefined && (!Number.isFinite(width) || width <= 0)) {
           console.error("Error: --width must be a positive number");
-          process.exit(1);
+          process.exitCode = 1; return;
         }
         if (height !== undefined && (!Number.isFinite(height) || height <= 0)) {
           console.error("Error: --height must be a positive number");
-          process.exit(1);
+          process.exitCode = 1; return;
         }
 
         const hasViewportOverride = width !== undefined || height !== undefined;
@@ -97,7 +97,7 @@ export function registerVisualCompare(cli: CAC): void {
           "\nError:",
           error instanceof Error ? error.message : String(error)
         );
-        process.exit(1);
+        process.exitCode = 1;
       }
     });
 }

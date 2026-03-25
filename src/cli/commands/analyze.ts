@@ -201,7 +201,7 @@ export function registerAnalyze(cli: CAC): void {
 
         // Exit with error code if grade is F
         if (scores.overall.grade === "F") {
-          process.exit(1);
+          process.exitCode = 1;
         }
       } catch (error) {
         trackError(
@@ -216,7 +216,7 @@ export function registerAnalyze(cli: CAC): void {
           "\nError:",
           error instanceof Error ? error.message : String(error)
         );
-        process.exit(1);
+        process.exitCode = 1;
       }
     });
 }

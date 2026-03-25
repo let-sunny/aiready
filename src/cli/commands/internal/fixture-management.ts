@@ -79,7 +79,7 @@ export function registerFixtureManagement(cli: CAC): void {
       if (!options.force) {
         if (!runDir) {
           console.error(`Error: no run directory found for fixture "${fixtureName}". Specify --run-dir, or use --force to skip check.`);
-          process.exit(1);
+          process.exitCode = 1; return;
         }
         const summary = checkConvergence(runDir, { lenient: options.lenientConvergence });
         console.log(`\nConvergence check (${summary.mode}):`);
@@ -95,7 +95,7 @@ export function registerFixtureManagement(cli: CAC): void {
 
         if (!summary.converged) {
           console.error(`\nError: fixture has not converged. Use --force to override or --lenient-convergence.`);
-          process.exit(1);
+          process.exitCode = 1; return;
         }
       } else if (options.dryRun) {
         console.log(`[dry-run] --force: would move fixture without convergence check: ${fixturePath}`);
@@ -107,7 +107,7 @@ export function registerFixtureManagement(cli: CAC): void {
         console.log(`\nMoved to: ${dest}`);
       } else {
         console.error(`Error: fixture not found: ${fixturePath}`);
-        process.exit(1);
+        process.exitCode = 1;
       }
     });
 }

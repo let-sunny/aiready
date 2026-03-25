@@ -89,7 +89,7 @@ export function registerImplement(cli: CAC): void {
             const imgScale = options.imageScale !== undefined ? Number(options.imageScale) : 2;
             if (!Number.isFinite(imgScale) || imgScale < 1 || imgScale > 4) {
               console.error("Error: --image-scale must be 1-4 (2 for PC, 3 for mobile)");
-              process.exit(1);
+              process.exitCode = 1; return;
             }
 
             const { FigmaClient } = await import("../../core/adapters/figma-client.js");
@@ -247,7 +247,7 @@ export function registerImplement(cli: CAC): void {
         console.log(`\nNext: Feed design-tree.txt + PROMPT.md to your AI assistant.`);
       } catch (error) {
         console.error("\nError:", error instanceof Error ? error.message : String(error));
-        process.exit(1);
+        process.exitCode = 1;
       }
     });
 }
