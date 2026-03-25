@@ -157,7 +157,7 @@
       gridEl.innerHTML = categories.map(function(cat) {
         var cs = scores.byCategory[cat];
         var barColor = cs.percentage >= 80 ? 'var(--green)' : cs.percentage >= 60 ? 'var(--amber)' : 'var(--red)';
-        return '<div class="cat-row" title="' + (catTips[cat] || '') + '">' +
+        return '<div class="cat-row" data-tip="' + (catTips[cat] || '') + '">' +
           '<div class="cat-score ' + scoreClass(cs.percentage) + '">' + cs.percentage + '</div>' +
           '<div class="cat-label">' + (CATEGORY_LABELS[cat] || cat) + '</div>' +
           '<div class="cat-bar"><div class="cat-bar-fill" style="width:' + cs.percentage + '%;background:' + barColor + '"></div></div>' +
@@ -169,10 +169,10 @@
       var s = scores.summary;
       var sevTips = { blocking: 'Cannot implement correctly without fixing.', risk: 'Implementable now but will break later.', missing: 'Information absent, AI must guess.', suggestion: 'Not problematic, but improves systemization.' };
       document.getElementById('summary-bar').innerHTML =
-        '<div class="summary-item" title="' + sevTips.blocking + '"><span class="dot dot-blocking"></span><span class="summary-count">' + s.blocking + '</span> Blocking</div>' +
-        '<div class="summary-item" title="' + sevTips.risk + '"><span class="dot dot-risk"></span><span class="summary-count">' + s.risk + '</span> Risk</div>' +
-        '<div class="summary-item" title="' + sevTips.missing + '"><span class="dot dot-missing"></span><span class="summary-count">' + s.missingInfo + '</span> Missing</div>' +
-        '<div class="summary-item" title="' + sevTips.suggestion + '"><span class="dot dot-suggestion"></span><span class="summary-count">' + s.suggestion + '</span> Suggestion</div>' +
+        '<div class="summary-item" data-tip="' + sevTips.blocking + '"><span class="dot dot-blocking"></span><span class="summary-count">' + s.blocking + '</span> Blocking</div>' +
+        '<div class="summary-item" data-tip="' + sevTips.risk + '"><span class="dot dot-risk"></span><span class="summary-count">' + s.risk + '</span> Risk</div>' +
+        '<div class="summary-item" data-tip="' + sevTips.missing + '"><span class="dot dot-missing"></span><span class="summary-count">' + s.missingInfo + '</span> Missing</div>' +
+        '<div class="summary-item" data-tip="' + sevTips.suggestion + '"><span class="dot dot-suggestion"></span><span class="summary-count">' + s.suggestion + '</span> Suggestion</div>' +
         '<div class="summary-total">' + s.totalIssues + ' total</div>';
 
       // Filter tabs

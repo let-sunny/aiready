@@ -110,6 +110,35 @@ body {
   white-space: nowrap;
 }
 
+/* ---- Tooltips (Figma iframe doesn't support title attr) ---- */
+[data-tip] {
+  position: relative;
+}
+[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 5px 10px;
+  background: #18181b;
+  color: #fafafa;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.4;
+  border-radius: 6px;
+  white-space: normal;
+  max-width: 220px;
+  width: max-content;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 100;
+}
+[data-tip]:hover::after {
+  opacity: 1;
+}
+
 /* ---- Summary bar ---- */
 .summary-bar {
   display: flex;
