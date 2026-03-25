@@ -39,8 +39,8 @@ export const DiscoveryEvidenceEntrySchema = z.object({
 export type DiscoveryEvidenceEntry = z.infer<typeof DiscoveryEvidenceEntrySchema>;
 
 export const DiscoveryEvidenceFileSchema = z.object({
-  schemaVersion: z.number(),
-  entries: z.array(DiscoveryEvidenceEntrySchema),
+  schemaVersion: z.literal(DISCOVERY_EVIDENCE_SCHEMA_VERSION),
+  entries: z.array(z.unknown()),
 });
 
 export type DiscoveryEvidenceFile = z.infer<typeof DiscoveryEvidenceFileSchema>;

@@ -146,7 +146,15 @@ function readDiscoveryEvidence(filePath: string): DiscoveryEvidenceEntry[] {
     // Versioned format: { schemaVersion, entries }
     const versionedParse = DiscoveryEvidenceFileSchema.safeParse(raw);
     if (versionedParse.success) {
-      return versionedParse.data.entries;
+      // Validate entries individually so one bad row doesn't discard all
+      const result: DiscoveryEvidenceEntry[] = [];
+      for (const item of versionedParse.data.entries) {
+        const parsed = DiscoveryEvidenceEntrySchema.safeParse(item);
+        if (parsed.success && parsed.data !== undefined) {
+          result.push(parsed.data);
+        }
+      }
+      return result;
     }
 
     // Legacy format: plain array (v0, before schemaVersion was introduced)
@@ -225,8 +233,10 @@ export function pruneDiscoveryEvidence(
   evidencePath: string = DEFAULT_DISCOVERY_PATH
 ): void {
   if (categories.length === 0) return;
-  const catSet = new Set(categories.map((c) => c.toLowerCase()));
+  const catSet = new Set(
+    categories.map((c) => c.toLowerCase().trim()).filter((c) => c.length > 0),
+  );
   const existing = readDiscoveryEvidence(evidencePath);
-  const pruned = existing.filter((e) => !catSet.has(e.category.toLowerCase()));
+  const pruned = existing.filter((e) => !catSet.has(e.category.toLowerCase().trim()));
   writeDiscoveryEvidence(evidencePath, pruned);
 }

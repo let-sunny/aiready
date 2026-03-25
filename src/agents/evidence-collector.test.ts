@@ -228,6 +228,36 @@ describe("evidence-collector", () => {
       const result = loadDiscoveryEvidence(disPath);
       expect(result).toHaveLength(1);
     });
+
+    it("skips invalid entries in versioned format (partial corruption)", () => {
+      const file = {
+        schemaVersion: DISCOVERY_EVIDENCE_SCHEMA_VERSION,
+        entries: [
+          { description: "good", category: "layout", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
+          { bad: "entry" },
+          { description: "also good", category: "color", impact: "easy", fixture: "fx2", timestamp: "t2", source: "gap-analysis" },
+        ],
+      };
+      writeFileSync(disPath, JSON.stringify(file), "utf-8");
+
+      const result = loadDiscoveryEvidence(disPath);
+      expect(result).toHaveLength(2);
+      expect(result[0]!.description).toBe("good");
+      expect(result[1]!.description).toBe("also good");
+    });
+
+    it("rejects unsupported schemaVersion", () => {
+      const file = {
+        schemaVersion: 999,
+        entries: [
+          { description: "gap1", category: "layout", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
+        ],
+      };
+      writeFileSync(disPath, JSON.stringify(file), "utf-8");
+
+      const result = loadDiscoveryEvidence(disPath);
+      expect(result).toEqual([]);
+    });
   });
 
   describe("appendDiscoveryEvidence", () => {
@@ -370,6 +400,17 @@ describe("evidence-collector", () => {
 
       const raw = JSON.parse(readFileSync(disPath, "utf-8")) as { entries: DiscoveryEvidenceEntry[] };
       expect(raw.entries).toHaveLength(1);
+    });
+
+    it("trims categories when matching", () => {
+      appendDiscoveryEvidence([
+        { description: "gap1", category: "layout", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
+      ], disPath);
+
+      pruneDiscoveryEvidence(["  layout  "], disPath);
+
+      const raw = JSON.parse(readFileSync(disPath, "utf-8")) as { entries: DiscoveryEvidenceEntry[] };
+      expect(raw.entries).toHaveLength(0);
     });
   });
 });
