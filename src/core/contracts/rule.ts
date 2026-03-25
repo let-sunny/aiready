@@ -51,8 +51,9 @@ export interface RuleContext {
  * Each key gets its own lazily-initialized state that persists for the duration of one analysis run.
  */
 export function getAnalysisState<T>(context: RuleContext, key: string, init: () => T): T {
-  const existing = context.analysisState.get(key);
-  if (existing !== undefined) return existing as T;
+  if (context.analysisState.has(key)) {
+    return context.analysisState.get(key) as T;
+  }
   const value = init();
   context.analysisState.set(key, value);
   return value;
