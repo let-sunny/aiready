@@ -3,10 +3,16 @@
  * and computes pixel-level similarity using pixelmatch.
  */
 
-import { writeFileSync, readFileSync, mkdirSync, existsSync, statSync, copyFileSync } from "node:fs";
+import { writeFileSync, readFileSync, mkdirSync, existsSync, copyFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
-import pixelmatch from "pixelmatch";
 import { PNG } from "pngjs";
+import {
+  FIGMA_CACHE_DIR,
+  getFigmaCachePath,
+  isCacheFresh,
+  inferDeviceScaleFactor,
+  compareScreenshots,
+} from "./visual-compare-helpers.js";
 
 /** Result of a visual comparison between Figma design and rendered code. */
 export interface VisualCompareResult {
@@ -36,27 +42,6 @@ export interface VisualCompareOptions {
    * Default 2 matches REST exports and avoids comparing a @2x PNG against a 1× Playwright capture.
    */
   figmaExportScale?: number | undefined;
-}
-
-const FIGMA_CACHE_DIR = "/tmp/canicode-figma-cache";
-const FIGMA_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
-
-/**
- * Get the cache path for a given fileKey + nodeId combination.
- */
-function getFigmaCachePath(fileKey: string, nodeId: string, scale: number): string {
-  // Sanitize nodeId for use as filename (replace : with -)
-  const safeNodeId = nodeId.replace(/:/g, "-");
-  return resolve(FIGMA_CACHE_DIR, `${fileKey}_${safeNodeId}@${scale}x.png`);
-}
-
-/**
- * Check if a cached Figma screenshot exists and is still fresh (within TTL).
- */
-function isCacheFresh(cachePath: string): boolean {
-  if (!existsSync(cachePath)) return false;
-  const stats = statSync(cachePath);
-  return Date.now() - stats.mtimeMs < FIGMA_CACHE_TTL_MS;
 }
 
 /**
@@ -104,39 +89,6 @@ async function fetchFigmaScreenshot(
 }
 
 /**
- * Tolerance for detecting integer scale factors (@2x, @3x).
- * Broader tolerance because render/rounding errors accumulate at higher scales.
- */
-const SCALE_ROUNDING_TOLERANCE = 0.08;
-
-/**
- * Tolerance for detecting 1x (unity) scale.
- * Tighter to avoid false positives — misidentifying a scaled PNG as 1x.
- */
-const UNITY_SCALE_TOLERANCE = 0.02;
-
-/**
- * Infer device pixel ratio so the Playwright screenshot matches Figma PNG pixel dimensions.
- */
-function inferDeviceScaleFactor(
-  pngW: number,
-  pngH: number,
-  logicalW: number,
-  logicalH: number,
-  fallback: number,
-): number {
-  if (logicalW <= 0 || logicalH <= 0) return 1;
-  const sx = pngW / logicalW;
-  const sy = pngH / logicalH;
-  const rounded = Math.round((sx + sy) / 2);
-  if (rounded >= 2 && Math.abs(sx - rounded) < SCALE_ROUNDING_TOLERANCE && Math.abs(sy - rounded) < SCALE_ROUNDING_TOLERANCE) {
-    return rounded;
-  }
-  if (Math.abs(sx - 1) < UNITY_SCALE_TOLERANCE && Math.abs(sy - 1) < UNITY_SCALE_TOLERANCE) return 1;
-  return fallback >= 2 ? fallback : Math.max(1, Math.round(sx));
-}
-
-/**
  * Render HTML file with Playwright and take a screenshot.
  * @param deviceScaleFactor - Pass 2 when the Figma reference is @2x and `viewport` is logical CSS size.
  */
@@ -172,77 +124,6 @@ export async function renderCodeScreenshot(
   } finally {
     await browser.close();
   }
-}
-
-/**
- * Pad a PNG to target dimensions with a high-contrast fill color (magenta).
- * Unlike resize, padding preserves original pixels 1:1 and guarantees that
- * any size difference is counted as mismatched pixels by pixelmatch.
- */
-function padPng(png: PNG, targetWidth: number, targetHeight: number): PNG {
-  const padded = new PNG({ width: targetWidth, height: targetHeight });
-  // Fill entire canvas with magenta (FF00FF) — guaranteed to differ from any real content
-  for (let i = 0; i < padded.data.length; i += 4) {
-    padded.data[i] = 255;     // R
-    padded.data[i + 1] = 0;   // G
-    padded.data[i + 2] = 255; // B
-    padded.data[i + 3] = 255; // A
-  }
-  // Copy original pixels into top-left corner
-  for (let y = 0; y < png.height; y++) {
-    for (let x = 0; x < png.width; x++) {
-      const srcIdx = (y * png.width + x) * 4;
-      const dstIdx = (y * targetWidth + x) * 4;
-      padded.data[dstIdx] = png.data[srcIdx]!;
-      padded.data[dstIdx + 1] = png.data[srcIdx + 1]!;
-      padded.data[dstIdx + 2] = png.data[srcIdx + 2]!;
-      padded.data[dstIdx + 3] = png.data[srcIdx + 3]!;
-    }
-  }
-  return padded;
-}
-
-/**
- * Compare two PNG files using pixelmatch.
- */
-function compareScreenshots(
-  path1: string,
-  path2: string,
-  diffOutputPath: string,
-): { similarity: number; diffPixels: number; totalPixels: number; width: number; height: number } {
-  const raw1 = PNG.sync.read(readFileSync(path1));
-  const raw2 = PNG.sync.read(readFileSync(path2));
-
-  // Size mismatch — pad smaller image with magenta so extra area counts as diff pixels
-  if (raw1.width !== raw2.width || raw1.height !== raw2.height) {
-    const width = Math.max(raw1.width, raw2.width);
-    const height = Math.max(raw1.height, raw2.height);
-    const img1 = padPng(raw1, width, height);
-    const img2 = padPng(raw2, width, height);
-    const diff = new PNG({ width, height });
-    const diffPixels = pixelmatch(img1.data, img2.data, diff.data, width, height, { threshold: 0.1 });
-    mkdirSync(dirname(diffOutputPath), { recursive: true });
-    writeFileSync(diffOutputPath, PNG.sync.write(diff));
-
-    const totalPixels = width * height;
-    const similarity = Math.round((1 - diffPixels / totalPixels) * 100);
-
-    return { similarity, diffPixels, totalPixels, width, height };
-  }
-
-  const { width, height } = raw1;
-  const diff = new PNG({ width, height });
-  const diffPixels = pixelmatch(raw1.data, raw2.data, diff.data, width, height, {
-    threshold: 0.1,
-  });
-
-  mkdirSync(dirname(diffOutputPath), { recursive: true });
-  writeFileSync(diffOutputPath, PNG.sync.write(diff));
-
-  const totalPixels = width * height;
-  const similarity = Math.round((1 - diffPixels / totalPixels) * 100);
-
-  return { similarity, diffPixels, totalPixels, width, height };
 }
 
 /**

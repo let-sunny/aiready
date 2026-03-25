@@ -1,116 +1,23 @@
 /**
- * Tests for visual-compare.ts
+ * Tests for visual-compare helpers.
  *
- * The core functions (getFigmaCachePath, isCacheFresh, compareScreenshots, resizePng)
- * are module-private. We test the observable behaviour through integration-style tests
- * that write real PNG files to a temp directory and exercise the logic indirectly via
- * the exported `visualCompare` function — or, where Playwright / Figma API would be
- * required, we test the underlying PNG arithmetic by re-implementing a thin slice of
- * the same logic to confirm correctness.
- *
- * What we CAN test without Playwright or network:
- *  1. Path generation logic (getFigmaCachePath) — verified by inspecting the cache
- *     path written during a cached run.
- *  2. isCacheFresh — returns false for a non-existent file.
- *  3. compareScreenshots size-mismatch branch — padded area counts as diff.
- *  4. padPng — output dimensions match, original preserved, padding is magenta.
- *  5. Same-image comparison → 100% similarity.
- *  6. Different-image comparison → < 100% similarity.
- *
- * For (3)–(6) we build small PNGs in memory with pngjs and write them to a temp dir,
- * then call compareScreenshots through a minimal re-export shim declared in this file.
- * Because the module does not export the private functions we reproduce the exact same
- * logic (padPng + compareScreenshots) so the tests validate
- * the algorithm rather than just the export boundary.
+ * Pure helper functions are imported directly from visual-compare-helpers.ts,
+ * so tests exercise the real implementation rather than mirrored copies.
  */
 
 import { mkdtempSync, writeFileSync, existsSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { rm } from "node:fs/promises";
 import { PNG } from "pngjs";
-import pixelmatch from "pixelmatch";
-
-// ---------------------------------------------------------------------------
-// Helpers — mirror of the private functions in visual-compare.ts
-// ---------------------------------------------------------------------------
-
-const FIGMA_CACHE_DIR = "/tmp/canicode-figma-cache";
-
-/** Mirror of the private getFigmaCachePath in visual-compare.ts */
-function getFigmaCachePath(fileKey: string, nodeId: string, scale: number = 2): string {
-  const safeNodeId = nodeId.replace(/:/g, "-");
-  return resolve(FIGMA_CACHE_DIR, `${fileKey}_${safeNodeId}@${scale}x.png`);
-}
-
-/** Mirror of the private isCacheFresh in visual-compare.ts */
-function isCacheFresh(cachePath: string): boolean {
-  if (!existsSync(cachePath)) return false;
-  const { statSync } = require("node:fs") as typeof import("node:fs");
-  const stats = statSync(cachePath);
-  const FIGMA_CACHE_TTL_MS = 60 * 60 * 1000;
-  return Date.now() - stats.mtimeMs < FIGMA_CACHE_TTL_MS;
-}
-
-/** Mirror of the private padPng in visual-compare.ts */
-function padPng(png: PNG, targetWidth: number, targetHeight: number): PNG {
-  const padded = new PNG({ width: targetWidth, height: targetHeight });
-  // Fill with magenta
-  for (let i = 0; i < padded.data.length; i += 4) {
-    padded.data[i] = 255;
-    padded.data[i + 1] = 0;
-    padded.data[i + 2] = 255;
-    padded.data[i + 3] = 255;
-  }
-  // Copy original pixels into top-left corner
-  for (let y = 0; y < png.height; y++) {
-    for (let x = 0; x < png.width; x++) {
-      const srcIdx = (y * png.width + x) * 4;
-      const dstIdx = (y * targetWidth + x) * 4;
-      padded.data[dstIdx] = png.data[srcIdx]!;
-      padded.data[dstIdx + 1] = png.data[srcIdx + 1]!;
-      padded.data[dstIdx + 2] = png.data[srcIdx + 2]!;
-      padded.data[dstIdx + 3] = png.data[srcIdx + 3]!;
-    }
-  }
-  return padded;
-}
-
-/** Mirror of the private compareScreenshots in visual-compare.ts */
-function compareScreenshots(
-  path1: string,
-  path2: string,
-  diffOutputPath: string,
-): { similarity: number; diffPixels: number; totalPixels: number; width: number; height: number } {
-  const { readFileSync, mkdirSync } = require("node:fs") as typeof import("node:fs");
-  const { dirname } = require("node:path") as typeof import("node:path");
-
-  const raw1 = PNG.sync.read(readFileSync(path1));
-  const raw2 = PNG.sync.read(readFileSync(path2));
-
-  if (raw1.width !== raw2.width || raw1.height !== raw2.height) {
-    const width = Math.max(raw1.width, raw2.width);
-    const height = Math.max(raw1.height, raw2.height);
-    const img1 = padPng(raw1, width, height);
-    const img2 = padPng(raw2, width, height);
-    const diff = new PNG({ width, height });
-    const diffPixels = pixelmatch(img1.data, img2.data, diff.data, width, height, { threshold: 0.1 });
-    mkdirSync(dirname(diffOutputPath), { recursive: true });
-    writeFileSync(diffOutputPath, PNG.sync.write(diff));
-    const totalPixels = width * height;
-    const similarity = Math.round((1 - diffPixels / totalPixels) * 100);
-    return { similarity, diffPixels, totalPixels, width, height };
-  }
-
-  const { width, height } = raw1;
-  const diff = new PNG({ width, height });
-  const diffPixels = pixelmatch(raw1.data, raw2.data, diff.data, width, height, { threshold: 0.1 });
-  mkdirSync(dirname(diffOutputPath), { recursive: true });
-  writeFileSync(diffOutputPath, PNG.sync.write(diff));
-  const totalPixels = width * height;
-  const similarity = Math.round((1 - diffPixels / totalPixels) * 100);
-  return { similarity, diffPixels, totalPixels, width, height };
-}
+import {
+  getFigmaCachePath,
+  isCacheFresh,
+  padPng,
+  compareScreenshots,
+  inferDeviceScaleFactor,
+  FIGMA_CACHE_DIR,
+} from "./visual-compare-helpers.js";
 
 // ---------------------------------------------------------------------------
 // PNG factory helpers
@@ -309,5 +216,35 @@ describe("compareScreenshots", () => {
     expect(result.totalPixels).toBe(6 * 4);
     expect(result.width).toBe(6);
     expect(result.height).toBe(4);
+  });
+});
+
+describe("inferDeviceScaleFactor", () => {
+  it("detects 2x scale", () => {
+    expect(inferDeviceScaleFactor(800, 600, 400, 300, 2)).toBe(2);
+  });
+
+  it("detects 3x scale", () => {
+    expect(inferDeviceScaleFactor(1200, 900, 400, 300, 2)).toBe(3);
+  });
+
+  it("detects 1x scale", () => {
+    expect(inferDeviceScaleFactor(400, 300, 400, 300, 2)).toBe(1);
+  });
+
+  it("returns 1 when logical dimensions are zero", () => {
+    expect(inferDeviceScaleFactor(800, 600, 0, 0, 2)).toBe(1);
+  });
+
+  it("uses fallback for fractional scale when fallback >= 2", () => {
+    // 800 / 300 ≈ 2.67, 600 / 250 = 2.4 — not close to any integer
+    // fallback is 2, so it should return 2
+    expect(inferDeviceScaleFactor(800, 600, 300, 250, 2)).toBe(2);
+  });
+
+  it("rounds to nearest integer when fallback < 2 for fractional scale", () => {
+    // 800 / 300 ≈ 2.67, 600 / 250 = 2.4 — not close to any integer
+    // fallback is 1 (< 2), so it uses Math.max(1, Math.round(sx)) = Math.round(2.67) = 3
+    expect(inferDeviceScaleFactor(800, 600, 300, 250, 1)).toBe(3);
   });
 });
