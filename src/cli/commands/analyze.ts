@@ -152,7 +152,7 @@ export function registerAnalyze(cli: CAC): void {
         if (options.json) {
           console.log(JSON.stringify(buildResultJson(file.name, result, scores), null, 2));
           if (scores.overall.grade === "F") {
-            process.exit(1);
+            process.exitCode = 1;
           }
           return;
         }
