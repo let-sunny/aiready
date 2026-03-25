@@ -85,16 +85,17 @@ function renderAdjustmentProposals(adjustments: ScoreAdjustment[]): string {
   const lines: string[] = [];
   lines.push("## Score Adjustment Proposals");
   lines.push("");
-  lines.push("| Rule | Current Score | Proposed Score | Severity Change | Confidence | Cases | Reasoning |");
-  lines.push("|------|--------------|----------------|-----------------|------------|-------|-----------|");
+  lines.push("| Rule | Current Score | Proposed Score | Disable? | Severity Change | Confidence | Cases | Reasoning |");
+  lines.push("|------|--------------|----------------|----------|-----------------|------------|-------|-----------|");
 
   for (const adj of adjustments) {
     const severityChange = adj.proposedSeverity
       ? `${adj.currentSeverity} -> ${adj.proposedSeverity}`
       : adj.currentSeverity;
+    const disable = adj.proposedDisable ? "⛔ YES" : "";
 
     lines.push(
-      `| ${adj.ruleId} | ${adj.currentScore} | ${adj.proposedScore} | ${severityChange} | ${adj.confidence} | ${adj.supportingCases} | ${adj.reasoning} |`
+      `| ${adj.ruleId} | ${adj.currentScore} | ${adj.proposedScore} | ${disable} | ${severityChange} | ${adj.confidence} | ${adj.supportingCases} | ${adj.reasoning} |`
     );
   }
 
@@ -199,8 +200,13 @@ function renderApplicationGuide(adjustments: ScoreAdjustment[]): string {
     lines.push("```typescript");
 
     for (const adj of adjustments) {
-      lines.push(`// ${adj.ruleId}: ${adj.currentScore} -> ${adj.proposedScore} (${adj.confidence} confidence)`);
-      if (adj.proposedSeverity) {
+      if (adj.proposedDisable) {
+        lines.push(`// ${adj.ruleId}: DISABLE (${adj.confidence} confidence, ${adj.supportingCases} cases)`);
+        lines.push(`//   enabled: false`);
+      } else {
+        lines.push(`// ${adj.ruleId}: ${adj.currentScore} -> ${adj.proposedScore} (${adj.confidence} confidence)`);
+      }
+      if (adj.proposedSeverity && !adj.proposedDisable) {
         lines.push(`//   severity: "${adj.currentSeverity}" -> "${adj.proposedSeverity}"`);
       }
     }

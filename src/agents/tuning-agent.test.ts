@@ -307,6 +307,117 @@ describe("runTuningAgent", () => {
   });
 
 
+  it("proposes disable when rule converges to zero impact (3+ easy cases)", () => {
+    const input: TuningAgentInput = {
+      mismatches: [
+        makeMismatch({
+          type: "overscored",
+          ruleId: "raw-color",
+          currentScore: -2,
+          currentSeverity: "suggestion",
+          actualDifficulty: "easy",
+          reasoning: "Trivial to implement",
+        }),
+      ],
+      ruleScores: {
+        "raw-color": { score: -2, severity: "suggestion" },
+      },
+      priorEvidence: {
+        "raw-color": {
+          overscoredCount: 2,
+          underscoredCount: 0,
+          overscoredDifficulties: ["easy", "easy"],
+          underscoredDifficulties: [],
+        },
+      },
+    };
+
+    const result = runTuningAgent(input);
+
+    expect(result.adjustments).toHaveLength(1);
+    const adj = result.adjustments[0]!;
+    expect(adj.ruleId).toBe("raw-color");
+    expect(adj.proposedDisable).toBe(true);
+    expect(adj.confidence).toBe("high");
+    expect(adj.supportingCases).toBe(3);
+    expect(adj.reasoning).toContain("Converged to zero impact");
+  });
+
+  it("does NOT propose disable when not all difficulties are easy", () => {
+    const input: TuningAgentInput = {
+      mismatches: [
+        makeMismatch({
+          type: "overscored",
+          ruleId: "raw-color",
+          currentScore: -4,
+          currentSeverity: "risk",
+          actualDifficulty: "easy",
+          reasoning: "case 1",
+        }),
+        makeMismatch({
+          type: "overscored",
+          ruleId: "raw-color",
+          nodeId: "node-2",
+          currentScore: -4,
+          currentSeverity: "risk",
+          actualDifficulty: "moderate",
+          reasoning: "case 2",
+        }),
+        makeMismatch({
+          type: "overscored",
+          ruleId: "raw-color",
+          nodeId: "node-3",
+          currentScore: -4,
+          currentSeverity: "risk",
+          actualDifficulty: "easy",
+          reasoning: "case 3",
+        }),
+      ],
+      ruleScores: {
+        "raw-color": { score: -4, severity: "risk" },
+      },
+    };
+
+    const result = runTuningAgent(input);
+
+    expect(result.adjustments).toHaveLength(1);
+    const adj = result.adjustments[0]!;
+    expect(adj.proposedDisable).toBeUndefined();
+  });
+
+  it("does NOT propose disable when fewer than 3 cases", () => {
+    const input: TuningAgentInput = {
+      mismatches: [
+        makeMismatch({
+          type: "overscored",
+          ruleId: "raw-color",
+          currentScore: -2,
+          currentSeverity: "suggestion",
+          actualDifficulty: "easy",
+          reasoning: "case 1",
+        }),
+        makeMismatch({
+          type: "overscored",
+          ruleId: "raw-color",
+          nodeId: "node-2",
+          currentScore: -2,
+          currentSeverity: "suggestion",
+          actualDifficulty: "easy",
+          reasoning: "case 2",
+        }),
+      ],
+      ruleScores: {
+        "raw-color": { score: -2, severity: "suggestion" },
+      },
+    };
+
+    const result = runTuningAgent(input);
+
+    expect(result.adjustments).toHaveLength(1);
+    const adj = result.adjustments[0]!;
+    expect(adj.proposedDisable).toBeUndefined();
+  });
+
   it("ignores validated mismatches and only processes overscored/underscored/missing-rule", () => {
     const input: TuningAgentInput = {
       mismatches: [
