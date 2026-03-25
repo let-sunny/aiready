@@ -37,7 +37,6 @@ export function registerCalibrateRun(cli: CAC): void {
           input,
           maxConversionNodes: options.maxNodes ?? 5,
           samplingStrategy: (options.sampling as "all" | "top-issues" | "random") ?? "top-issues",
-          outputPath: "unused",
           ...(figmaToken && { token: figmaToken }),
         });
 

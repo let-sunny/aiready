@@ -2,7 +2,7 @@ import type { AnalysisFile, AnalysisNode, AnalysisNodeType } from "../core/contr
 import { analyzeFile } from "../core/engine/rule-engine.js";
 import { RULE_CONFIGS } from "../core/rules/rule-config.js";
 
-import type { CalibrationConfig } from "./contracts/calibration.js";
+import type { CalibrationConfigInput } from "./contracts/calibration.js";
 import { CalibrationConfigSchema } from "./contracts/calibration.js";
 import type { NodeIssueSummary } from "./contracts/analysis-agent.js";
 import type { ScoreReport } from "../core/engine/scoring.js";
@@ -172,7 +172,7 @@ function buildRuleScoresMap(): Record<string, { score: number; severity: string 
  * Run Step 1 only: analysis + save JSON output
  */
 export async function runCalibrationAnalyze(
-  config: CalibrationConfig
+  config: CalibrationConfigInput
 ): Promise<{
   analysisOutput: ReturnType<typeof runAnalysisAgent> extends infer T ? T : never;
   ruleScores: Record<string, { score: number; severity: string }>;
