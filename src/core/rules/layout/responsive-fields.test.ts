@@ -228,4 +228,29 @@ describe("missing-max-width", () => {
     );
     expect(issues).toHaveLength(0);
   });
+
+  it("does not flag FILL container outside auto-layout parent", () => {
+    const file = makeFile(
+      makeNode({
+        name: "Root",
+        type: "FRAME",
+        children: [
+          makeNode({
+            name: "TextBlock",
+            type: "FRAME",
+            layoutSizingHorizontal: "FILL",
+            absoluteBoundingBox: { x: 0, y: 0, width: 600, height: 100 },
+            children: [
+              makeNode({ name: "Label", type: "TEXT", characters: "Hello" }),
+            ],
+          }),
+        ],
+      }),
+    );
+    const result = analyzeFile(file);
+    const issues = result.issues.filter(
+      (i) => i.rule.definition.id === "missing-max-width",
+    );
+    expect(issues).toHaveLength(0);
+  });
 });

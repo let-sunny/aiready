@@ -232,7 +232,7 @@ function transformPluginNode(node: SceneNode): AnalysisNode {
     if ("clipsContent" in node) {
       result.clipsContent = node.clipsContent;
     }
-    if ("overflowDirection" in node && node.overflowDirection && node.overflowDirection !== "NONE") {
+    if ("overflowDirection" in node && node.overflowDirection) {
       result.overflowDirection = node.overflowDirection;
     }
   }

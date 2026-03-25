@@ -168,8 +168,26 @@ describe("extractStylesFromClasses — responsive fields", () => {
     expect(extractStylesFromClasses("flex-nowrap").layoutWrap).toBe("NO_WRAP");
   });
 
-  it("extracts gap-y as counterAxisSpacing", () => {
+  it("extracts gap-y as counterAxisSpacing in flex-row", () => {
     expect(extractStylesFromClasses("gap-y-4").counterAxisSpacing).toBe(16);
+  });
+
+  it("extracts gap-y as itemSpacing in flex-col", () => {
+    const styles = extractStylesFromClasses("flex-col gap-y-4");
+    expect(styles.itemSpacing).toBe(16);
+    expect(styles.counterAxisSpacing).toBeUndefined();
+  });
+
+  it("extracts gap-x as counterAxisSpacing in flex-col", () => {
+    const styles = extractStylesFromClasses("flex-col gap-x-4");
+    expect(styles.counterAxisSpacing).toBe(16);
+    expect(styles.itemSpacing).toBeUndefined();
+  });
+
+  it("resolves gap-x/gap-y correctly regardless of token order", () => {
+    const styles = extractStylesFromClasses("gap-y-4 flex-col");
+    expect(styles.itemSpacing).toBe(16);
+    expect(styles.counterAxisSpacing).toBeUndefined();
   });
 
   it("extracts overflow-hidden as clipsContent", () => {

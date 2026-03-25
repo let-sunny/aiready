@@ -333,6 +333,8 @@ const missingMaxWidthCheck: RuleCheckFn = (node, context) => {
     const { width } = node.absoluteBoundingBox;
     if (width <= 200) return null;
   }
+  // Skip if not in Auto Layout context
+  if (!context.parent || !hasAutoLayout(context.parent)) return null;
 
   // Only flag FILL containers — FIXED/HUG don't need max-width
   if (node.layoutSizingHorizontal !== "FILL") return null;

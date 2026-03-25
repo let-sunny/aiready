@@ -124,11 +124,16 @@ function renderNode(
 
   // Layout
   if (node.layoutMode && node.layoutMode !== "NONE") {
-    const dir = node.layoutMode === "VERTICAL" ? "column" : "row";
-    styles.push(`display: flex; flex-direction: ${dir}`);
-    if (node.itemSpacing != null) styles.push(`gap: ${node.itemSpacing}px`);
-    if (node.primaryAxisAlignItems) styles.push(`justify-content: ${mapAlign(node.primaryAxisAlignItems)}`);
-    if (node.counterAxisAlignItems) styles.push(`align-items: ${mapAlign(node.counterAxisAlignItems)}`);
+    if (node.layoutMode === "GRID") {
+      styles.push(`display: grid`);
+      if (node.itemSpacing != null) styles.push(`gap: ${node.itemSpacing}px`);
+    } else {
+      const dir = node.layoutMode === "VERTICAL" ? "column" : "row";
+      styles.push(`display: flex; flex-direction: ${dir}`);
+      if (node.itemSpacing != null) styles.push(`gap: ${node.itemSpacing}px`);
+      if (node.primaryAxisAlignItems) styles.push(`justify-content: ${mapAlign(node.primaryAxisAlignItems)}`);
+      if (node.counterAxisAlignItems) styles.push(`align-items: ${mapAlign(node.counterAxisAlignItems)}`);
+    }
   }
 
   // Padding

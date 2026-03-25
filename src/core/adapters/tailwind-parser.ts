@@ -59,6 +59,8 @@ function resolveSpacing(value: string): number | undefined {
 export function extractStylesFromClasses(classes: string): ExtractedStyles {
   const styles: ExtractedStyles = {};
   const tokens = classes.split(/\s+/);
+  let gapX: number | undefined;
+  let gapY: number | undefined;
 
   for (const token of tokens) {
     // Layout direction
@@ -90,13 +92,11 @@ export function extractStylesFromClasses(classes: string): ExtractedStyles {
       styles.layoutSizingVertical = "FIXED";
     }
 
-    // Gap → itemSpacing (gap-x-*/gap-y-* must be checked before gap-*)
+    // Gap → deferred until layoutMode is known (gap-x-*/gap-y-* must be checked before gap-*)
     else if (token.startsWith("gap-y-")) {
-      const px = resolveSpacing(token.slice(6));
-      if (px !== undefined) styles.counterAxisSpacing = px;
+      gapY = resolveSpacing(token.slice(6));
     } else if (token.startsWith("gap-x-")) {
-      const px = resolveSpacing(token.slice(6));
-      if (px !== undefined) styles.itemSpacing = px;
+      gapX = resolveSpacing(token.slice(6));
     } else if (token.startsWith("gap-")) {
       const val = token.slice(4);
       const px = resolveSpacing(val);
@@ -196,6 +196,19 @@ export function extractStylesFromClasses(classes: string): ExtractedStyles {
       if (!styles.effects) styles.effects = [];
       styles.effects.push({ type: "DROP_SHADOW" });
     }
+  }
+
+  // Resolve gap-x/gap-y based on final layout direction
+  // In flex-row (HORIZONTAL): gap-x → itemSpacing (main), gap-y → counterAxisSpacing (cross)
+  // In flex-col (VERTICAL): gap-y → itemSpacing (main), gap-x → counterAxisSpacing (cross)
+  const isColumn = styles.layoutMode === "VERTICAL";
+  if (gapX !== undefined) {
+    if (isColumn) styles.counterAxisSpacing = gapX;
+    else styles.itemSpacing = gapX;
+  }
+  if (gapY !== undefined) {
+    if (isColumn) styles.itemSpacing = gapY;
+    else styles.counterAxisSpacing = gapY;
   }
 
   return styles;
