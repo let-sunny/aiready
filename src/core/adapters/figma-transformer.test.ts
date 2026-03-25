@@ -97,6 +97,47 @@ describe("figma-transformer responsive fields", () => {
     expect(result.document.layoutMode).toBe("GRID");
   });
 
+  it("maps grid container fields", () => {
+    const response = makeFigmaResponse(
+      makeFigmaNode({
+        layoutMode: "GRID",
+        gridRowCount: 3,
+        gridColumnCount: 4,
+        gridRowGap: 8,
+        gridColumnGap: 16,
+        gridColumnsSizing: "1fr 1fr 1fr 1fr",
+        gridRowsSizing: "auto auto auto",
+      }),
+    );
+    const result = transformFigmaResponse("test-key", response);
+    expect(result.document.gridRowCount).toBe(3);
+    expect(result.document.gridColumnCount).toBe(4);
+    expect(result.document.gridRowGap).toBe(8);
+    expect(result.document.gridColumnGap).toBe(16);
+    expect(result.document.gridColumnsSizing).toBe("1fr 1fr 1fr 1fr");
+    expect(result.document.gridRowsSizing).toBe("auto auto auto");
+  });
+
+  it("maps grid child fields", () => {
+    const response = makeFigmaResponse(
+      makeFigmaNode({
+        gridChildHorizontalAlign: "CENTER",
+        gridChildVerticalAlign: "MAX",
+        gridRowSpan: 2,
+        gridColumnSpan: 3,
+        gridRowAnchorIndex: 0,
+        gridColumnAnchorIndex: 1,
+      }),
+    );
+    const result = transformFigmaResponse("test-key", response);
+    expect(result.document.gridChildHorizontalAlign).toBe("CENTER");
+    expect(result.document.gridChildVerticalAlign).toBe("MAX");
+    expect(result.document.gridRowSpan).toBe(2);
+    expect(result.document.gridColumnSpan).toBe(3);
+    expect(result.document.gridRowAnchorIndex).toBe(0);
+    expect(result.document.gridColumnAnchorIndex).toBe(1);
+  });
+
   it("does not set fields when absent", () => {
     const response = makeFigmaResponse(makeFigmaNode({}));
     const result = transformFigmaResponse("test-key", response);

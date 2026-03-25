@@ -62,6 +62,9 @@ export const OverflowDirectionSchema = z.enum([
 ]);
 export type OverflowDirection = z.infer<typeof OverflowDirectionSchema>;
 
+export const GridChildAlignSchema = z.enum(["AUTO", "MIN", "CENTER", "MAX"]);
+export type GridChildAlign = z.infer<typeof GridChildAlignSchema>;
+
 /**
  * Lightweight FigmaNode type for analysis
  * Contains only properties needed by rules
@@ -99,6 +102,22 @@ const BaseAnalysisNodeSchema = z.object({
   layoutWrap: LayoutWrapSchema.optional(),
   counterAxisSpacing: z.number().optional(),
   counterAxisAlignContent: z.enum(["AUTO", "SPACE_BETWEEN"]).optional(),
+
+  // Grid layout (container)
+  gridRowCount: z.number().optional(),
+  gridColumnCount: z.number().optional(),
+  gridRowGap: z.number().optional(),
+  gridColumnGap: z.number().optional(),
+  gridColumnsSizing: z.string().optional(),
+  gridRowsSizing: z.string().optional(),
+
+  // Grid layout (child)
+  gridChildHorizontalAlign: GridChildAlignSchema.optional(),
+  gridChildVerticalAlign: GridChildAlignSchema.optional(),
+  gridRowSpan: z.number().optional(),
+  gridColumnSpan: z.number().optional(),
+  gridRowAnchorIndex: z.number().optional(),
+  gridColumnAnchorIndex: z.number().optional(),
 
   // Overflow / clip
   clipsContent: z.boolean().optional(),
