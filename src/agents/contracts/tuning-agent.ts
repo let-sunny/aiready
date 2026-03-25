@@ -14,6 +14,7 @@ export const ScoreAdjustmentSchema = z.object({
   reasoning: z.string(),
   confidence: ConfidenceSchema,
   supportingCases: z.number(),
+  proposedDisable: z.boolean().optional(),
 });
 
 export type ScoreAdjustment = z.infer<typeof ScoreAdjustmentSchema>;

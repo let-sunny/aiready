@@ -169,15 +169,25 @@ export function runTuningAgent(
       ? ` (+ ${priorData.overscoredCount} case(s) from prior runs)`
       : "";
 
+    // Propose disable when rule converges to zero impact:
+    // score already at suggestion floor (-2) + 3+ cases + all easy
+    const shouldDisable =
+      proposedScore >= -2 &&
+      totalCases >= 3 &&
+      allDifficulties.every((d) => d === "easy");
+
     adjustments.push({
       ruleId,
       currentScore: ruleInfo.score,
       proposedScore,
       currentSeverity,
       proposedSeverity: newSeverity,
-      reasoning: `Overscored in ${cases.length} case(s)${priorNote}. Actual difficulties: [${allDifficulties.join(", ")}]. Current score ${ruleInfo.score} is too harsh.`,
+      reasoning: shouldDisable
+        ? `Converged to zero impact: ${totalCases} case(s) all "easy"${priorNote}. Recommend disabling.`
+        : `Overscored in ${cases.length} case(s)${priorNote}. Actual difficulties: [${allDifficulties.join(", ")}]. Current score ${ruleInfo.score} is too harsh.`,
       confidence: getConfidence(totalCases),
       supportingCases: totalCases,
+      ...(shouldDisable && { proposedDisable: true }),
     });
   }
 

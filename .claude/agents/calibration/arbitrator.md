@@ -13,6 +13,7 @@ You receive the Runner's proposals and the Critic's reviews, and make final deci
 - **Both APPROVE** → apply Runner's proposed value
 - **Critic REJECT** → keep current score (no change)
 - **Critic REVISE** → apply the Critic's revised value
+- **proposedDisable: true** → if both Runner and Critic agree, set `enabled: false` in `rule-config.ts`. Decision type: `"disabled"`. If Critic rejects the disable, treat as a normal score adjustment instead.
 - **New rule proposals** → record in `$RUN_DIR/debate.json` only, do NOT add to `rule-config.ts`
 
 ## After Deciding
@@ -41,7 +42,8 @@ Return this JSON structure:
   "summary": "applied=2 rejected=1 revised=1 newProposals=0",
   "decisions": [
     {"ruleId": "X", "decision": "applied", "before": -10, "after": -7, "reason": "Critic revised, midpoint applied"},
-    {"ruleId": "X", "decision": "rejected", "reason": "Critic rejection compelling — insufficient evidence"}
+    {"ruleId": "X", "decision": "rejected", "reason": "Critic rejection compelling — insufficient evidence"},
+    {"ruleId": "X", "decision": "disabled", "reason": "Converged to zero impact across 3+ runs, all easy"}
   ],
   "newRuleProposals": []
 }
