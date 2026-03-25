@@ -15,9 +15,16 @@ describe("prototype-link-in-design (missing prototype interaction)", () => {
     expect(result!.message).toContain("looks interactive");
   });
 
-  it("flags element with interactive name patterns", () => {
-    for (const name of ["Submit Btn", "Nav Link", "Tab Item", "CTA", "Toggle Switch"]) {
-      const node = makeNode({ type: "FRAME", name });
+  it("flags element with interactive name patterns (FRAME and INSTANCE)", () => {
+    const testCases = [
+      { type: "FRAME" as const, name: "Submit Btn" },
+      { type: "FRAME" as const, name: "Nav Link" },
+      { type: "INSTANCE" as const, name: "Tab Item" },
+      { type: "FRAME" as const, name: "CTA" },
+      { type: "INSTANCE" as const, name: "Toggle Switch" },
+    ];
+    for (const { type, name } of testCases) {
+      const node = makeNode({ type, name });
       expect(prototypeLinkInDesign.check(node, makeContext())).not.toBeNull();
     }
   });

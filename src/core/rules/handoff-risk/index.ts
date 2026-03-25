@@ -142,8 +142,8 @@ function looksInteractive(node: AnalysisNode): boolean {
       const p = prop as Record<string, unknown>;
       // VARIANT type properties with state-like values
       if (p["type"] === "VARIANT" && p["variantOptions"]) {
-        const options = p["variantOptions"] as string[];
-        if (options.some((opt) => STATE_VARIANT_PATTERNS.some((pat) => pat.test(opt)))) {
+        const options = p["variantOptions"];
+        if (Array.isArray(options) && options.some((opt) => typeof opt === "string" && STATE_VARIANT_PATTERNS.some((pat) => pat.test(opt)))) {
           return true;
         }
       }
