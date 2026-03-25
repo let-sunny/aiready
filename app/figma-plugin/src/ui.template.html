@@ -157,9 +157,9 @@
       gridEl.innerHTML = categories.map(function(cat) {
         var cs = scores.byCategory[cat];
         var barColor = cs.percentage >= 80 ? 'var(--green)' : cs.percentage >= 60 ? 'var(--amber)' : 'var(--red)';
-        return '<div class="cat-row" data-tip="' + (catTips[cat] || '') + '">' +
+        return '<div class="cat-row">' +
           '<div class="cat-score ' + scoreClass(cs.percentage) + '">' + cs.percentage + '</div>' +
-          '<div class="cat-label">' + (CATEGORY_LABELS[cat] || cat) + '</div>' +
+          '<div class="cat-label" data-tip="' + (catTips[cat] || '') + '">' + (CATEGORY_LABELS[cat] || cat) + '</div>' +
           '<div class="cat-bar"><div class="cat-bar-fill" style="width:' + cs.percentage + '%;background:' + barColor + '"></div></div>' +
           '<div class="cat-issues">' + cs.issueCount + '</div>' +
         '</div>';
@@ -352,21 +352,33 @@
     (function() {
       var tip = document.createElement('div');
       tip.className = 'cic-tooltip';
+      var arrow = document.createElement('div');
+      arrow.className = 'cic-tooltip-arrow';
       document.body.appendChild(tip);
+      document.body.appendChild(arrow);
+
+      function hide() { tip.classList.remove('visible'); arrow.classList.remove('visible'); }
+
       document.addEventListener('mouseover', function(e) {
         var el = e.target.closest('[data-tip]');
-        if (!el) { tip.classList.remove('visible'); return; }
+        if (!el) { hide(); return; }
         tip.textContent = el.getAttribute('data-tip');
-        var rect = el.getBoundingClientRect();
-        tip.style.left = Math.min(rect.left, window.innerWidth - 230) + 'px';
-        tip.style.top = (rect.top - tip.offsetHeight - 6) + 'px';
-        if (rect.top - tip.offsetHeight - 6 < 0) {
-          tip.style.top = (rect.bottom + 6) + 'px';
-        }
         tip.classList.add('visible');
+        var rect = el.getBoundingClientRect();
+        var tipH = tip.offsetHeight;
+        var tipW = tip.offsetWidth;
+        var cx = rect.left + rect.width / 2;
+        var tipLeft = Math.max(4, Math.min(cx - tipW / 2, window.innerWidth - tipW - 4));
+        var above = rect.top - tipH - 10 >= 0;
+        var tipTop = above ? rect.top - tipH - 10 : rect.bottom + 10;
+        tip.style.left = tipLeft + 'px';
+        tip.style.top = tipTop + 'px';
+        arrow.style.left = (cx - 4) + 'px';
+        arrow.style.top = (above ? rect.top - 14 : rect.bottom + 6) + 'px';
+        arrow.classList.add('visible');
       });
       document.addEventListener('mouseout', function(e) {
-        if (!e.target.closest('[data-tip]')) tip.classList.remove('visible');
+        if (!e.target.closest('[data-tip]')) hide();
       });
     })();
   </script>
