@@ -137,6 +137,8 @@ function discoveryDedupeKey(e: DiscoveryEvidenceEntry): string {
 /**
  * Read discovery evidence from file, supporting both legacy (plain array)
  * and versioned ({ schemaVersion, entries }) formats.
+ * Throws if the file contains a versioned object with an unsupported schemaVersion
+ * to prevent silent data loss on subsequent writes.
  */
 function readDiscoveryEvidence(filePath: string): DiscoveryEvidenceEntry[] {
   if (!existsSync(filePath)) return [];
@@ -157,6 +159,20 @@ function readDiscoveryEvidence(filePath: string): DiscoveryEvidenceEntry[] {
       return result;
     }
 
+    // Detect unsupported versioned format — refuse to load to prevent silent overwrite
+    if (
+      typeof raw === "object" &&
+      raw !== null &&
+      !Array.isArray(raw) &&
+      "schemaVersion" in raw
+    ) {
+      const version = (raw as { schemaVersion: unknown }).schemaVersion;
+      throw new Error(
+        `Unsupported discovery-evidence schemaVersion: ${String(version)} (expected ${DISCOVERY_EVIDENCE_SCHEMA_VERSION}). ` +
+        `Upgrade canicode to read this file, or delete it to start fresh.`
+      );
+    }
+
     // Legacy format: plain array (v0, before schemaVersion was introduced)
     if (Array.isArray(raw)) {
       const result: DiscoveryEvidenceEntry[] = [];
@@ -170,7 +186,11 @@ function readDiscoveryEvidence(filePath: string): DiscoveryEvidenceEntry[] {
     }
 
     return [];
-  } catch {
+  } catch (err) {
+    // Re-throw unsupported version errors; swallow everything else (malformed JSON, etc.)
+    if (err instanceof Error && err.message.startsWith("Unsupported discovery-evidence")) {
+      throw err;
+    }
     return [];
   }
 }

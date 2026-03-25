@@ -246,7 +246,7 @@ describe("evidence-collector", () => {
       expect(result[1]!.description).toBe("also good");
     });
 
-    it("rejects unsupported schemaVersion", () => {
+    it("throws on unsupported schemaVersion to prevent silent overwrite", () => {
       const file = {
         schemaVersion: 999,
         entries: [
@@ -255,8 +255,32 @@ describe("evidence-collector", () => {
       };
       writeFileSync(disPath, JSON.stringify(file), "utf-8");
 
-      const result = loadDiscoveryEvidence(disPath);
-      expect(result).toEqual([]);
+      expect(() => loadDiscoveryEvidence(disPath)).toThrow(/Unsupported discovery-evidence schemaVersion: 999/);
+    });
+
+    it("append is no-op when file has unsupported schemaVersion", () => {
+      const file = { schemaVersion: 999, entries: [] };
+      writeFileSync(disPath, JSON.stringify(file), "utf-8");
+      const before = readFileSync(disPath, "utf-8");
+
+      expect(() => appendDiscoveryEvidence([
+        { description: "new", category: "layout", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
+      ], disPath)).toThrow(/Unsupported discovery-evidence schemaVersion/);
+
+      // File must not be overwritten
+      expect(readFileSync(disPath, "utf-8")).toBe(before);
+    });
+
+    it("prune is no-op when file has unsupported schemaVersion", () => {
+      const file = { schemaVersion: 999, entries: [
+        { description: "gap1", category: "layout", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
+      ]};
+      writeFileSync(disPath, JSON.stringify(file), "utf-8");
+      const before = readFileSync(disPath, "utf-8");
+
+      expect(() => pruneDiscoveryEvidence(["layout"], disPath)).toThrow(/Unsupported discovery-evidence schemaVersion/);
+
+      expect(readFileSync(disPath, "utf-8")).toBe(before);
     });
   });
 
