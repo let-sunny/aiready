@@ -135,7 +135,7 @@ const inconsistentNamingConventionDef: RuleDefinition = {
   category: "naming",
   why: "Mixed naming conventions (camelCase + kebab-case + Title Case) at the same level confuse AI pattern recognition",
   impact: "AI generates inconsistent class/component names, making the codebase harder to maintain",
-  fix: "Use a consistent naming convention for sibling elements",
+  fix: "Pick one convention for sibling elements (e.g., kebab-case: 'product-card', or PascalCase: 'ProductCard') — AI maps names to CSS classes and component names, so mixed conventions produce inconsistent code",
 };
 
 const inconsistentNamingConventionCheck: RuleCheckFn = (node, context) => {
