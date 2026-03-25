@@ -147,6 +147,7 @@ const BaseAnalysisNodeSchema = z.object({
   individualStrokeWeights: z.record(z.string(), z.number()).optional(),
   effects: z.array(z.unknown()).optional(),
   cornerRadius: z.number().optional(),
+  opacity: z.number().optional(),
 
   // Variable binding analysis (design tokens)
   boundVariables: z.record(z.string(), z.unknown()).optional(),

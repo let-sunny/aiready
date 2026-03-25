@@ -263,13 +263,19 @@ const rawOpacityDef: RuleDefinition = {
   fix: "Use opacity variables so the value is explicit and referenceable",
 };
 
-const rawOpacityCheck: RuleCheckFn = (node, _context) => {
-  // Check if opacity variable is bound
+const rawOpacityCheck: RuleCheckFn = (node, context) => {
+  // Only flag nodes with non-default opacity (< 1)
+  if (node.opacity === undefined) return null;
+
+  // Check if opacity variable is bound (tokenized)
   if (hasBoundVariable(node, "opacity")) return null;
 
-  // This would need to check node opacity property
-  // Simplified for now - needs more Figma API data
-  return null;
+  return {
+    ruleId: rawOpacityDef.id,
+    nodeId: node.id,
+    nodePath: context.path.join(" > "),
+    message: `"${node.name}" uses raw opacity (${Math.round(node.opacity * 100)}%) without a variable binding`,
+  };
 };
 
 export const rawOpacity = defineRule({
