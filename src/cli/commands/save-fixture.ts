@@ -1,0 +1,188 @@
+import { mkdirSync } from "node:fs";
+import { writeFile } from "node:fs/promises";
+import { resolve } from "node:path";
+import type { CAC } from "cac";
+
+import { parseFigmaUrl } from "../../core/adapters/figma-url-parser.js";
+import { loadFile, isFigmaUrl } from "../../core/engine/loader.js";
+import { getFigmaToken } from "../../core/engine/config-store.js";
+import { collectVectorNodeIds, collectImageNodes, sanitizeFilename, countNodes } from "../helpers.js";
+
+interface SaveFixtureOptions {
+  output?: string;
+  api?: boolean;
+  token?: string;
+  imageScale?: string;
+  name?: string;
+}
+
+export function registerSaveFixture(cli: CAC): void {
+  cli
+    .command(
+      "save-fixture <input>",
+      "Save Figma design as a fixture directory for offline analysis"
+    )
+    .option("--output <path>", "Output directory (default: fixtures/<name>/)")
+    .option("--name <name>", "Fixture name (default: extracted from URL)")
+    .option("--token <token>", "Figma API token (or use FIGMA_TOKEN env var)")
+    .option("--image-scale <n>", "Image export scale: 2 for PC (default), 3 for mobile")
+    .example("  canicode save-fixture https://www.figma.com/design/ABC123/MyDesign?node-id=1-234")
+    .example("  canicode save-fixture https://www.figma.com/design/ABC123/MyDesign?node-id=1-234 --image-scale 3")
+    .action(async (input: string, options: SaveFixtureOptions) => {
+      try {
+        if (!isFigmaUrl(input)) {
+          throw new Error("save-fixture requires a Figma URL as input.");
+        }
+
+        if (!parseFigmaUrl(input).nodeId) {
+          console.warn("\nWarning: No node-id specified. Saving entire file as fixture.");
+          console.warn("Tip: Add ?node-id=XXX to save a specific section.\n");
+        }
+
+        const { file } = await loadFile(input, options.token);
+        file.sourceUrl = input;
+
+        const fixtureName = options.name ?? file.fileKey;
+        const fixtureDir = resolve(options.output ?? `fixtures/${fixtureName}`);
+        mkdirSync(fixtureDir, { recursive: true });
+
+        // 0. Resolve component master node trees
+        const figmaTokenForComponents = options.token ?? getFigmaToken();
+        if (figmaTokenForComponents) {
+          const { FigmaClient: FC } = await import("../../core/adapters/figma-client.js");
+          const { resolveComponentDefinitions } = await import("../../core/adapters/component-resolver.js");
+          const componentClient = new FC({ token: figmaTokenForComponents });
+          try {
+            const definitions = await resolveComponentDefinitions(componentClient, file.fileKey, file.document);
+            const count = Object.keys(definitions).length;
+            if (count > 0) {
+              file.componentDefinitions = definitions;
+              console.log(`Resolved ${count} component master node tree(s)`);
+            }
+          } catch {
+            console.warn("Warning: failed to resolve component definitions (continuing)");
+          }
+        }
+
+        // 1. Save data.json
+        const dataPath = resolve(fixtureDir, "data.json");
+        await writeFile(dataPath, JSON.stringify(file, null, 2), "utf-8");
+        console.log(`Fixture saved: ${fixtureDir}/`);
+        console.log(`  data.json: ${file.name} (${countNodes(file.document)} nodes)`);
+
+        // 2. Download screenshot
+        const figmaToken = options.token ?? getFigmaToken();
+        if (figmaToken) {
+          const { FigmaClient } = await import("../../core/adapters/figma-client.js");
+          const client = new FigmaClient({ token: figmaToken });
+          const { nodeId } = parseFigmaUrl(input);
+          const rootNodeId = nodeId?.replace(/-/g, ":") ?? file.document.id;
+
+          try {
+            const imageUrls = await client.getNodeImages(file.fileKey, [rootNodeId], { format: "png", scale: 2 });
+            const url = imageUrls[rootNodeId];
+            if (url) {
+              const resp = await fetch(url);
+              if (resp.ok) {
+                const buffer = Buffer.from(await resp.arrayBuffer());
+                const { writeFile: writeFileSync } = await import("node:fs/promises");
+                await writeFileSync(resolve(fixtureDir, "screenshot.png"), buffer);
+                console.log(`  screenshot.png: saved`);
+              }
+            }
+          } catch {
+            console.warn("  screenshot.png: failed to download (continuing)");
+          }
+
+          // 3. Download SVGs for VECTOR nodes
+          const vectorNodeIds = collectVectorNodeIds(file.document);
+          if (vectorNodeIds.length > 0) {
+            const vectorDir = resolve(fixtureDir, "vectors");
+            mkdirSync(vectorDir, { recursive: true });
+
+            const svgUrls = await client.getNodeImages(file.fileKey, vectorNodeIds, { format: "svg" });
+            let downloaded = 0;
+            for (const [id, svgUrl] of Object.entries(svgUrls)) {
+              if (!svgUrl) continue;
+              try {
+                const resp = await fetch(svgUrl);
+                if (resp.ok) {
+                  const svg = await resp.text();
+                  const safeId = id.replace(/:/g, "-");
+                  await writeFile(resolve(vectorDir, `${safeId}.svg`), svg, "utf-8");
+                  downloaded++;
+                }
+              } catch {
+                // Skip failed downloads
+              }
+            }
+            console.log(`  vectors/: ${downloaded}/${vectorNodeIds.length} SVGs`);
+          }
+
+          // 4. Download PNGs for IMAGE fill nodes
+          const imageNodes = collectImageNodes(file.document);
+          if (imageNodes.length > 0) {
+            const imgScale = options.imageScale !== undefined ? Number(options.imageScale) : 2;
+            if (!Number.isFinite(imgScale) || imgScale < 1 || imgScale > 4) {
+              console.error("Error: --image-scale must be 1-4 (2 for PC, 3 for mobile)");
+              process.exit(1);
+            }
+
+            const imageDir = resolve(fixtureDir, "images");
+            mkdirSync(imageDir, { recursive: true });
+
+            const imageUrls = await client.getNodeImages(
+              file.fileKey,
+              imageNodes.map((n) => n.id),
+              { format: "png", scale: imgScale }
+            );
+
+            const usedNames = new Map<string, number>();
+            const nodeIdToFilename = new Map<string, string>();
+            for (const { id, name } of imageNodes) {
+              let base = sanitizeFilename(name);
+              const count = usedNames.get(base) ?? 0;
+              usedNames.set(base, count + 1);
+              if (count > 0) base = `${base}-${count + 1}`;
+              nodeIdToFilename.set(id, `${base}@${imgScale}x.png`);
+            }
+
+            let imgDownloaded = 0;
+            for (const [id, imgUrl] of Object.entries(imageUrls)) {
+              if (!imgUrl) continue;
+              const filename = nodeIdToFilename.get(id);
+              if (!filename) continue;
+              try {
+                const resp = await fetch(imgUrl);
+                if (resp.ok) {
+                  const buf = Buffer.from(await resp.arrayBuffer());
+                  await writeFile(resolve(fixtureDir, "images", filename), buf);
+                  imgDownloaded++;
+                }
+              } catch {
+                // Skip failed downloads
+              }
+            }
+
+            const mapping: Record<string, string> = {};
+            for (const [id, filename] of nodeIdToFilename) {
+              mapping[id] = filename;
+            }
+            await writeFile(
+              resolve(imageDir, "mapping.json"),
+              JSON.stringify(mapping, null, 2),
+              "utf-8"
+            );
+
+            console.log(`  images/: ${imgDownloaded}/${imageNodes.length} PNGs (@${imgScale}x)`);
+          }
+        }
+      } catch (error) {
+        console.error(
+          "\nError:",
+          error instanceof Error ? error.message : String(error)
+        );
+        process.exit(1);
+      }
+    });
+}
