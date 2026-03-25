@@ -17,7 +17,7 @@ import {
   compareScreenshots,
   inferDeviceScaleFactor,
   FIGMA_CACHE_DIR,
-} from "@/core/engine/visual-compare-helpers.js";
+} from "./visual-compare-helpers.js";
 
 // ---------------------------------------------------------------------------
 // PNG factory helpers

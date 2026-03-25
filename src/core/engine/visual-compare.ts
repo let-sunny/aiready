@@ -12,7 +12,7 @@ import {
   isCacheFresh,
   inferDeviceScaleFactor,
   compareScreenshots,
-} from "@/core/engine/visual-compare-helpers.js";
+} from "./visual-compare-helpers.js";
 
 /** Result of a visual comparison between Figma design and rendered code. */
 export interface VisualCompareResult {

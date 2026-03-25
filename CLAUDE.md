@@ -200,7 +200,7 @@ pnpm lint           # Type check
 
 - Use ESM modules (`import`/`export`)
 - Use `.js` extension for relative imports
-- Use `@/*` path alias to reference `src/`
+- Use relative paths for imports (not `@/*` alias)
 
 ### TypeScript
 
