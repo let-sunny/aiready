@@ -15,11 +15,17 @@ interface AireadyConfig {
   deviceId?: string;
 }
 
+function hardenPermissions(path: string, mode: number): void {
+  if (process.platform !== "win32") {
+    chmodSync(path, mode);
+  }
+}
+
 function ensureDir(dir: string): void {
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true, mode: 0o700 });
   }
-  chmodSync(dir, 0o700);
+  hardenPermissions(dir, 0o700);
 }
 
 export function readConfig(): AireadyConfig {
@@ -40,7 +46,7 @@ export function writeConfig(config: AireadyConfig): void {
     encoding: "utf-8",
     mode: 0o600,
   });
-  chmodSync(CONFIG_PATH, 0o600);
+  hardenPermissions(CONFIG_PATH, 0o600);
 }
 
 export function getFigmaToken(): string | undefined {
@@ -67,6 +73,7 @@ export function getReportsDir(): string {
 }
 
 export function ensureReportsDir(): void {
+  ensureDir(AIREADY_DIR);
   ensureDir(REPORTS_DIR);
 }
 
