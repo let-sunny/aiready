@@ -54,6 +54,21 @@ describe("prototype-link-in-design (missing prototype interaction)", () => {
     expect(result!.message).toContain("looks interactive");
   });
 
+  it("returns null for container frame whose children have interactions", () => {
+    const child = makeNode({
+      id: "c:1",
+      type: "COMPONENT",
+      name: "Button",
+      interactions: [{ trigger: { type: "ON_CLICK" }, actions: [{ type: "NAVIGATE" }] }],
+    });
+    const container = makeNode({
+      type: "FRAME",
+      name: "Button Group",
+      children: [child],
+    });
+    expect(prototypeLinkInDesign.check(container, makeContext())).toBeNull();
+  });
+
   it("returns null for component with non-state variants", () => {
     const node = makeNode({
       type: "COMPONENT",

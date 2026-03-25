@@ -153,14 +153,28 @@ function looksInteractive(node: AnalysisNode): boolean {
   return false;
 }
 
+/** Check if any descendant has interactions defined */
+function hasDescendantInteractions(node: AnalysisNode): boolean {
+  if (node.interactions && node.interactions.length > 0) return true;
+  for (const child of node.children ?? []) {
+    if (hasDescendantInteractions(child)) return true;
+  }
+  return false;
+}
+
 const prototypeLinkInDesignCheck: RuleCheckFn = (node, context) => {
   // Only check components and instances (interactive elements are typically components)
   if (node.type !== "COMPONENT" && node.type !== "INSTANCE" && node.type !== "FRAME") return null;
 
   if (!looksInteractive(node)) return null;
 
-  // If interactions exist, the element has prototype behavior defined
+  // If interactions exist on this node, it's covered
   if (node.interactions && node.interactions.length > 0) return null;
+
+  // Skip container frames whose children already have interactions (e.g., "Button Group" wrapping interactive buttons)
+  if (node.type === "FRAME" && node.children && node.children.length > 0) {
+    if (hasDescendantInteractions(node)) return null;
+  }
 
   return {
     ruleId: prototypeLinkInDesignDef.id,

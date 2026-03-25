@@ -263,7 +263,9 @@ describe("RuleEngine.analyze — rule filtering", () => {
 
     // Disable the rule → no issues for that rule
     const disabledConfigs = { ...RULE_CONFIGS };
-    disabledConfigs["no-auto-layout"] = { ...disabledConfigs["no-auto-layout"], enabled: false };
+    const baseConfig = disabledConfigs["no-auto-layout"];
+    expect(baseConfig).toBeDefined();
+    disabledConfigs["no-auto-layout"] = { ...baseConfig!, enabled: false };
     const result = analyzeFile(file, { configs: disabledConfigs });
     const disabledIssues = result.issues.filter(
       (i) => i.violation.ruleId === "no-auto-layout"
