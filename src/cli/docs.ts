@@ -338,7 +338,7 @@ export function handleDocs(topic?: string): void {
     handler();
   } else {
     console.error(`Unknown docs topic: ${topic}`);
-    console.error(`Available topics: setup, rules, config, visual-compare, design-tree`);
+    console.error(`Available topics: ${Object.keys(DOCS_TOPICS).join(", ")}`);
     process.exitCode = 1;
   }
 }
