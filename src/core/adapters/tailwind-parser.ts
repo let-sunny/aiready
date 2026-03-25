@@ -16,6 +16,16 @@ export interface ExtractedStyles {
   paddingBottom?: number;
   fills?: unknown[];
   effects?: unknown[];
+
+  // Responsive fields
+  minWidth?: number;
+  maxWidth?: number;
+  minHeight?: number;
+  maxHeight?: number;
+  layoutWrap?: "WRAP" | "NO_WRAP";
+  counterAxisSpacing?: number;
+  clipsContent?: boolean;
+  overflowDirection?: "HORIZONTAL_SCROLLING" | "VERTICAL_SCROLLING" | "HORIZONTAL_AND_VERTICAL_SCROLLING" | "NONE";
 }
 
 /**
@@ -80,8 +90,14 @@ export function extractStylesFromClasses(classes: string): ExtractedStyles {
       styles.layoutSizingVertical = "FIXED";
     }
 
-    // Gap → itemSpacing
-    else if (token.startsWith("gap-")) {
+    // Gap → itemSpacing (gap-x-*/gap-y-* must be checked before gap-*)
+    else if (token.startsWith("gap-y-")) {
+      const px = resolveSpacing(token.slice(6));
+      if (px !== undefined) styles.counterAxisSpacing = px;
+    } else if (token.startsWith("gap-x-")) {
+      const px = resolveSpacing(token.slice(6));
+      if (px !== undefined) styles.itemSpacing = px;
+    } else if (token.startsWith("gap-")) {
       const val = token.slice(4);
       const px = resolveSpacing(val);
       if (px !== undefined) styles.itemSpacing = px;
@@ -121,6 +137,42 @@ export function extractStylesFromClasses(classes: string): ExtractedStyles {
     } else if (token.startsWith("pb-")) {
       const px = resolveSpacing(token.slice(3));
       if (px !== undefined) styles.paddingBottom = px;
+    }
+
+    // Min/max width
+    else if (token.startsWith("min-w-")) {
+      const px = resolveSpacing(token.slice(6));
+      if (px !== undefined) styles.minWidth = px;
+    } else if (token.startsWith("max-w-")) {
+      const px = resolveSpacing(token.slice(6));
+      if (px !== undefined) styles.maxWidth = px;
+    }
+
+    // Min/max height
+    else if (token.startsWith("min-h-")) {
+      const px = resolveSpacing(token.slice(6));
+      if (px !== undefined) styles.minHeight = px;
+    } else if (token.startsWith("max-h-")) {
+      const px = resolveSpacing(token.slice(6));
+      if (px !== undefined) styles.maxHeight = px;
+    }
+
+    // Flex wrap
+    else if (token === "flex-wrap") {
+      styles.layoutWrap = "WRAP";
+    } else if (token === "flex-nowrap") {
+      styles.layoutWrap = "NO_WRAP";
+    }
+
+    // Overflow
+    else if (token === "overflow-hidden") {
+      styles.clipsContent = true;
+    } else if (token === "overflow-x-auto" || token === "overflow-x-scroll") {
+      styles.overflowDirection = "HORIZONTAL_SCROLLING";
+    } else if (token === "overflow-y-auto" || token === "overflow-y-scroll") {
+      styles.overflowDirection = "VERTICAL_SCROLLING";
+    } else if (token === "overflow-auto" || token === "overflow-scroll") {
+      styles.overflowDirection = "HORIZONTAL_AND_VERTICAL_SCROLLING";
     }
 
     // Background color → fills
@@ -283,4 +335,14 @@ export function enrichNodeWithStyles(node: AnalysisNode, styles: ExtractedStyles
   if (styles.paddingBottom !== undefined && node.paddingBottom === undefined) node.paddingBottom = styles.paddingBottom;
   if (styles.fills && !node.fills) node.fills = styles.fills;
   if (styles.effects && !node.effects) node.effects = styles.effects;
+
+  // Responsive fields
+  if (styles.minWidth !== undefined && node.minWidth === undefined) node.minWidth = styles.minWidth;
+  if (styles.maxWidth !== undefined && node.maxWidth === undefined) node.maxWidth = styles.maxWidth;
+  if (styles.minHeight !== undefined && node.minHeight === undefined) node.minHeight = styles.minHeight;
+  if (styles.maxHeight !== undefined && node.maxHeight === undefined) node.maxHeight = styles.maxHeight;
+  if (styles.layoutWrap && !node.layoutWrap) node.layoutWrap = styles.layoutWrap;
+  if (styles.counterAxisSpacing !== undefined && node.counterAxisSpacing === undefined) node.counterAxisSpacing = styles.counterAxisSpacing;
+  if (styles.clipsContent !== undefined && node.clipsContent === undefined) node.clipsContent = styles.clipsContent;
+  if (styles.overflowDirection && !node.overflowDirection) node.overflowDirection = styles.overflowDirection;
 }
