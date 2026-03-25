@@ -31,6 +31,7 @@ function makeContext(overrides?: Partial<RuleContext>): RuleContext {
     componentDepth: 0,
     maxDepth: 10,
     path: ["Page", "Section"],
+    analysisState: new Map(),
     ...overrides,
   };
 }

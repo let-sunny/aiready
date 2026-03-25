@@ -1,9 +1,6 @@
 import type { RuleContext } from "../../contracts/rule.js";
 import type { AnalysisFile, AnalysisNode } from "../../contracts/figma-node.js";
-import {
-  missingComponentDescription,
-  resetMissingComponentDescriptionState,
-} from "./index.js";
+import { missingComponentDescription } from "./index.js";
 
 // ============================================
 // Test helpers
@@ -33,12 +30,17 @@ function makeFile(
   };
 }
 
+/** Each test gets a fresh analysisState to isolate dedup state */
+let analysisState: Map<string, unknown>;
+
 function makeContext(overrides?: Partial<RuleContext>): RuleContext {
   return {
     file: makeFile(),
     depth: 2,
+    componentDepth: 0,
     maxDepth: 10,
     path: ["Page", "Frame"],
+    analysisState,
     ...overrides,
   };
 }
@@ -49,7 +51,7 @@ function makeContext(overrides?: Partial<RuleContext>): RuleContext {
 
 describe("missing-component-description", () => {
   beforeEach(() => {
-    resetMissingComponentDescriptionState();
+    analysisState = new Map();
   });
 
   it("returns null for non-INSTANCE nodes", () => {
@@ -236,7 +238,7 @@ describe("missing-component-description", () => {
     expect(result2!.message).toContain("Input");
   });
 
-  it("resets deduplication state between test runs via resetMissingComponentDescriptionState", () => {
+  it("fresh analysisState clears dedup state between analysis runs", () => {
     const ctx = makeContext({
       file: makeFile({
         "comp:1": { key: "comp:1", name: "Button", description: "" },
@@ -249,12 +251,17 @@ describe("missing-component-description", () => {
     );
     expect(first).not.toBeNull();
 
-    // After reset, same component should be flaggable again
-    resetMissingComponentDescriptionState();
+    // Fresh analysisState simulates a new analysis run — should flag again
+    analysisState = new Map();
+    const freshCtx = makeContext({
+      file: makeFile({
+        "comp:1": { key: "comp:1", name: "Button", description: "" },
+      }),
+    });
 
     const second = missingComponentDescription.check(
       makeNode({ id: "inst:1", type: "INSTANCE", componentId: "comp:1" }),
-      ctx
+      freshCtx
     );
     expect(second).not.toBeNull();
   });

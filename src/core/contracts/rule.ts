@@ -42,6 +42,20 @@ export interface RuleContext {
   maxDepth: number;
   path: string[];
   siblings?: AnalysisNode[] | undefined;
+  /** Per-analysis shared state. Created fresh for each analysis run, eliminating module-level mutable state. */
+  analysisState: Map<string, unknown>;
+}
+
+/**
+ * Get or initialize per-analysis state for a rule.
+ * Each key gets its own lazily-initialized state that persists for the duration of one analysis run.
+ */
+export function getAnalysisState<T>(context: RuleContext, key: string, init: () => T): T {
+  const existing = context.analysisState.get(key);
+  if (existing !== undefined) return existing as T;
+  const value = init();
+  context.analysisState.set(key, value);
+  return value;
 }
 
 /**

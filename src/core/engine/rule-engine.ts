@@ -9,7 +9,6 @@ import type {
 import { supportsDepthWeight } from "../contracts/rule.js";
 import { ruleRegistry } from "../rules/rule-registry.js";
 import { RULE_CONFIGS } from "../rules/rule-config.js";
-import { resetMissingComponentState, resetMissingComponentDescriptionState } from "../rules/component/index.js";
 
 /**
  * Analysis issue with calculated score and metadata
@@ -146,9 +145,8 @@ export class RuleEngine {
    * Analyze a Figma file and return issues
    */
   analyze(file: AnalysisFile): AnalysisResult {
-    // Reset module-level dedup state for rules that track seen patterns
-    resetMissingComponentState();
-    resetMissingComponentDescriptionState();
+    // Fresh per-analysis state — eliminates module-level mutable state in rules
+    const analysisState = new Map<string, unknown>();
 
     // Find target node if specified
     let rootNode = file.document;
@@ -177,6 +175,7 @@ export class RuleEngine {
       0,
       [],
       0,
+      analysisState,
       undefined,
       undefined
     );
@@ -221,6 +220,7 @@ export class RuleEngine {
     depth: number,
     path: string[],
     componentDepth: number,
+    analysisState: Map<string, unknown>,
     parent?: AnalysisNode,
     siblings?: AnalysisNode[]
   ): void {
@@ -247,6 +247,7 @@ export class RuleEngine {
       maxDepth,
       path: nodePath,
       siblings,
+      analysisState,
     };
 
     // Run each rule on this node
@@ -297,6 +298,7 @@ export class RuleEngine {
           depth + 1,
           nodePath,
           currentComponentDepth + 1,
+          analysisState,
           node,
           node.children
         );

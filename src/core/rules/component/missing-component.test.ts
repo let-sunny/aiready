@@ -1,6 +1,6 @@
 import type { RuleContext } from "../../contracts/rule.js";
 import type { AnalysisFile, AnalysisNode } from "../../contracts/figma-node.js";
-import { missingComponent, resetMissingComponentState } from "./index.js";
+import { missingComponent } from "./index.js";
 
 // ============================================
 // Test helpers
@@ -32,6 +32,9 @@ function makeFile(
   };
 }
 
+/** Each test gets a fresh analysisState to isolate dedup state */
+let analysisState: Map<string, unknown>;
+
 function makeContext(overrides?: Partial<RuleContext>): RuleContext {
   return {
     file: makeFile(),
@@ -39,6 +42,7 @@ function makeContext(overrides?: Partial<RuleContext>): RuleContext {
     componentDepth: 0,
     maxDepth: 10,
     path: ["Page", "Section"],
+    analysisState,
     ...overrides,
   };
 }
@@ -61,7 +65,7 @@ function makeChildFrame(
 
 describe("missing-component — Stage 1: Component exists but not used", () => {
   beforeEach(() => {
-    resetMissingComponentState();
+    analysisState = new Map();
   });
 
   it("returns null when no component matches frame name", () => {
@@ -170,7 +174,7 @@ describe("missing-component — Stage 1: Component exists but not used", () => {
 
 describe("missing-component — Stage 2: Name-based repetition", () => {
   beforeEach(() => {
-    resetMissingComponentState();
+    analysisState = new Map();
   });
 
   it("returns null below minRepetitions threshold", () => {
@@ -276,7 +280,7 @@ describe("missing-component — Stage 2: Name-based repetition", () => {
 
 describe("missing-component — Stage 3: Structure-based repetition", () => {
   beforeEach(() => {
-    resetMissingComponentState();
+    analysisState = new Map();
   });
 
   it("detects identical sibling structure", () => {
@@ -453,7 +457,7 @@ describe("missing-component — Stage 3: Structure-based repetition", () => {
 
 describe("missing-component — Stage 4: Instance style overrides", () => {
   beforeEach(() => {
-    resetMissingComponentState();
+    analysisState = new Map();
   });
 
   it("returns null for non-INSTANCE nodes", () => {
@@ -705,7 +709,7 @@ describe("missing-component — Stage 4: Instance style overrides", () => {
 
 describe("missing-component — General", () => {
   beforeEach(() => {
-    resetMissingComponentState();
+    analysisState = new Map();
   });
 
   it("has correct rule definition metadata", () => {
@@ -717,7 +721,7 @@ describe("missing-component — General", () => {
     expect(def.fix).toBeTruthy();
   });
 
-  it("resetMissingComponentState clears dedup state", () => {
+  it("fresh analysisState clears dedup state", () => {
     const frameA = makeNode({ id: "f:1", name: "Button" });
     const frameB = makeNode({ id: "f:2", name: "Button" });
     const doc = makeNode({
@@ -727,14 +731,14 @@ describe("missing-component — General", () => {
       children: [frameA, frameB],
     });
 
-    const ctx = makeContext({
-      file: makeFile({
-        document: doc,
-        components: {
-          "comp:1": { key: "comp:1", name: "Button", description: "" },
-        },
-      }),
+    const file = makeFile({
+      document: doc,
+      components: {
+        "comp:1": { key: "comp:1", name: "Button", description: "" },
+      },
     });
+
+    const ctx = makeContext({ file });
 
     // First call flags (Stage 1)
     expect(missingComponent.check(frameA, ctx)).not.toBeNull();
@@ -742,8 +746,9 @@ describe("missing-component — General", () => {
     // Deduped
     expect(missingComponent.check(frameA, ctx)).toBeNull();
 
-    // After reset, should flag again
-    resetMissingComponentState();
-    expect(missingComponent.check(frameA, ctx)).not.toBeNull();
+    // Fresh analysisState simulates a new analysis run — should flag again
+    analysisState = new Map();
+    const freshCtx = makeContext({ file });
+    expect(missingComponent.check(frameA, freshCtx)).not.toBeNull();
   });
 });

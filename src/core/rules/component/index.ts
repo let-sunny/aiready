@@ -1,4 +1,5 @@
-import type { RuleCheckFn, RuleDefinition } from "../../contracts/rule.js";
+import type { RuleCheckFn, RuleDefinition, RuleContext } from "../../contracts/rule.js";
+import { getAnalysisState } from "../../contracts/rule.js";
 import type { AnalysisNode } from "../../contracts/figma-node.js";
 import { defineRule } from "../rule-registry.js";
 import { getRuleOption } from "../rule-config.js";
@@ -94,26 +95,16 @@ function isInsideInstance(context: {
 // missing-component (unified 4-stage rule)
 // ============================================
 
-/**
- * Module-level dedup Sets for missing-component stages.
- * These prevent duplicate violations when the same pattern is encountered
- * multiple times during a single analysis run.
- *
- * IMPORTANT: The analysis engine must call resetMissingComponentState()
- * before each run to clear stale state (especially in long-running processes
- * like the MCP server). See rule-engine.ts analyze() method.
- */
-const seenStage1ComponentNames = new Set<string>();
-const seenStage4ComponentIds = new Set<string>();
+/** State keys for per-analysis deduplication via RuleContext.analysisState */
+const SEEN_STAGE1_KEY = "missing-component:seenStage1ComponentNames";
+const SEEN_STAGE4_KEY = "missing-component:seenStage4ComponentIds";
 
-/**
- * Reset deduplication state for missing-component between analysis runs.
- * Call this at the start of each analysis if the process is long-running
- * (e.g. MCP server mode).
- */
-export function resetMissingComponentState(): void {
-  seenStage1ComponentNames.clear();
-  seenStage4ComponentIds.clear();
+function getSeenStage1(context: RuleContext): Set<string> {
+  return getAnalysisState(context, SEEN_STAGE1_KEY, () => new Set<string>());
+}
+
+function getSeenStage4(context: RuleContext): Set<string> {
+  return getAnalysisState(context, SEEN_STAGE4_KEY, () => new Set<string>());
 }
 
 const missingComponentDef: RuleDefinition = {
@@ -142,13 +133,14 @@ const missingComponentCheck: RuleCheckFn = (node, context, options) => {
     const firstFrame = sameNameFrames?.[0];
 
     if (matchingComponent) {
+      const seenStage1 = getSeenStage1(context);
       if (
         sameNameFrames &&
         firstFrame !== undefined &&
         sameNameFrames.length >= 2 &&
-        !seenStage1ComponentNames.has(node.name.toLowerCase())
+        !seenStage1.has(node.name.toLowerCase())
       ) {
-        seenStage1ComponentNames.add(node.name.toLowerCase());
+        seenStage1.add(node.name.toLowerCase());
         if (firstFrame === node.id) {
           return {
             ruleId: missingComponentDef.id,
@@ -247,7 +239,8 @@ const missingComponentCheck: RuleCheckFn = (node, context, options) => {
   // the designer should use a variant instead.
   // ========================================
   if (node.type === "INSTANCE" && node.componentId) {
-    if (seenStage4ComponentIds.has(node.componentId)) return null;
+    const seenStage4 = getSeenStage4(context);
+    if (seenStage4.has(node.componentId)) return null;
 
     const componentDefs = context.file.componentDefinitions;
     if (!componentDefs) return null;
@@ -259,7 +252,7 @@ const missingComponentCheck: RuleCheckFn = (node, context, options) => {
     const overrides = detectStyleOverrides(master, node);
     if (overrides.length > 0) {
       // Only mark as seen when we actually flag — allows other instances to be checked
-      seenStage4ComponentIds.add(node.componentId);
+      seenStage4.add(node.componentId);
       const componentMeta = context.file.components[node.componentId];
       const componentName = componentMeta?.name ?? node.name;
 
@@ -434,16 +427,12 @@ export const singleUseComponent = defineRule({
 // missing-component-description
 // ============================================
 
-/**
- * Module-level Set for deduplication across nodes within a single analysis run.
- * Tracks componentIds that have already been flagged to avoid duplicate issues
- * when many INSTANCE nodes reference the same component.
- *
- * Note: This Set persists for the lifetime of the module (i.e., the process).
- * The analysis engine is expected to clear it between runs if needed, but since
- * each CLI invocation starts a fresh process this is safe in practice.
- */
-const seenMissingDescriptionComponentIds = new Set<string>();
+/** State key for per-analysis deduplication via RuleContext.analysisState */
+const SEEN_MISSING_DESC_KEY = "missing-component-description:seenComponentIds";
+
+function getSeenMissingDescription(context: RuleContext): Set<string> {
+  return getAnalysisState(context, SEEN_MISSING_DESC_KEY, () => new Set<string>());
+}
 
 const missingComponentDescriptionDef: RuleDefinition = {
   id: "missing-component-description",
@@ -466,8 +455,9 @@ const missingComponentDescriptionCheck: RuleCheckFn = (node, context) => {
   if (componentMeta.description.trim() !== "") return null;
 
   // Deduplicate: emit at most one issue per unique componentId
-  if (seenMissingDescriptionComponentIds.has(componentId)) return null;
-  seenMissingDescriptionComponentIds.add(componentId);
+  const seenDesc = getSeenMissingDescription(context);
+  if (seenDesc.has(componentId)) return null;
+  seenDesc.add(componentId);
 
   return {
     ruleId: missingComponentDescriptionDef.id,
@@ -482,11 +472,3 @@ export const missingComponentDescription = defineRule({
   check: missingComponentDescriptionCheck,
 });
 
-/**
- * Reset deduplication state between analysis runs.
- * Call this at the start of each analysis if the process is long-running
- * (e.g. MCP server mode).
- */
-export function resetMissingComponentDescriptionState(): void {
-  seenMissingDescriptionComponentIds.clear();
-}

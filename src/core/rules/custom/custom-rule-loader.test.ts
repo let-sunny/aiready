@@ -10,8 +10,10 @@ function makeContext(overrides?: Partial<RuleContext>): RuleContext {
   return {
     file: {} as never,
     depth: 2,
+    componentDepth: 0,
     maxDepth: 5,
     path: ["Root", "Section"],
+    analysisState: new Map(),
     ...overrides,
   };
 }
