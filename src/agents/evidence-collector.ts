@@ -3,6 +3,8 @@ import { dirname, resolve } from "node:path";
 import {
   CalibrationEvidenceEntrySchema,
   DiscoveryEvidenceEntrySchema,
+  DiscoveryEvidenceFileSchema,
+  DISCOVERY_EVIDENCE_SCHEMA_VERSION,
 } from "./contracts/evidence.js";
 import type {
   CalibrationEvidenceEntry,
@@ -11,6 +13,7 @@ import type {
 } from "./contracts/evidence.js";
 
 export type { CalibrationEvidenceEntry, CrossRunEvidence, DiscoveryEvidenceEntry };
+export { DISCOVERY_EVIDENCE_SCHEMA_VERSION };
 
 const DEFAULT_CALIBRATION_PATH = resolve("data/calibration-evidence.json");
 
@@ -121,25 +124,97 @@ export function pruneCalibrationEvidence(
 const DEFAULT_DISCOVERY_PATH = resolve("data/discovery-evidence.json");
 
 /**
+ * Build a dedupe key for a discovery evidence entry.
+ * Key: category (lowered) + normalized description + fixture (trimmed, lowered).
+ */
+function discoveryDedupeKey(e: DiscoveryEvidenceEntry): string {
+  const cat = e.category.toLowerCase().trim();
+  const desc = e.description.toLowerCase().trim().replace(/\s+/g, " ");
+  const fix = e.fixture.toLowerCase().trim();
+  return `${cat}\0${desc}\0${fix}`;
+}
+
+/**
+ * Read discovery evidence from file, supporting both legacy (plain array)
+ * and versioned ({ schemaVersion, entries }) formats.
+ */
+function readDiscoveryEvidence(filePath: string): DiscoveryEvidenceEntry[] {
+  if (!existsSync(filePath)) return [];
+  try {
+    const raw = JSON.parse(readFileSync(filePath, "utf-8")) as unknown;
+
+    // Versioned format: { schemaVersion, entries }
+    const versionedParse = DiscoveryEvidenceFileSchema.safeParse(raw);
+    if (versionedParse.success) {
+      return versionedParse.data.entries;
+    }
+
+    // Legacy format: plain array (v0, before schemaVersion was introduced)
+    if (Array.isArray(raw)) {
+      const result: DiscoveryEvidenceEntry[] = [];
+      for (const item of raw) {
+        const parsed = DiscoveryEvidenceEntrySchema.safeParse(item);
+        if (parsed.success && parsed.data !== undefined) {
+          result.push(parsed.data);
+        }
+      }
+      return result;
+    }
+
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Write discovery evidence in the versioned format.
+ */
+function writeDiscoveryEvidence(filePath: string, entries: DiscoveryEvidenceEntry[]): void {
+  const dir = dirname(filePath);
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true });
+  }
+  const data = {
+    schemaVersion: DISCOVERY_EVIDENCE_SCHEMA_VERSION,
+    entries,
+  };
+  writeFileSync(filePath, JSON.stringify(data, null, 2) + "\n", "utf-8");
+}
+
+/**
  * Load all discovery evidence entries.
  */
 export function loadDiscoveryEvidence(
   evidencePath: string = DEFAULT_DISCOVERY_PATH
 ): DiscoveryEvidenceEntry[] {
-  return readValidatedArray(evidencePath, DiscoveryEvidenceEntrySchema);
+  return readDiscoveryEvidence(evidencePath);
 }
 
 /**
- * Append new discovery evidence entries (missing-rule + gap analysis).
+ * Append new discovery evidence entries with deduplication.
+ * Dedupe key: (category + normalized description + fixture).
+ * Last-write-wins for duplicate keys.
  */
 export function appendDiscoveryEvidence(
   entries: DiscoveryEvidenceEntry[],
   evidencePath: string = DEFAULT_DISCOVERY_PATH
 ): void {
   if (entries.length === 0) return;
-  const existing = readValidatedArray(evidencePath, DiscoveryEvidenceEntrySchema);
-  existing.push(...entries);
-  writeJsonArray(evidencePath, existing);
+  const existing = readDiscoveryEvidence(evidencePath);
+
+  // Build map of existing entries keyed by dedupe key
+  const byKey = new Map<string, DiscoveryEvidenceEntry>();
+  for (const e of existing) {
+    byKey.set(discoveryDedupeKey(e), e);
+  }
+
+  // Incoming entries override existing duplicates (last-write-wins)
+  for (const e of entries) {
+    byKey.set(discoveryDedupeKey(e), e);
+  }
+
+  writeDiscoveryEvidence(evidencePath, [...byKey.values()]);
 }
 
 /**
@@ -151,7 +226,7 @@ export function pruneDiscoveryEvidence(
 ): void {
   if (categories.length === 0) return;
   const catSet = new Set(categories.map((c) => c.toLowerCase()));
-  const existing = readValidatedArray(evidencePath, DiscoveryEvidenceEntrySchema);
+  const existing = readDiscoveryEvidence(evidencePath);
   const pruned = existing.filter((e) => !catSet.has(e.category.toLowerCase()));
-  writeJsonArray(evidencePath, pruned);
+  writeDiscoveryEvidence(evidencePath, pruned);
 }

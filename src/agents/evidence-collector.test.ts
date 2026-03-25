@@ -8,6 +8,7 @@ import {
   loadDiscoveryEvidence,
   appendDiscoveryEvidence,
   pruneDiscoveryEvidence,
+  DISCOVERY_EVIDENCE_SCHEMA_VERSION,
 } from "./evidence-collector.js";
 import type {
   CalibrationEvidenceEntry,
@@ -187,7 +188,21 @@ describe("evidence-collector", () => {
       expect(result).toEqual([]);
     });
 
-    it("returns entries from file", () => {
+    it("loads entries from versioned format", () => {
+      const file = {
+        schemaVersion: DISCOVERY_EVIDENCE_SCHEMA_VERSION,
+        entries: [
+          { description: "gap1", category: "layout", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
+        ],
+      };
+      writeFileSync(disPath, JSON.stringify(file), "utf-8");
+
+      const result = loadDiscoveryEvidence(disPath);
+      expect(result).toHaveLength(1);
+      expect(result[0]!.category).toBe("layout");
+    });
+
+    it("loads entries from legacy plain-array format (v0 fallback)", () => {
       const entries: DiscoveryEvidenceEntry[] = [
         { description: "gap1", category: "layout", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
       ];
@@ -197,59 +212,164 @@ describe("evidence-collector", () => {
       expect(result).toHaveLength(1);
       expect(result[0]!.category).toBe("layout");
     });
+
+    it("handles malformed JSON gracefully", () => {
+      writeFileSync(disPath, "not json", "utf-8");
+      const result = loadDiscoveryEvidence(disPath);
+      expect(result).toEqual([]);
+    });
+
+    it("skips invalid entries in legacy array", () => {
+      writeFileSync(disPath, JSON.stringify([
+        { description: "gap1", category: "layout", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
+        { bad: "entry" },
+      ]), "utf-8");
+
+      const result = loadDiscoveryEvidence(disPath);
+      expect(result).toHaveLength(1);
+    });
   });
 
   describe("appendDiscoveryEvidence", () => {
-    it("creates file and appends entries", () => {
+    it("creates file in versioned format", () => {
       appendDiscoveryEvidence([
         { description: "gap1", category: "layout", impact: "hard", fixture: "fx1", timestamp: "t1", source: "gap-analysis" },
       ], disPath);
 
-      const raw = JSON.parse(readFileSync(disPath, "utf-8")) as DiscoveryEvidenceEntry[];
-      expect(raw).toHaveLength(1);
-      expect(raw[0]!.source).toBe("gap-analysis");
+      const raw = JSON.parse(readFileSync(disPath, "utf-8")) as { schemaVersion: number; entries: DiscoveryEvidenceEntry[] };
+      expect(raw.schemaVersion).toBe(DISCOVERY_EVIDENCE_SCHEMA_VERSION);
+      expect(raw.entries).toHaveLength(1);
+      expect(raw.entries[0]!.source).toBe("gap-analysis");
     });
 
-    it("appends to existing entries", () => {
-      writeFileSync(disPath, JSON.stringify([
+    it("appends to existing entries (different keys)", () => {
+      appendDiscoveryEvidence([
         { description: "gap1", category: "layout", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
-      ]), "utf-8");
+      ], disPath);
 
       appendDiscoveryEvidence([
         { description: "gap2", category: "color", impact: "moderate", fixture: "fx2", timestamp: "t2", source: "gap-analysis" },
       ], disPath);
 
-      const raw = JSON.parse(readFileSync(disPath, "utf-8")) as DiscoveryEvidenceEntry[];
-      expect(raw).toHaveLength(2);
+      const raw = JSON.parse(readFileSync(disPath, "utf-8")) as { entries: DiscoveryEvidenceEntry[] };
+      expect(raw.entries).toHaveLength(2);
+    });
+
+    it("deduplicates by (category + description + fixture), last-write-wins", () => {
+      appendDiscoveryEvidence([
+        { description: "gap1", category: "layout", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
+      ], disPath);
+
+      // Same category+description+fixture, different impact/timestamp → replaces
+      appendDiscoveryEvidence([
+        { description: "gap1", category: "layout", impact: "moderate", fixture: "fx1", timestamp: "t2", source: "evaluation" },
+      ], disPath);
+
+      const raw = JSON.parse(readFileSync(disPath, "utf-8")) as { entries: DiscoveryEvidenceEntry[] };
+      expect(raw.entries).toHaveLength(1);
+      expect(raw.entries[0]!.impact).toBe("moderate");
+      expect(raw.entries[0]!.timestamp).toBe("t2");
+    });
+
+    it("dedupe is case-insensitive for category and description", () => {
+      appendDiscoveryEvidence([
+        { description: "Gap One", category: "Layout", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
+      ], disPath);
+
+      appendDiscoveryEvidence([
+        { description: "gap one", category: "layout", impact: "easy", fixture: "fx1", timestamp: "t2", source: "evaluation" },
+      ], disPath);
+
+      const raw = JSON.parse(readFileSync(disPath, "utf-8")) as { entries: DiscoveryEvidenceEntry[] };
+      expect(raw.entries).toHaveLength(1);
+      expect(raw.entries[0]!.impact).toBe("easy");
+    });
+
+    it("dedupes within a single append call (last row wins)", () => {
+      appendDiscoveryEvidence([
+        { description: "gap1", category: "layout", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
+        { description: "gap1", category: "layout", impact: "easy", fixture: "fx1", timestamp: "t2", source: "evaluation" },
+      ], disPath);
+
+      const raw = JSON.parse(readFileSync(disPath, "utf-8")) as { entries: DiscoveryEvidenceEntry[] };
+      expect(raw.entries).toHaveLength(1);
+      expect(raw.entries[0]!.impact).toBe("easy");
+    });
+
+    it("same description different fixture → kept as separate entries", () => {
+      appendDiscoveryEvidence([
+        { description: "gap1", category: "layout", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
+        { description: "gap1", category: "layout", impact: "hard", fixture: "fx2", timestamp: "t1", source: "evaluation" },
+      ], disPath);
+
+      const raw = JSON.parse(readFileSync(disPath, "utf-8")) as { entries: DiscoveryEvidenceEntry[] };
+      expect(raw.entries).toHaveLength(2);
+    });
+
+    it("migrates legacy array to versioned format on append", () => {
+      // Write legacy format
+      writeFileSync(disPath, JSON.stringify([
+        { description: "old", category: "layout", impact: "hard", fixture: "fx1", timestamp: "t0", source: "evaluation" },
+      ]), "utf-8");
+
+      appendDiscoveryEvidence([
+        { description: "new", category: "color", impact: "easy", fixture: "fx2", timestamp: "t1", source: "gap-analysis" },
+      ], disPath);
+
+      const raw = JSON.parse(readFileSync(disPath, "utf-8")) as { schemaVersion: number; entries: DiscoveryEvidenceEntry[] };
+      expect(raw.schemaVersion).toBe(DISCOVERY_EVIDENCE_SCHEMA_VERSION);
+      expect(raw.entries).toHaveLength(2);
+    });
+
+    it("does nothing for empty entries", () => {
+      appendDiscoveryEvidence([
+        { description: "gap1", category: "layout", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
+      ], disPath);
+      const before = readFileSync(disPath, "utf-8");
+
+      appendDiscoveryEvidence([], disPath);
+
+      const after = readFileSync(disPath, "utf-8");
+      expect(after).toBe(before);
     });
   });
 
   describe("pruneDiscoveryEvidence", () => {
     it("removes entries for specified categories (case-insensitive)", () => {
-      const entries: DiscoveryEvidenceEntry[] = [
+      appendDiscoveryEvidence([
         { description: "gap1", category: "Layout", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
         { description: "gap2", category: "layout", impact: "hard", fixture: "fx2", timestamp: "t2", source: "gap-analysis" },
         { description: "gap3", category: "color", impact: "moderate", fixture: "fx1", timestamp: "t1", source: "evaluation" },
-      ];
-      writeFileSync(disPath, JSON.stringify(entries), "utf-8");
+      ], disPath);
 
       pruneDiscoveryEvidence(["layout"], disPath);
 
-      const raw = JSON.parse(readFileSync(disPath, "utf-8")) as DiscoveryEvidenceEntry[];
-      expect(raw).toHaveLength(1);
-      expect(raw[0]!.category).toBe("color");
+      const raw = JSON.parse(readFileSync(disPath, "utf-8")) as { entries: DiscoveryEvidenceEntry[] };
+      expect(raw.entries).toHaveLength(1);
+      expect(raw.entries[0]!.category).toBe("color");
+    });
+
+    it("writes versioned format after prune", () => {
+      appendDiscoveryEvidence([
+        { description: "gap1", category: "layout", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
+      ], disPath);
+
+      pruneDiscoveryEvidence(["layout"], disPath);
+
+      const raw = JSON.parse(readFileSync(disPath, "utf-8")) as { schemaVersion: number; entries: DiscoveryEvidenceEntry[] };
+      expect(raw.schemaVersion).toBe(DISCOVERY_EVIDENCE_SCHEMA_VERSION);
+      expect(raw.entries).toHaveLength(0);
     });
 
     it("does nothing for empty categories", () => {
-      const entries: DiscoveryEvidenceEntry[] = [
+      appendDiscoveryEvidence([
         { description: "gap1", category: "layout", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
-      ];
-      writeFileSync(disPath, JSON.stringify(entries), "utf-8");
+      ], disPath);
 
       pruneDiscoveryEvidence([], disPath);
 
-      const raw = JSON.parse(readFileSync(disPath, "utf-8")) as DiscoveryEvidenceEntry[];
-      expect(raw).toHaveLength(1);
+      const raw = JSON.parse(readFileSync(disPath, "utf-8")) as { entries: DiscoveryEvidenceEntry[] };
+      expect(raw.entries).toHaveLength(1);
     });
   });
 });
