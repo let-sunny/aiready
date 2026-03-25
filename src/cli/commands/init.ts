@@ -16,6 +16,11 @@ export function registerInit(cli: CAC): void {
     .option("--mcp", "Show Figma MCP setup instructions")
     .action((options: InitOptions) => {
       try {
+        if (options.token && options.mcp) {
+          console.error("Error: --token and --mcp are mutually exclusive. Choose one.");
+          process.exit(1);
+        }
+
         if (options.token) {
           initAiready(options.token);
 

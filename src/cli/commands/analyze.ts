@@ -2,6 +2,7 @@ import { existsSync, mkdirSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { resolve, dirname } from "node:path";
 import type { CAC } from "cac";
+import { z } from "zod";
 
 import type { RuleConfig, RuleId } from "../../core/contracts/rule.js";
 import { analyzeFile } from "../../core/engine/rule-engine.js";
@@ -10,7 +11,7 @@ import {
   getFigmaToken, getReportsDir, ensureReportsDir,
 } from "../../core/engine/config-store.js";
 import { calculateScores, formatScoreSummary, buildResultJson } from "../../core/engine/scoring.js";
-import { getConfigsWithPreset, RULE_CONFIGS, type Preset } from "../../core/rules/rule-config.js";
+import { getConfigsWithPreset, RULE_CONFIGS } from "../../core/rules/rule-config.js";
 import { ruleRegistry } from "../../core/rules/rule-registry.js";
 import { loadCustomRules } from "../../core/rules/custom/custom-rule-loader.js";
 import { loadConfigFile, mergeConfigs } from "../../core/rules/custom/config-loader.js";
@@ -18,17 +19,18 @@ import { generateHtmlReport } from "../../core/report-html/index.js";
 import { trackEvent, trackError, EVENTS } from "../../core/monitoring/index.js";
 import { pickRandomScope, countNodes, MAX_NODES_WITHOUT_SCOPE } from "../helpers.js";
 
-interface AnalyzeOptions {
-  preset?: Preset;
-  output?: string;
-  token?: string;
-  api?: boolean;
-  screenshot?: boolean;
-  customRules?: string;
-  config?: string;
-  noOpen?: boolean;
-  json?: boolean;
-}
+const AnalyzeOptionsSchema = z.object({
+  preset: z.enum(["relaxed", "dev-friendly", "ai-ready", "strict"]).optional(),
+  output: z.string().optional(),
+  token: z.string().optional(),
+  api: z.boolean().optional(),
+  screenshot: z.boolean().optional(),
+  customRules: z.string().optional(),
+  config: z.string().optional(),
+  noOpen: z.boolean().optional(),
+  json: z.boolean().optional(),
+});
+
 
 export function registerAnalyze(cli: CAC): void {
   cli
@@ -47,7 +49,14 @@ export function registerAnalyze(cli: CAC): void {
     .example("  canicode analyze ./fixtures/my-design --output report.html")
     .example("  canicode analyze ./fixtures/my-design --custom-rules ./my-rules.json")
     .example("  canicode analyze ./fixtures/my-design --config ./my-config.json")
-    .action(async (input: string, options: AnalyzeOptions) => {
+    .action(async (input: string, rawOptions: Record<string, unknown>) => {
+      const parseResult = AnalyzeOptionsSchema.safeParse(rawOptions);
+      if (!parseResult.success) {
+        const msg = parseResult.error.issues.map(i => `--${i.path.join(".")}: ${i.message}`).join("\n");
+        console.error(`\nInvalid options:\n${msg}`);
+        process.exit(1);
+      }
+      const options = parseResult.data;
       const analysisStart = Date.now();
       trackEvent(EVENTS.ANALYSIS_STARTED, { source: isJsonFile(input) || isFixtureDir(input) ? "fixture" : "figma" });
       // In --json mode, send progress messages to stderr so stdout contains only valid JSON

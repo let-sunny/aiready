@@ -2,6 +2,7 @@ import { existsSync, mkdirSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { resolve, dirname } from "node:path";
 import type { CAC } from "cac";
+import { z } from "zod";
 
 import { parseFigmaUrl } from "../../core/adapters/figma-url-parser.js";
 import { analyzeFile } from "../../core/engine/rule-engine.js";
@@ -10,12 +11,13 @@ import { getFigmaToken } from "../../core/engine/config-store.js";
 import { calculateScores, buildResultJson } from "../../core/engine/scoring.js";
 import { collectVectorNodeIds, collectImageNodes, sanitizeFilename } from "../helpers.js";
 
-interface ImplementOptions {
-  token?: string;
-  output?: string;
-  prompt?: string;
-  imageScale?: string;
-}
+const ImplementOptionsSchema = z.object({
+  token: z.string().optional(),
+  output: z.string().optional(),
+  prompt: z.string().optional(),
+  imageScale: z.string().optional(),
+});
+
 
 export function registerImplement(cli: CAC): void {
   cli
@@ -29,8 +31,30 @@ export function registerImplement(cli: CAC): void {
     .option("--image-scale <n>", "Image export scale: 2 for PC (default), 3 for mobile")
     .example("  canicode implement ./fixtures/my-design")
     .example("  canicode implement ./fixtures/my-design --prompt ./my-react-prompt.md --image-scale 3")
-    .action(async (input: string, options: ImplementOptions) => {
+    .action(async (input: string, rawOptions: Record<string, unknown>) => {
       try {
+        const parseResult = ImplementOptionsSchema.safeParse(rawOptions);
+        if (!parseResult.success) {
+          const msg = parseResult.error.issues.map(i => `--${i.path.join(".")}: ${i.message}`).join("\n");
+          console.error(`\nInvalid options:\n${msg}`);
+          process.exit(1);
+        }
+        const options = parseResult.data;
+
+        // Validate --image-scale early
+        if (options.imageScale !== undefined) {
+          const scale = Number(options.imageScale);
+          if (!Number.isFinite(scale) || scale < 1 || scale > 4) {
+            console.error("Error: --image-scale must be 1-4 (2 for PC, 3 for mobile)");
+            process.exit(1);
+          }
+        }
+
+        // Warn for unscoped Figma URL
+        if (isFigmaUrl(input) && !parseFigmaUrl(input).nodeId) {
+          console.warn("Warning: No node-id in Figma URL. Implementation package will cover the entire file.");
+          console.warn("Tip: Add ?node-id=XXX to target a specific section.\n");
+        }
 
         const outputDir = resolve(options.output ?? "canicode-implement");
         mkdirSync(outputDir, { recursive: true });

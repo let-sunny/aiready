@@ -2,19 +2,21 @@ import { mkdirSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import type { CAC } from "cac";
+import { z } from "zod";
 
 import { parseFigmaUrl } from "../../core/adapters/figma-url-parser.js";
 import { loadFile, isFigmaUrl } from "../../core/engine/loader.js";
 import { getFigmaToken } from "../../core/engine/config-store.js";
 import { collectVectorNodeIds, collectImageNodes, sanitizeFilename, countNodes } from "../helpers.js";
 
-interface SaveFixtureOptions {
-  output?: string;
-  api?: boolean;
-  token?: string;
-  imageScale?: string;
-  name?: string;
-}
+const SaveFixtureOptionsSchema = z.object({
+  output: z.string().optional(),
+  api: z.boolean().optional(),
+  token: z.string().optional(),
+  imageScale: z.string().optional(),
+  name: z.string().optional(),
+});
+
 
 export function registerSaveFixture(cli: CAC): void {
   cli
@@ -28,10 +30,27 @@ export function registerSaveFixture(cli: CAC): void {
     .option("--image-scale <n>", "Image export scale: 2 for PC (default), 3 for mobile")
     .example("  canicode save-fixture https://www.figma.com/design/ABC123/MyDesign?node-id=1-234")
     .example("  canicode save-fixture https://www.figma.com/design/ABC123/MyDesign?node-id=1-234 --image-scale 3")
-    .action(async (input: string, options: SaveFixtureOptions) => {
+    .action(async (input: string, rawOptions: Record<string, unknown>) => {
       try {
+        const parseResult = SaveFixtureOptionsSchema.safeParse(rawOptions);
+        if (!parseResult.success) {
+          const msg = parseResult.error.issues.map(i => `--${i.path.join(".")}: ${i.message}`).join("\n");
+          console.error(`\nInvalid options:\n${msg}`);
+          process.exit(1);
+        }
+        const options = parseResult.data;
+
         if (!isFigmaUrl(input)) {
           throw new Error("save-fixture requires a Figma URL as input.");
+        }
+
+        // Validate --image-scale early (before any file I/O)
+        if (options.imageScale !== undefined) {
+          const scale = Number(options.imageScale);
+          if (!Number.isFinite(scale) || scale < 1 || scale > 4) {
+            console.error("Error: --image-scale must be 1-4 (2 for PC, 3 for mobile)");
+            process.exit(1);
+          }
         }
 
         if (!parseFigmaUrl(input).nodeId) {

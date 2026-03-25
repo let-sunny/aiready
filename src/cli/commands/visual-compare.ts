@@ -1,16 +1,19 @@
 import { resolve } from "node:path";
 import type { CAC } from "cac";
+import { z } from "zod";
 
+import { parseFigmaUrl } from "../../core/adapters/figma-url-parser.js";
 import { getFigmaToken } from "../../core/engine/config-store.js";
 
-interface VisualCompareOptions {
-  figmaUrl: string;
-  token?: string;
-  output?: string;
-  width?: number;
-  height?: number;
-  figmaScale?: string;
-}
+const VisualCompareOptionsSchema = z.object({
+  figmaUrl: z.string().optional(),
+  token: z.string().optional(),
+  output: z.string().optional(),
+  width: z.unknown().optional(),
+  height: z.unknown().optional(),
+  figmaScale: z.string().optional(),
+});
+
 
 export function registerVisualCompare(cli: CAC): void {
   cli
@@ -25,11 +28,25 @@ export function registerVisualCompare(cli: CAC): void {
     .option("--height <px>", "Logical viewport height in CSS px (default: infer from Figma PNG ÷ export scale)")
     .option("--figma-scale <n>", "Figma export scale (default: 2, matches save-fixture / @2x PNGs)")
     .example("  canicode visual-compare ./generated/index.html --figma-url 'https://www.figma.com/design/ABC/File?node-id=1-234'")
-    .action(async (codePath: string, options: VisualCompareOptions) => {
+    .action(async (codePath: string, rawOptions: Record<string, unknown>) => {
       try {
+        const parseResult = VisualCompareOptionsSchema.safeParse(rawOptions);
+        if (!parseResult.success) {
+          const msg = parseResult.error.issues.map(i => `--${i.path.join(".")}: ${i.message}`).join("\n");
+          console.error(`\nInvalid options:\n${msg}`);
+          process.exit(1);
+        }
+        const options = parseResult.data;
+
         if (!options.figmaUrl) {
           console.error("Error: --figma-url is required");
           process.exitCode = 1; return;
+        }
+
+        // Warn if --figma-url has no node-id
+        if (!parseFigmaUrl(options.figmaUrl).nodeId) {
+          console.warn("Warning: --figma-url has no node-id. Results may be inaccurate for full files.");
+          console.warn("Tip: Add ?node-id=XXX to target a specific section.\n");
         }
 
         const token = options.token ?? getFigmaToken();
