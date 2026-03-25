@@ -729,8 +729,14 @@ cli
   )
   .action((category: string | string[]) => {
     const categories = Array.isArray(category) ? category : [category];
-    pruneDiscoveryEvidence(categories);
-    console.log(`Pruned discovery evidence for categories: ${categories.join(", ")}`);
+    try {
+      pruneDiscoveryEvidence(categories);
+      console.log(`Pruned discovery evidence for categories: ${categories.join(", ")}`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[evidence] Failed to prune discovery evidence: ${msg}`);
+      process.exitCode = 1;
+    }
   });
 
 interface CalibrateRunOptions {

@@ -5,6 +5,7 @@ import type { RuleId } from "../core/contracts/rule.js";
 import { runCalibrationEvaluate } from "./orchestrator.js";
 import { GapAnalyzerOutputSchema } from "./contracts/gap-analyzer.js";
 import { loadCalibrationEvidence, loadDiscoveryEvidence } from "./evidence-collector.js";
+import type { DiscoveryEvidenceEntry } from "./evidence-collector.js";
 
 type CalibrationAnalysisJson = Parameters<typeof runCalibrationEvaluate>[0] & {
   ruleScores: Record<string, { score: number; severity: string }>;
@@ -508,7 +509,12 @@ export function generateGapRuleReport(options: GapRuleReportOptions): GapRuleRep
   }
   lines.push("");
 
-  const discoveryEvidence = loadDiscoveryEvidence();
+  let discoveryEvidence: DiscoveryEvidenceEntry[] = [];
+  try {
+    discoveryEvidence = loadDiscoveryEvidence();
+  } catch (err) {
+    console.warn("[evidence] Failed to load discovery evidence (non-fatal):", err);
+  }
   lines.push("## Cross-run discovery evidence (git-tracked)");
   lines.push("");
   if (discoveryEvidence.length === 0) {

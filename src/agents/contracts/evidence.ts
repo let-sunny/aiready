@@ -25,6 +25,8 @@ export type CrossRunEvidence = Record<string, CrossRunEvidenceGroup>;
 
 // --- Discovery evidence ---
 
+export const DISCOVERY_EVIDENCE_SCHEMA_VERSION = 1;
+
 export const DiscoveryEvidenceEntrySchema = z.object({
   description: z.string(),
   category: z.string(),
@@ -35,3 +37,10 @@ export const DiscoveryEvidenceEntrySchema = z.object({
 });
 
 export type DiscoveryEvidenceEntry = z.infer<typeof DiscoveryEvidenceEntrySchema>;
+
+export const DiscoveryEvidenceFileSchema = z.object({
+  schemaVersion: z.literal(DISCOVERY_EVIDENCE_SCHEMA_VERSION),
+  entries: z.array(z.unknown()),
+});
+
+export type DiscoveryEvidenceFile = z.infer<typeof DiscoveryEvidenceFileSchema>;
