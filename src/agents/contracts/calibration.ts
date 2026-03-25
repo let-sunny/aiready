@@ -25,6 +25,7 @@ export const CalibrationConfigSchema = z.object({
 });
 
 export type CalibrationConfig = z.infer<typeof CalibrationConfigSchema>;
+export type CalibrationConfigInput = z.input<typeof CalibrationConfigSchema>;
 
 export interface CalibrationRun {
   config: CalibrationConfig;
