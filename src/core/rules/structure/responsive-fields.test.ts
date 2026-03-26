@@ -102,7 +102,7 @@ describe("fixed-size-in-auto-layout", () => {
 });
 
 describe("missing-size-constraint", () => {
-  it("flags FILL containers without maxWidth when multiple FILL siblings exist", () => {
+  it("flags FILL container when siblings have mixed sizing", () => {
     const file = makeFile(
       makeNode({
         name: "Page",
@@ -114,16 +114,16 @@ describe("missing-size-constraint", () => {
             layoutMode: "HORIZONTAL",
             children: [
               makeNode({
-                name: "Left",
+                name: "Sidebar",
                 type: "FRAME",
-                layoutSizingHorizontal: "FILL",
-                absoluteBoundingBox: { x: 0, y: 0, width: 300, height: 100 },
+                layoutSizingHorizontal: "FIXED",
+                absoluteBoundingBox: { x: 0, y: 0, width: 200, height: 100 },
               }),
               makeNode({
-                name: "Right",
+                name: "Content",
                 type: "FRAME",
                 layoutSizingHorizontal: "FILL",
-                absoluteBoundingBox: { x: 300, y: 0, width: 300, height: 100 },
+                absoluteBoundingBox: { x: 200, y: 0, width: 400, height: 100 },
               }),
             ],
           }),
@@ -173,7 +173,7 @@ describe("missing-size-constraint", () => {
     expect(issues).toHaveLength(0);
   });
 
-  it("does not flag only FILL child — intent is to fill parent", () => {
+  it("does not flag when all siblings are FILL (e.g. list view)", () => {
     const file = makeFile(
       makeNode({
         name: "Page",
@@ -182,13 +182,19 @@ describe("missing-size-constraint", () => {
           makeNode({
             name: "Root",
             type: "FRAME",
-            layoutMode: "HORIZONTAL",
+            layoutMode: "VERTICAL",
             children: [
               makeNode({
-                name: "Content",
+                name: "Item1",
                 type: "FRAME",
                 layoutSizingHorizontal: "FILL",
-                absoluteBoundingBox: { x: 0, y: 0, width: 600, height: 100 },
+                absoluteBoundingBox: { x: 0, y: 0, width: 600, height: 50 },
+              }),
+              makeNode({
+                name: "Item2",
+                type: "FRAME",
+                layoutSizingHorizontal: "FILL",
+                absoluteBoundingBox: { x: 0, y: 50, width: 600, height: 50 },
               }),
             ],
           }),

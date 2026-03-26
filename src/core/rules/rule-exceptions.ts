@@ -1,5 +1,6 @@
 import type { AnalysisNode } from "../contracts/figma-node.js";
 import type { RuleContext } from "../contracts/rule.js";
+import { isExcludedName } from "./excluded-names.js";
 
 // ============================================
 // Shared node type helpers
@@ -55,6 +56,9 @@ export function isAutoLayoutExempt(node: AnalysisNode): boolean {
 export function isAbsolutePositionExempt(node: AnalysisNode): boolean {
   if (isVisualOnlyNode(node)) return true;
 
+  // Intentional name patterns (badge, close, overlay, etc.)
+  if (isExcludedName(node.name)) return true;
+
   return false;
 }
 
@@ -76,10 +80,9 @@ export function isSizeConstraintExempt(node: AnalysisNode, context: RuleContext)
   // Root-level frames — they represent the screen itself
   if (context.depth <= 1) return true;
 
-  // Only FILL child among siblings — intent is to fill the parent entirely
-  if (context.siblings) {
-    const fillSiblings = context.siblings.filter((s) => s.layoutSizingHorizontal === "FILL");
-    if (fillSiblings.length <= 1) return true;
+  // All siblings are FILL (e.g. list view) — parent controls the width
+  if (context.siblings && context.siblings.length > 0) {
+    if (context.siblings.every((s) => s.layoutSizingHorizontal === "FILL")) return true;
   }
 
   // Inside grid layout — grid controls sizing
@@ -107,6 +110,9 @@ export function isFixedSizeExempt(node: AnalysisNode): boolean {
   }
 
   if (isVisualOnlyNode(node)) return true;
+
+  // Excluded names (nav, header, etc.)
+  if (isExcludedName(node.name)) return true;
 
   return false;
 }

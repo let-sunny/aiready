@@ -2,7 +2,6 @@ import type { RuleCheckFn, RuleDefinition } from "../../contracts/rule.js";
 import type { AnalysisNode } from "../../contracts/figma-node.js";
 import { defineRule } from "../rule-registry.js";
 import { getRuleOption } from "../rule-config.js";
-import { isExcludedName } from "../excluded-names.js";
 import { isAutoLayoutExempt, isAbsolutePositionExempt, isSizeConstraintExempt, isFixedSizeExempt } from "../rule-exceptions.js";
 
 // ============================================
@@ -144,9 +143,6 @@ const absolutePositionInAutoLayoutCheck: RuleCheckFn = (node, context) => {
 
   if (isAbsolutePositionExempt(node)) return null;
 
-  // Exception: intentional name patterns (badge, close, overlay, etc.)
-  if (isExcludedName(node.name)) return null;
-
   return {
     ruleId: absolutePositionInAutoLayoutDef.id,
     nodeId: node.id,
@@ -212,8 +208,7 @@ const fixedSizeInAutoLayoutCheck: RuleCheckFn = (node, context) => {
       if (node.layoutAlign !== "INHERIT") return null;
     }
 
-    // Excluded names (nav, header, etc.)
-    if (isExcludedName(node.name)) return null;
+    if (isFixedSizeExempt(node)) return null;
 
     return {
       ruleId: fixedSizeInAutoLayoutDef.id,
