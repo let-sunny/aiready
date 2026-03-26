@@ -289,6 +289,24 @@ const missingSizeConstraintCheck: RuleCheckFn = (node, context) => {
   // Skip small elements — they won't stretch problematically
   if (node.absoluteBoundingBox && node.absoluteBoundingBox.width <= 200) return null;
 
+  // Skip if parent already has maxWidth — parent constrains the stretch
+  if (context.parent?.maxWidth !== undefined) return null;
+
+  // Skip root-level frames — they represent the screen itself
+  if (context.depth <= 1) return null;
+
+  // Skip if this is the only FILL child — intent is to fill the parent entirely
+  if (context.siblings) {
+    const fillSiblings = context.siblings.filter((s) => s.layoutSizingHorizontal === "FILL");
+    if (fillSiblings.length <= 1) return null;
+  }
+
+  // Skip if inside a grid layout — grid controls sizing
+  if (context.parent?.layoutMode === "GRID") return null;
+
+  // Skip if inside flex wrap — wrap layout controls sizing per row
+  if (context.parent?.layoutWrap === "WRAP") return null;
+
   const currentWidth = node.absoluteBoundingBox ? `${node.absoluteBoundingBox.width}px` : "unknown";
 
   return {

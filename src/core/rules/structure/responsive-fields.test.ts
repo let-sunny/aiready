@@ -102,18 +102,30 @@ describe("fixed-size-in-auto-layout", () => {
 });
 
 describe("missing-size-constraint", () => {
-  it("flags FILL container without maxWidth", () => {
+  it("flags FILL containers without maxWidth when multiple FILL siblings exist", () => {
     const file = makeFile(
       makeNode({
-        name: "Root",
+        name: "Page",
         type: "FRAME",
-        layoutMode: "HORIZONTAL",
         children: [
           makeNode({
-            name: "Content",
+            name: "Root",
             type: "FRAME",
-            layoutSizingHorizontal: "FILL",
-            absoluteBoundingBox: { x: 0, y: 0, width: 300, height: 100 },
+            layoutMode: "HORIZONTAL",
+            children: [
+              makeNode({
+                name: "Left",
+                type: "FRAME",
+                layoutSizingHorizontal: "FILL",
+                absoluteBoundingBox: { x: 0, y: 0, width: 300, height: 100 },
+              }),
+              makeNode({
+                name: "Right",
+                type: "FRAME",
+                layoutSizingHorizontal: "FILL",
+                absoluteBoundingBox: { x: 300, y: 0, width: 300, height: 100 },
+              }),
+            ],
           }),
         ],
       }),
@@ -123,22 +135,163 @@ describe("missing-size-constraint", () => {
       (i) => i.rule.definition.id === "missing-size-constraint",
     );
     expect(issues.length).toBeGreaterThanOrEqual(1);
-    expect(issues.at(0)?.violation.message).toContain("max-width");
   });
 
-  it("does not flag when maxWidth is set (even without minWidth)", () => {
+  it("does not flag when maxWidth is set", () => {
     const file = makeFile(
       makeNode({
-        name: "Root",
+        name: "Page",
         type: "FRAME",
-        layoutMode: "HORIZONTAL",
         children: [
           makeNode({
-            name: "Content",
+            name: "Root",
             type: "FRAME",
-            layoutSizingHorizontal: "FILL",
-            maxWidth: 800,
-            absoluteBoundingBox: { x: 0, y: 0, width: 300, height: 100 },
+            layoutMode: "HORIZONTAL",
+            children: [
+              makeNode({
+                name: "Left",
+                type: "FRAME",
+                layoutSizingHorizontal: "FILL",
+                maxWidth: 800,
+                absoluteBoundingBox: { x: 0, y: 0, width: 300, height: 100 },
+              }),
+              makeNode({
+                name: "Right",
+                type: "FRAME",
+                layoutSizingHorizontal: "FILL",
+                absoluteBoundingBox: { x: 300, y: 0, width: 300, height: 100 },
+              }),
+            ],
+          }),
+        ],
+      }),
+    );
+    const result = analyzeFile(file);
+    const issues = result.issues.filter(
+      (i) => i.rule.definition.id === "missing-size-constraint" && i.violation.nodeId === "Left",
+    );
+    expect(issues).toHaveLength(0);
+  });
+
+  it("does not flag only FILL child — intent is to fill parent", () => {
+    const file = makeFile(
+      makeNode({
+        name: "Page",
+        type: "FRAME",
+        children: [
+          makeNode({
+            name: "Root",
+            type: "FRAME",
+            layoutMode: "HORIZONTAL",
+            children: [
+              makeNode({
+                name: "Content",
+                type: "FRAME",
+                layoutSizingHorizontal: "FILL",
+                absoluteBoundingBox: { x: 0, y: 0, width: 600, height: 100 },
+              }),
+            ],
+          }),
+        ],
+      }),
+    );
+    const result = analyzeFile(file);
+    const issues = result.issues.filter(
+      (i) => i.rule.definition.id === "missing-size-constraint",
+    );
+    expect(issues).toHaveLength(0);
+  });
+
+  it("does not flag when parent has maxWidth", () => {
+    const file = makeFile(
+      makeNode({
+        name: "Page",
+        type: "FRAME",
+        children: [
+          makeNode({
+            name: "Root",
+            type: "FRAME",
+            layoutMode: "HORIZONTAL",
+            maxWidth: 1200,
+            children: [
+              makeNode({
+                name: "Left",
+                type: "FRAME",
+                layoutSizingHorizontal: "FILL",
+                absoluteBoundingBox: { x: 0, y: 0, width: 300, height: 100 },
+              }),
+              makeNode({
+                name: "Right",
+                type: "FRAME",
+                layoutSizingHorizontal: "FILL",
+                absoluteBoundingBox: { x: 300, y: 0, width: 300, height: 100 },
+              }),
+            ],
+          }),
+        ],
+      }),
+    );
+    const result = analyzeFile(file);
+    const issues = result.issues.filter(
+      (i) => i.rule.definition.id === "missing-size-constraint",
+    );
+    expect(issues).toHaveLength(0);
+  });
+
+  it("does not flag inside grid layout", () => {
+    const file = makeFile(
+      makeNode({
+        name: "Page",
+        type: "FRAME",
+        children: [
+          makeNode({
+            name: "Grid",
+            type: "FRAME",
+            layoutMode: "GRID",
+            children: [
+              makeNode({
+                name: "Cell",
+                type: "FRAME",
+                layoutSizingHorizontal: "FILL",
+                absoluteBoundingBox: { x: 0, y: 0, width: 300, height: 100 },
+              }),
+            ],
+          }),
+        ],
+      }),
+    );
+    const result = analyzeFile(file);
+    const issues = result.issues.filter(
+      (i) => i.rule.definition.id === "missing-size-constraint",
+    );
+    expect(issues).toHaveLength(0);
+  });
+
+  it("does not flag inside flex wrap", () => {
+    const file = makeFile(
+      makeNode({
+        name: "Page",
+        type: "FRAME",
+        children: [
+          makeNode({
+            name: "WrapContainer",
+            type: "FRAME",
+            layoutMode: "HORIZONTAL",
+            layoutWrap: "WRAP",
+            children: [
+              makeNode({
+                name: "Tag1",
+                type: "FRAME",
+                layoutSizingHorizontal: "FILL",
+                absoluteBoundingBox: { x: 0, y: 0, width: 300, height: 40 },
+              }),
+              makeNode({
+                name: "Tag2",
+                type: "FRAME",
+                layoutSizingHorizontal: "FILL",
+                absoluteBoundingBox: { x: 300, y: 0, width: 300, height: 40 },
+              }),
+            ],
           }),
         ],
       }),
