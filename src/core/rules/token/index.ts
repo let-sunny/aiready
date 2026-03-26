@@ -47,11 +47,13 @@ const rawColorCheck: RuleCheckFn = (node, context) => {
   for (const fill of node.fills) {
     const fillObj = fill as Record<string, unknown>;
     if (fillObj["type"] === "SOLID" && fillObj["color"]) {
+      const c = fillObj["color"] as Record<string, number>;
+      const hex = `#${Math.round((c["r"] ?? 0) * 255).toString(16).padStart(2, "0")}${Math.round((c["g"] ?? 0) * 255).toString(16).padStart(2, "0")}${Math.round((c["b"] ?? 0) * 255).toString(16).padStart(2, "0")}`.toUpperCase();
       return {
         ruleId: rawColorDef.id,
         nodeId: node.id,
         nodePath: context.path.join(" > "),
-        message: `"${node.name}" uses raw color without style or variable`,
+        message: `"${node.name}" uses raw fill color ${hex} without style or variable — bind to a color variable`,
       };
     }
   }
@@ -88,11 +90,20 @@ const rawFontCheck: RuleCheckFn = (node, context) => {
     return null;
   }
 
+  const fontParts: string[] = [];
+  const s = node.style;
+  if (s) {
+    if (s["fontFamily"]) fontParts.push(String(s["fontFamily"]));
+    if (s["fontSize"]) fontParts.push(`${s["fontSize"]}px`);
+    if (s["fontWeight"]) fontParts.push(String(s["fontWeight"]));
+  }
+  const fontDesc = fontParts.length > 0 ? ` (${fontParts.join(" ")})` : "";
+
   return {
     ruleId: rawFontDef.id,
     nodeId: node.id,
     nodePath: context.path.join(" > "),
-    message: `"${node.name}" has no text style applied`,
+    message: `"${node.name}" uses raw font${fontDesc} without text style — apply a text style`,
   };
 };
 
@@ -131,7 +142,7 @@ const inconsistentSpacingCheck: RuleCheckFn = (node, context, options) => {
         ruleId: inconsistentSpacingDef.id,
         nodeId: node.id,
         nodePath: context.path.join(" > "),
-        message: `"${node.name}" has padding ${padding}px not on ${gridBase}pt grid`,
+        message: `"${node.name}" has padding ${padding}px not on ${gridBase}pt grid — round to nearest ${gridBase}pt multiple (${Math.round(padding / gridBase) * gridBase}px)`,
       };
     }
   }
@@ -143,7 +154,7 @@ const inconsistentSpacingCheck: RuleCheckFn = (node, context, options) => {
         ruleId: inconsistentSpacingDef.id,
         nodeId: node.id,
         nodePath: context.path.join(" > "),
-        message: `"${node.name}" has item spacing ${node.itemSpacing}px not on ${gridBase}pt grid`,
+        message: `"${node.name}" has item spacing ${node.itemSpacing}px not on ${gridBase}pt grid — round to nearest ${gridBase}pt multiple (${Math.round(node.itemSpacing / gridBase) * gridBase}px)`,
       };
     }
   }
@@ -192,7 +203,7 @@ const magicNumberSpacingCheck: RuleCheckFn = (node, context, options) => {
           ruleId: magicNumberSpacingDef.id,
           nodeId: node.id,
           nodePath: context.path.join(" > "),
-          message: `"${node.name}" uses magic number spacing: ${spacing}px`,
+          message: `"${node.name}" uses magic number spacing: ${spacing}px — round to ${Math.round(spacing / gridBase) * gridBase}px (nearest ${gridBase}pt grid value)`,
         };
       }
     }
@@ -233,11 +244,18 @@ const rawShadowCheck: RuleCheckFn = (node, context) => {
       effectObj["type"] === "DROP_SHADOW" ||
       effectObj["type"] === "INNER_SHADOW"
     ) {
+      const shadowType = effectObj["type"] === "DROP_SHADOW" ? "drop shadow" : "inner shadow";
+      const offset = effectObj["offset"] as Record<string, number> | undefined;
+      const radius = effectObj["radius"] as number | undefined;
+      const detailParts: string[] = [];
+      if (offset) detailParts.push(`offset ${Math.round(offset["x"] ?? 0)},${Math.round(offset["y"] ?? 0)}`);
+      if (radius !== undefined) detailParts.push(`blur ${Math.round(radius)}`);
+      const details = detailParts.length > 0 ? ` (${detailParts.join(" ")})` : "";
       return {
         ruleId: rawShadowDef.id,
         nodeId: node.id,
         nodePath: context.path.join(" > "),
-        message: `"${node.name}" has shadow effect without effect style`,
+        message: `"${node.name}" has ${shadowType}${details} without effect style — apply an effect style`,
       };
     }
   }
@@ -274,7 +292,7 @@ const rawOpacityCheck: RuleCheckFn = (node, context) => {
     ruleId: rawOpacityDef.id,
     nodeId: node.id,
     nodePath: context.path.join(" > "),
-    message: `"${node.name}" uses raw opacity (${Math.round(node.opacity * 100)}%) without a variable binding`,
+    message: `"${node.name}" uses raw opacity (${Math.round(node.opacity * 100)}%) without a variable binding — bind opacity to a variable`,
   };
 };
 
@@ -338,11 +356,13 @@ const multipleFillColorsCheck: RuleCheckFn = (node, context, options) => {
     const dist = colorDistance(myColor, sibColor);
     // Flag if colors are similar but not identical (distance > 0 but within tolerance)
     if (dist > 0 && dist <= tolerance) {
+      const myHex = `#${myColor[0].toString(16).padStart(2, "0")}${myColor[1].toString(16).padStart(2, "0")}${myColor[2].toString(16).padStart(2, "0")}`.toUpperCase();
+      const sibHex = `#${sibColor[0].toString(16).padStart(2, "0")}${sibColor[1].toString(16).padStart(2, "0")}${sibColor[2].toString(16).padStart(2, "0")}`.toUpperCase();
       return {
         ruleId: multipleFillColorsDef.id,
         nodeId: node.id,
         nodePath: context.path.join(" > "),
-        message: `"${node.name}" has a near-duplicate fill color compared to sibling "${sibling.name}" (distance: ${Math.round(dist)})`,
+        message: `"${node.name}" (${myHex}) has near-duplicate fill compared to sibling "${sibling.name}" (${sibHex}) — consolidate to a single color token`,
       };
     }
   }
