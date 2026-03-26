@@ -136,19 +136,35 @@ describe("calculateScores", () => {
 
   it("diversity score penalizes more unique rules being triggered", () => {
     const concentrated = calculateScores(makeResult([
-      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "risk" }),
-      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "risk" }),
-      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "risk" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "risk", score: -5 }),
+      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "risk", score: -5 }),
+      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "risk", score: -5 }),
     ], 100));
 
     const spread = calculateScores(makeResult([
-      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "risk" }),
-      makeIssue({ ruleId: "group-usage", category: "structure", severity: "risk" }),
-      makeIssue({ ruleId: "deep-nesting", category: "structure", severity: "risk" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "risk", score: -5 }),
+      makeIssue({ ruleId: "group-usage", category: "structure", severity: "risk", score: -5 }),
+      makeIssue({ ruleId: "deep-nesting", category: "structure", severity: "risk", score: -5 }),
     ], 100));
 
     expect(concentrated.byCategory.structure.diversityScore).toBeGreaterThan(
       spread.byCategory.structure.diversityScore
+    );
+  });
+
+  it("diversity weights triggered rules by score severity", () => {
+    // One high-severity rule triggered
+    const heavyRule = calculateScores(makeResult([
+      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking", score: -10 }),
+    ], 100));
+
+    // One low-severity rule triggered
+    const lightRule = calculateScores(makeResult([
+      makeIssue({ ruleId: "unnecessary-node", category: "structure", severity: "suggestion", score: -2 }),
+    ], 100));
+
+    expect(heavyRule.byCategory.structure.diversityScore).toBeLessThan(
+      lightRule.byCategory.structure.diversityScore
     );
   });
 

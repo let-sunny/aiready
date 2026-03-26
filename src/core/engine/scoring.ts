@@ -60,15 +60,22 @@ export type Grade = "S" | "A+" | "A" | "B+" | "B" | "C+" | "C" | "D" | "F";
  */
 
 /**
- * Total rules per category — used as denominator for diversity scoring.
- * Must be updated when rules are added/removed from a category.
+ * Sum of |score| for all rules in each category — used as denominator for
+ * severity-weighted diversity scoring. Must be updated when rules are
+ * added/removed or scores change in rule-config.ts.
+ *
+ * structure: 10+7+3+3+3+5+4+5+2 = 42
+ * token:     2+4+2+3+3+2+3      = 19
+ * component: 7+5+2+4             = 18
+ * naming:    2+2+2+1+1           = 8
+ * behavior:  5+2+3+3             = 13
  */
-const TOTAL_RULES_PER_CATEGORY: Record<Category, number> = {
-  structure: 9,
-  token: 7,
-  component: 4,
-  naming: 5,
-  behavior: 4,
+const TOTAL_SCORE_PER_CATEGORY: Record<Category, number> = {
+  structure: 42,
+  token: 19,
+  component: 18,
+  naming: 8,
+  behavior: 13,
 };
 
 /**
@@ -151,20 +158,22 @@ function clamp(value: number, min: number, max: number): number {
  * Calculate scores from analysis result using density + diversity scoring
  *
  * Density Score = 100 - (weighted issue count / node count) * 100
- * Diversity Score = (1 - unique rules / total category rules) * 100
+ * Diversity Score = (1 - weighted triggered rule scores / total category scores) * 100
  * Final Score = density * 0.7 + diversity * 0.3
  */
 export function calculateScores(result: AnalysisResult): ScoreReport {
   const categoryScores = initializeCategoryScores();
   const nodeCount = result.nodeCount;
 
-  // Track unique rules per category
+  // Track unique rules and their base |score| per category
   const uniqueRulesPerCategory = new Map<Category, Set<string>>();
+  const ruleScorePerCategory = new Map<Category, Map<string, number>>();
   for (const category of CATEGORIES) {
     uniqueRulesPerCategory.set(category, new Set());
+    ruleScorePerCategory.set(category, new Map());
   }
 
-  // Count issues by severity per category and track unique rules
+  // Count issues by severity per category and track unique rules with scores
   for (const issue of result.issues) {
     const category = issue.rule.definition.category;
     const severity = issue.config.severity;
@@ -174,13 +183,13 @@ export function calculateScores(result: AnalysisResult): ScoreReport {
     categoryScores[category].bySeverity[severity]++;
     categoryScores[category].weightedIssueCount += Math.abs(issue.calculatedScore);
     uniqueRulesPerCategory.get(category)!.add(ruleId);
+    ruleScorePerCategory.get(category)!.set(ruleId, Math.abs(issue.config.score));
   }
 
   // Calculate percentage for each category based on density + diversity
   for (const category of CATEGORIES) {
     const catScore = categoryScores[category];
     const uniqueRules = uniqueRulesPerCategory.get(category)!;
-    const totalRules = TOTAL_RULES_PER_CATEGORY[category];
 
     catScore.uniqueRuleCount = uniqueRules.size;
 
@@ -192,11 +201,15 @@ export function calculateScores(result: AnalysisResult): ScoreReport {
     }
     catScore.densityScore = densityScore;
 
-    // Diversity score: fewer unique rules = higher score (issues are concentrated)
-    // If no issues, diversity score is 100 (perfect)
+    // Diversity score: weighted by rule severity (|score|).
+    // Triggering a blocking rule (score -10) penalizes more than a suggestion (score -1).
+    // This prevents a single concentrated blocking problem from getting a high diversity score.
     let diversityScore = 100;
     if (catScore.issueCount > 0) {
-      const diversityRatio = uniqueRules.size / totalRules;
+      const ruleScores = ruleScorePerCategory.get(category)!;
+      const weightedTriggered = Array.from(ruleScores.values()).reduce((sum, s) => sum + s, 0);
+      const weightedTotal = TOTAL_SCORE_PER_CATEGORY[category];
+      const diversityRatio = weightedTriggered / weightedTotal;
       diversityScore = clamp(Math.round((1 - diversityRatio) * 100), 0, 100);
     }
     catScore.diversityScore = diversityScore;
