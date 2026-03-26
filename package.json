@@ -24,6 +24,7 @@
     "test:run": "vitest run",
     "lint": "tsc --noEmit",
     "build:plugin": "bash scripts/build-plugin.sh",
+    "sync-docs": "npx tsx scripts/sync-rule-docs.ts",
     "clean": "rm -rf dist"
   },
   "files": [
