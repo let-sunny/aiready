@@ -13,7 +13,6 @@ export function printDocsIndex(): void {
 CANICODE DOCUMENTATION (v${pkg.version})
 
   canicode docs setup      Full setup guide (CLI, MCP, Skills)
-  canicode docs rules      Custom rules guide + example
   canicode docs config     Config override guide + example
   canicode docs implement  Design-to-code package guide
   canicode docs scoring    Scoring model explanation
@@ -45,7 +44,6 @@ CANICODE SETUP GUIDE
   Options:
     --preset strict|relaxed|dev-friendly|ai-ready
     --config ./my-config.json
-    --custom-rules ./my-rules.json
     --no-open   Don't open report in browser
 
   Output:
@@ -103,64 +101,6 @@ CANICODE SETUP GUIDE
                     slightly from CLI due to this interpretation layer.
 
   Details:          github.com/let-sunny/canicode/blob/main/docs/MCP-VS-CLI.md
-`.trimStart());
-}
-
-/** Print custom rules guide with examples. */
-export function printDocsRules(): void {
-  console.log(`
-CUSTOM RULES GUIDE
-
-Add project-specific checks with declarative pattern matching.
-All conditions in "match" use AND logic — every condition must be true to flag a node.
-
-MATCH CONDITIONS
-  type: ["FRAME","GROUP"]     Node type must be one of these
-  notType: ["INSTANCE"]       Node type must NOT be one of these
-  nameContains: "icon"        Name contains (case-insensitive)
-  nameNotContains: "badge"    Name does NOT contain
-  namePattern: "^btn-"        Regex pattern on name
-  minWidth / maxWidth         Size constraints (px)
-  minHeight / maxHeight       Size constraints (px)
-  hasAutoLayout: true/false   Has layoutMode set
-  hasChildren: true/false     Has child nodes
-  minChildren / maxChildren   Child count range
-  isComponent: true/false     Is COMPONENT or COMPONENT_SET
-  isInstance: true/false       Is INSTANCE
-  hasComponentId: true/false  Has componentId
-  isVisible: true/false       Visibility
-  hasFills / hasStrokes       Has fills or strokes
-  hasEffects: true/false      Has effects
-  minDepth / maxDepth         Tree depth range
-
-EXAMPLE
-  [
-    {
-      "id": "icon-not-component",
-      "category": "component",
-      "severity": "blocking",
-      "score": -10,
-      "match": {
-        "type": ["FRAME", "GROUP"],
-        "maxWidth": 48,
-        "maxHeight": 48,
-        "nameContains": "icon"
-      },
-      "message": "\\"{name}\\" is an icon but not a component",
-      "why": "Icons should be reusable components.",
-      "impact": "Developers hardcode icons.",
-      "fix": "Convert to component and publish to library."
-    }
-  ]
-
-USAGE
-  canicode analyze <url> --custom-rules ./my-rules.json
-
-  Full guide: docs/REFERENCE.md
-  Examples:   examples/custom-rules.json
-
-TIP: Ask any LLM "Write a canicode custom rule that checks X" with the
-  match conditions above. It can generate the JSON for you.
 `.trimStart());
 }
 
@@ -337,7 +277,6 @@ SCORING MODEL
 const DOCS_TOPICS: Record<string, () => void> = {
   setup: printDocsSetup,
   install: printDocsSetup, // alias
-  rules: printDocsRules,
   config: printDocsConfig,
   implement: printDocsImplement,
   scoring: printDocsScoring,

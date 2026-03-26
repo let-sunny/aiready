@@ -63,7 +63,7 @@ app/                          # Browser runtime
 **1. CLI (`canicode analyze`)**
 - Data source: Figma REST API (requires FIGMA_TOKEN) or JSON fixture
 - Output: HTML report (opens in browser)
-- Options: `--preset`, `--token`, `--output`, `--custom-rules`, `--config`
+- Options: `--preset`, `--token`, `--output`, `--config`
 - Also: `canicode save-fixture` to save Figma data as JSON for offline analysis
 - Also: `canicode implement` to prepare a design-to-code package (analysis + design tree + assets + prompt)
 - Component master resolution: fetches `componentDefinitions` for accurate component analysis

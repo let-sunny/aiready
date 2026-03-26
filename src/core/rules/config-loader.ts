@@ -1,8 +1,8 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { z } from "zod";
-import { SeveritySchema } from "../../contracts/severity.js";
-import type { RuleConfig } from "../../contracts/rule.js";
+import { SeveritySchema } from "../contracts/severity.js";
+import type { RuleConfig } from "../contracts/rule.js";
 
 const RuleOverrideSchema = z.object({
   score: z.number().int().max(0).optional(),

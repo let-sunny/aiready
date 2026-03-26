@@ -3,11 +3,9 @@ import type { CAC } from "cac";
 import type { RuleConfig } from "../../core/contracts/rule.js";
 import { RULE_CONFIGS } from "../../core/rules/rule-config.js";
 import { ruleRegistry } from "../../core/rules/rule-registry.js";
-import { loadCustomRules } from "../../core/rules/custom/custom-rule-loader.js";
-import { loadConfigFile, mergeConfigs } from "../../core/rules/custom/config-loader.js";
+import { loadConfigFile, mergeConfigs } from "../../core/rules/config-loader.js";
 
 interface ListRulesOptions {
-  customRules?: string;
   config?: string;
   json?: boolean;
 }
@@ -15,7 +13,6 @@ interface ListRulesOptions {
 export function registerListRules(cli: CAC): void {
   cli
     .command("list-rules", "List all analysis rules with scores and severity")
-    .option("--custom-rules <path>", "Include custom rules from JSON file")
     .option("--config <path>", "Apply config overrides to show effective scores")
     .option("--json", "Output as JSON")
     .action(async (options: ListRulesOptions) => {
@@ -25,14 +22,6 @@ export function registerListRules(cli: CAC): void {
         if (options.config) {
           const configFile = await loadConfigFile(options.config);
           configs = mergeConfigs(configs, configFile);
-        }
-
-        if (options.customRules) {
-          const { rules, configs: customConfigs } = await loadCustomRules(options.customRules);
-          for (const rule of rules) {
-            ruleRegistry.register(rule);
-          }
-          configs = { ...configs, ...customConfigs };
         }
 
         const rules = ruleRegistry.getAll().map((rule) => {

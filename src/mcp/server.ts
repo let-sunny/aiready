@@ -14,8 +14,7 @@ import { calculateScores, buildResultJson } from "../core/engine/scoring.js";
 import { generateHtmlReport } from "../core/report-html/index.js";
 import { getReportsDir, ensureReportsDir } from "../core/engine/config-store.js";
 import { getConfigsWithPreset, RULE_CONFIGS, type Preset } from "../core/rules/rule-config.js";
-import { loadConfigFile, mergeConfigs } from "../core/rules/custom/config-loader.js";
-import { loadCustomRules } from "../core/rules/custom/custom-rule-loader.js";
+import { loadConfigFile, mergeConfigs } from "../core/rules/config-loader.js";
 import { ruleRegistry } from "../core/rules/rule-registry.js";
 import type { RuleConfig, RuleId } from "../core/contracts/rule.js";
 import { initMonitoring, trackEvent, trackError, shutdownMonitoring, EVENTS } from "../core/monitoring/index.js";
@@ -68,7 +67,6 @@ IMPORTANT — Before calling this tool, check which data source is available:
     preset: z.enum(["relaxed", "dev-friendly", "ai-ready", "strict"]).optional().describe("Analysis preset"),
     targetNodeId: z.string().optional().describe("Scope analysis to a specific node ID"),
     configPath: z.string().optional().describe("Path to config JSON file for rule overrides"),
-    customRulesPath: z.string().optional().describe("Path to custom rules JSON file"),
   },
   {
     readOnlyHint: false,
@@ -76,7 +74,7 @@ IMPORTANT — Before calling this tool, check which data source is available:
     openWorldHint: true,
     title: "Analyze Figma Design",
   },
-  async ({ designData, designContext, input, fileKey, fileName, token, preset, targetNodeId, configPath, customRulesPath }) => {
+  async ({ designData, designContext, input, fileKey, fileName, token, preset, targetNodeId, configPath }) => {
     trackEvent(EVENTS.MCP_TOOL_CALLED, { tool: "analyze" });
     try {
       let file;
@@ -108,14 +106,6 @@ IMPORTANT — Before calling this tool, check which data source is available:
       if (configPath) {
         const configFile = await loadConfigFile(configPath);
         configs = mergeConfigs(configs, configFile);
-      }
-
-      if (customRulesPath) {
-        const { rules, configs: customConfigs } = await loadCustomRules(customRulesPath);
-        for (const rule of rules) {
-          ruleRegistry.register(rule);
-        }
-        configs = { ...configs, ...customConfigs };
       }
 
       const result = analyzeFile(file, {
@@ -241,14 +231,13 @@ Available topics:
 - setup: Installation and token configuration
 - rules: All rule IDs with default scores and severity
 - config: Config overrides (scores, severity, node exclusions, thresholds)
-- custom-rules: How to add project-specific checks
 - visual-compare: Pixel-level comparison between Figma and AI-generated code
 - design-tree: Generate DOM-like design tree from fixture for AI code generation
 - all: Full customization guide
 
 Use this when the user asks about how to use canicode, configuration, rules, visual comparison, or any feature.`,
   {
-    topic: z.enum(["all", "setup", "rules", "config", "custom-rules", "visual-compare", "design-tree"]).optional()
+    topic: z.enum(["all", "setup", "rules", "config", "visual-compare", "design-tree"]).optional()
       .describe("Topic to retrieve. Default: all"),
   },
   {
@@ -373,7 +362,7 @@ Hero Form (INSTANCE, 375x960)
       };
     }
 
-    // Fall back to REFERENCE.md for config/custom-rules/rules/all
+    // Fall back to REFERENCE.md for config/rules/all
     const { readFile } = await import("node:fs/promises");
     const { resolve, dirname } = await import("node:path");
     const { fileURLToPath } = await import("node:url");
@@ -393,7 +382,6 @@ Hero Form (INSTANCE, 375x960)
       if (selectedTopic !== "all") {
         const sections: Record<string, string> = {
           "config": "## Config Overrides",
-          "custom-rules": "## Custom Rules",
           "rules": "### All Rule IDs",
         };
         const header = sections[selectedTopic];

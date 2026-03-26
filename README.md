@@ -222,9 +222,6 @@ Posts analysis as a PR comment. Fails if score is below threshold. See [**canico
 |------|-----|
 | **Presets** | `--preset relaxed \| dev-friendly \| ai-ready \| strict` |
 | **Config overrides** | `--config ./config.json` — adjust scores, severity, exclude nodes |
-| **Custom rules** | `--custom-rules ./rules.json` — add project-specific checks |
-
-> Ask any LLM *"Write a canicode custom rule that checks X"* — it can generate the JSON for you.
 
 See [`docs/REFERENCE.md`](docs/REFERENCE.md) for the full guide, examples, and all available options.
 

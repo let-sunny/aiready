@@ -12,9 +12,7 @@ import {
 } from "../../core/engine/config-store.js";
 import { calculateScores, formatScoreSummary, buildResultJson } from "../../core/engine/scoring.js";
 import { getConfigsWithPreset, RULE_CONFIGS } from "../../core/rules/rule-config.js";
-import { ruleRegistry } from "../../core/rules/rule-registry.js";
-import { loadCustomRules } from "../../core/rules/custom/custom-rule-loader.js";
-import { loadConfigFile, mergeConfigs } from "../../core/rules/custom/config-loader.js";
+import { loadConfigFile, mergeConfigs } from "../../core/rules/config-loader.js";
 import { generateHtmlReport } from "../../core/report-html/index.js";
 import { trackEvent, trackError, EVENTS } from "../../core/monitoring/index.js";
 import { pickRandomScope, countNodes, MAX_NODES_WITHOUT_SCOPE } from "../helpers.js";
@@ -25,7 +23,6 @@ const AnalyzeOptionsSchema = z.object({
   token: z.string().optional(),
   api: z.boolean().optional(),
   screenshot: z.boolean().optional(),
-  customRules: z.string().optional(),
   config: z.string().optional(),
   noOpen: z.boolean().optional(),
   json: z.boolean().optional(),
@@ -40,14 +37,12 @@ export function registerAnalyze(cli: CAC): void {
     .option("--token <token>", "Figma API token (or use FIGMA_TOKEN env var)")
     .option("--api", "Load via Figma REST API (requires FIGMA_TOKEN)")
     .option("--screenshot", "Include screenshot comparison in report (requires ANTHROPIC_API_KEY)")
-    .option("--custom-rules <path>", "Path to custom rules JSON file")
     .option("--config <path>", "Path to config JSON file (override rule scores/settings)")
     .option("--no-open", "Don't open report in browser after analysis")
     .option("--json", "Output JSON results to stdout (same format as MCP)")
     .example("  canicode analyze https://www.figma.com/design/ABC123/MyDesign")
     .example("  canicode analyze https://www.figma.com/design/ABC123/MyDesign --api --token YOUR_TOKEN")
     .example("  canicode analyze ./fixtures/my-design --output report.html")
-    .example("  canicode analyze ./fixtures/my-design --custom-rules ./my-rules.json")
     .example("  canicode analyze ./fixtures/my-design --config ./my-config.json")
     .action(async (input: string, rawOptions: Record<string, unknown>) => {
       const parseResult = AnalyzeOptionsSchema.safeParse(rawOptions);
@@ -130,16 +125,6 @@ export function registerAnalyze(cli: CAC): void {
           excludeNodeNames = configFile.excludeNodeNames;
           excludeNodeTypes = configFile.excludeNodeTypes;
           log(`Config loaded: ${options.config}`);
-        }
-
-        // Load and register custom rules
-        if (options.customRules) {
-          const { rules, configs: customConfigs } = await loadCustomRules(options.customRules);
-          for (const rule of rules) {
-            ruleRegistry.register(rule);
-          }
-          configs = { ...configs, ...customConfigs };
-          log(`Custom rules loaded: ${rules.length} rules from ${options.customRules}`);
         }
 
         // Build analysis options
