@@ -10,29 +10,29 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
   // ============================================
   "no-auto-layout": {
     severity: "blocking",
-    score: -7,
+    score: -10,
     depthWeight: 1.5,
     enabled: true,
   },
   "absolute-position-in-auto-layout": {
     severity: "blocking",
-    score: -10,
+    score: -7,
     depthWeight: 1.3,
     enabled: true,
   },
   "fixed-size-in-auto-layout": {
     severity: "risk",
-    score: -5,
+    score: -3,
     enabled: true,
   },
   "missing-size-constraint": {
     severity: "risk",
-    score: -5,
+    score: -3,
     enabled: true,
   },
   "missing-responsive-behavior": {
     severity: "risk",
-    score: -4,
+    score: -3,
     depthWeight: 1.5,
     enabled: true,
   },
@@ -74,8 +74,8 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
     enabled: true,
   },
   "raw-font": {
-    severity: "blocking",
-    score: -8,
+    severity: "risk",
+    score: -4,
     enabled: true,
   },
   "inconsistent-spacing": {
@@ -88,7 +88,7 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
   },
   "magic-number-spacing": {
     severity: "risk",
-    score: -4,
+    score: -3,
     enabled: true,
     options: {
       gridBase: 4,
