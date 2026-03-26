@@ -16,7 +16,7 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
   },
   "absolute-position-in-auto-layout": {
     severity: "blocking",
-    score: -10,
+    score: -7,
     depthWeight: 1.3,
     enabled: true,
   },
@@ -32,7 +32,7 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
   },
   "missing-responsive-behavior": {
     severity: "risk",
-    score: -4,
+    score: -3,
     depthWeight: 1.5,
     enabled: true,
   },
@@ -74,8 +74,8 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
     enabled: true,
   },
   "raw-font": {
-    severity: "blocking",
-    score: -8,
+    severity: "risk",
+    score: -4,
     enabled: true,
   },
   "inconsistent-spacing": {
