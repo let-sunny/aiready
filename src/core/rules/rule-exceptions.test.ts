@@ -77,9 +77,9 @@ describe("isAutoLayoutExempt", () => {
     expect(isAutoLayoutExempt(node)).toBe(true);
   });
 
-  it("exempts INSTANCE nodes", () => {
+  it("does not exempt INSTANCE nodes", () => {
     const node = makeNode({ type: "INSTANCE" as any, children: [makeNode()] });
-    expect(isAutoLayoutExempt(node)).toBe(true);
+    expect(isAutoLayoutExempt(node)).toBe(false);
   });
 
   it("does not exempt frames with mixed children", () => {

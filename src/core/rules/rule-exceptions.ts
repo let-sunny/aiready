@@ -44,9 +44,6 @@ export function isVisualOnlyNode(node: AnalysisNode): boolean {
 export function isAutoLayoutExempt(node: AnalysisNode): boolean {
   if (isVisualOnlyNode(node)) return true;
 
-  // Instance nodes — internal layout is managed by the component master
-  if (node.type === "INSTANCE") return true;
-
   return false;
 }
 
