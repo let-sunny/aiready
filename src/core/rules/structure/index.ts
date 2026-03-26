@@ -2,7 +2,7 @@ import type { RuleCheckFn, RuleDefinition } from "../../contracts/rule.js";
 import type { AnalysisNode } from "../../contracts/figma-node.js";
 import { defineRule } from "../rule-registry.js";
 import { getRuleOption } from "../rule-config.js";
-import { isExcludedName } from "../excluded-names.js";
+import { isAutoLayoutExempt, isAbsolutePositionExempt, isSizeConstraintExempt, isFixedSizeExempt } from "../rule-exceptions.js";
 
 // ============================================
 // Helper functions
@@ -48,9 +48,11 @@ const noAutoLayoutDef: RuleDefinition = {
 };
 
 const noAutoLayoutCheck: RuleCheckFn = (node, context) => {
-  if (node.type !== "FRAME" && !isContainerNode(node)) return null;
+  if (!isContainerNode(node)) return null;
   if (hasAutoLayout(node)) return null;
   if (!node.children || node.children.length === 0) return null;
+
+  if (isAutoLayoutExempt(node)) return null;
 
   // Priority 1: Check for overlapping visible children (ambiguous-structure)
   if (node.children.length >= 2) {
@@ -134,37 +136,12 @@ const absolutePositionInAutoLayoutDef: RuleDefinition = {
   fix: "Remove absolute positioning or use proper Auto Layout alignment",
 };
 
-/**
- * Check if a node is small relative to its parent (decoration/badge pattern).
- * Returns true if the node is less than 25% of the parent's width AND height.
- */
-function isSmallRelativeToParent(node: AnalysisNode, parent: AnalysisNode): boolean {
-  const nodeBB = node.absoluteBoundingBox;
-  const parentBB = parent.absoluteBoundingBox;
-  if (!nodeBB || !parentBB) return false;
-  if (parentBB.width === 0 || parentBB.height === 0) return false;
-
-  const widthRatio = nodeBB.width / parentBB.width;
-  const heightRatio = nodeBB.height / parentBB.height;
-  return widthRatio < 0.25 && heightRatio < 0.25;
-}
-
 const absolutePositionInAutoLayoutCheck: RuleCheckFn = (node, context) => {
   if (!context.parent) return null;
   if (!hasAutoLayout(context.parent)) return null;
   if (node.layoutPositioning !== "ABSOLUTE") return null;
 
-  // Exception: vector/graphic nodes (icons, illustrations — absolute positioning is expected)
-  if (node.type === "VECTOR" || node.type === "BOOLEAN_OPERATION" || node.type === "LINE" || node.type === "ELLIPSE" || node.type === "STAR" || node.type === "REGULAR_POLYGON") return null;
-
-  // Exception: intentional name patterns (badge, close, overlay, etc.)
-  if (isExcludedName(node.name)) return null;
-
-  // Exception: small decoration relative to parent (< 25% size)
-  if (isSmallRelativeToParent(node, context.parent)) return null;
-
-  // Exception: inside a component definition (designer's intentional layout)
-  if (context.parent.type === "COMPONENT") return null;
+  if (isAbsolutePositionExempt(node)) return null;
 
   return {
     ruleId: absolutePositionInAutoLayoutDef.id,
@@ -198,9 +175,9 @@ const fixedSizeInAutoLayoutCheck: RuleCheckFn = (node, context) => {
   if (!isContainerNode(node)) return null;
   if (!node.absoluteBoundingBox) return null;
 
-  // Skip if it's intentionally a small fixed element (icon, avatar, etc.)
+  if (isFixedSizeExempt(node)) return null;
+
   const { width, height } = node.absoluteBoundingBox;
-  if (width <= 48 && height <= 48) return null;
 
   // Check both axes FIXED (stronger case)
   const hFixed =
@@ -230,9 +207,6 @@ const fixedSizeInAutoLayoutCheck: RuleCheckFn = (node, context) => {
       if (node.layoutAlign === "STRETCH") return null;
       if (node.layoutAlign !== "INHERIT") return null;
     }
-
-    // Excluded names (nav, header, etc.)
-    if (isExcludedName(node.name)) return null;
 
     return {
       ruleId: fixedSizeInAutoLayoutDef.id,
@@ -271,56 +245,16 @@ const missingSizeConstraintCheck: RuleCheckFn = (node, context) => {
   // Only flag FILL containers — FIXED/HUG don't need min/max-width
   if (node.layoutSizingHorizontal !== "FILL") return null;
 
-  const missingMin = node.minWidth === undefined;
-  const missingMax = node.maxWidth === undefined;
-
-  // Skip small fixed elements (icons, dividers) for min-width check
-  let skipMinCheck = false;
-  if (node.absoluteBoundingBox) {
-    const { width, height } = node.absoluteBoundingBox;
-    if (width <= 48 && height <= 24) skipMinCheck = true;
-  }
-
-  // Skip small elements for max-width check
-  let skipMaxCheck = false;
-  if (node.absoluteBoundingBox) {
-    const { width } = node.absoluteBoundingBox;
-    if (width <= 200) skipMaxCheck = true;
-  }
-
-  const effectiveMissingMin = missingMin && !skipMinCheck;
-  const effectiveMissingMax = missingMax && !skipMaxCheck;
+  if (isSizeConstraintExempt(node, context)) return null;
 
   const currentWidth = node.absoluteBoundingBox ? `${node.absoluteBoundingBox.width}px` : "unknown";
 
-  if (effectiveMissingMin && effectiveMissingMax) {
-    return {
-      ruleId: missingSizeConstraintDef.id,
-      nodeId: node.id,
-      nodePath: context.path.join(" > "),
-      message: `"${node.name}" uses FILL width (currently ${currentWidth}) without min or max constraints — add minWidth and/or maxWidth`,
-    };
-  }
-
-  if (effectiveMissingMin) {
-    return {
-      ruleId: missingSizeConstraintDef.id,
-      nodeId: node.id,
-      nodePath: context.path.join(" > "),
-      message: `"${node.name}" uses FILL width (currently ${currentWidth}) without min-width — add minWidth to prevent collapse on narrow screens`,
-    };
-  }
-
-  if (effectiveMissingMax) {
-    return {
-      ruleId: missingSizeConstraintDef.id,
-      nodeId: node.id,
-      nodePath: context.path.join(" > "),
-      message: `"${node.name}" uses FILL width (currently ${currentWidth}) without max-width — add maxWidth to prevent stretching on large screens`,
-    };
-  }
-
-  return null;
+  return {
+    ruleId: missingSizeConstraintDef.id,
+    nodeId: node.id,
+    nodePath: context.path.join(" > "),
+    message: `"${node.name}" uses FILL width (currently ${currentWidth}) without max-width — add maxWidth to prevent stretching on large screens`,
+  };
 };
 
 export const missingSizeConstraint = defineRule({
