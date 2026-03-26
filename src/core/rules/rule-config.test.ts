@@ -1,22 +1,29 @@
 import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { RULE_CONFIGS } from "./rule-config.js";
 import { ruleRegistry } from "./rule-registry.js";
-import { CATEGORIES } from "../contracts/category.js";
-import type { Category } from "../contracts/category.js";
 import type { RuleId } from "../contracts/rule.js";
 
 // Import all rules to populate registry
 import "./index.js";
 
-const REFERENCE_PATH = resolve(import.meta.dirname, "../../../docs/REFERENCE.md");
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const REFERENCE_PATH = resolve(__dirname, "../../../docs/REFERENCE.md");
 
 describe("rule-config sync", () => {
   describe("REFERENCE.md matches rule-config.ts", () => {
     const content = readFileSync(REFERENCE_PATH, "utf-8");
 
-    // Parse rule tables from REFERENCE.md
-    const tableRows = [...content.matchAll(/\| `([^`]+)` \| (-?\d+) \| ([a-z-]+) \|/g)];
+    // Parse only the auto-generated rule table block between markers
+    const tableStart = content.indexOf("<!-- RULE_TABLE_START");
+    const tableEnd = content.indexOf("<!-- RULE_TABLE_END -->");
+    if (tableStart === -1 || tableEnd === -1 || tableEnd <= tableStart) {
+      throw new Error("REFERENCE.md rule table markers are missing or misordered");
+    }
+    const tableContent = content.slice(tableStart, tableEnd);
+
+    const tableRows = [...tableContent.matchAll(/\| `([^`]+)` \| (-?\d+) \| ([a-z-]+) \|/g)];
     const docRules = new Map(
       tableRows
         .filter((m) => m[1] !== undefined && m[2] !== undefined && m[3] !== undefined)

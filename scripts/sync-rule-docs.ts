@@ -14,9 +14,11 @@ import { CATEGORIES } from "../src/core/contracts/category.js";
 import type { Category } from "../src/core/contracts/category.js";
 import type { RuleId } from "../src/core/contracts/rule.js";
 import { readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const REFERENCE_PATH = resolve(import.meta.dirname, "../docs/REFERENCE.md");
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const REFERENCE_PATH = resolve(__dirname, "../docs/REFERENCE.md");
 const START_MARKER = "<!-- RULE_TABLE_START";
 const END_MARKER = "<!-- RULE_TABLE_END -->";
 
