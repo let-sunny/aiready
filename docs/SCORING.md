@@ -73,9 +73,10 @@ All categories are weighted equally (1.0). No category is inherently more import
 
 The severity weights, density/diversity ratio, and grade thresholds started as intuition-based values. The [`/calibrate-loop`](CALIBRATION.md) pipeline validates them against pixel-level visual comparison:
 
-1. Convert a Figma design to code
-2. Compare the result against the original screenshot (`visual-compare`)
-3. Check if designs with low scores are actually harder to implement accurately
+1. Implement the entire scoped design as one HTML page
+2. Compare the result against the Figma screenshot (`visual-compare`)
+3. Analyze diff images to categorize pixel gaps
+4. Check if designs with low scores are actually harder to implement accurately
 
 Calibration evidence accumulates across runs in `data/calibration-evidence.json`. As more evidence is collected, these constants will be adjusted to better reflect actual implementation difficulty.
 

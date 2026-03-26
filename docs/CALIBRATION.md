@@ -1,15 +1,16 @@
 # Calibration Pipeline
 
-CanICode's rule scores and severity levels are not arbitrary — they are continuously validated against actual code conversion difficulty through an automated 4-agent debate pipeline.
+CanICode's rule scores and severity levels are not arbitrary — they are continuously validated against actual code conversion difficulty through an automated 6-agent pipeline.
 
 ## Why Calibrate?
 
 Initial rule scores were intuition-based estimates. A rule flagged as "blocking" with score -10 might turn out to be trivial to work around in practice (overscored), or a "suggestion" at -2 might actually cause significant conversion difficulty (underscored).
 
 The calibration pipeline validates scores by:
-1. Converting flagged Figma nodes to production code
-2. Measuring how much each rule actually impacted conversion difficulty
-3. Proposing score adjustments when predicted and actual difficulty diverge
+1. Implementing the entire scoped design as one HTML page
+2. Measuring pixel-level similarity against the Figma screenshot (`visual-compare`)
+3. Analyzing diff images to categorize pixel gaps
+4. Proposing score adjustments when predicted and actual difficulty diverge
 
 ## Pipeline Structure
 
@@ -20,34 +21,56 @@ Step 1 — Analysis (CLI)
   Run canicode calibrate-analyze to identify issues and group by node.
 
 Step 2 — Converter (Subagent)
-  Convert the top 5 flagged nodes to production CSS/HTML/React code.
-  Assess actual conversion difficulty: easy | moderate | hard | failed.
-  For each flagged rule, note whether it actually made conversion harder.
+  Implement the ENTIRE scoped design as one HTML page.
+  Run visual-compare for pixel-level similarity against Figma screenshot.
 
-Step 3 — Evaluation (CLI)
+Step 3 — Gap Analyzer (Subagent)
+  Analyze the diff image between Figma screenshot and generated code.
+  Categorize each pixel difference (spacing, color, typography, layout, etc.).
+  Append uncovered gaps to data/discovery-evidence.json.
+
+Step 4 — Evaluation (CLI)
   Compare predicted difficulty (from rule scores) vs actual difficulty.
   Generate score adjustment proposals.
+  Append overscored/underscored findings to data/calibration-evidence.json.
 
-Step 4 — Critic (Subagent)
+Step 5 — Critic (Subagent)
   Challenge each proposal against rejection rules:
   - Rule 1: Low confidence + fewer than 2 supporting cases → reject
   - Rule 2: Change exceeds 50% of current value → cap at midpoint
   - Rule 3: Severity change without high confidence → reject
 
-Step 5 — Arbitrator (Subagent)
+Step 6 — Arbitrator (Subagent)
   Make final decisions:
   - Both approve → apply Runner's value
   - Critic rejects → keep current score
   - Critic revises → apply Critic's conservative value
   Commits approved changes to rule-config.ts.
+
+Step 6.5 — Prune Evidence
+  Remove evidence for rules that were just adjusted from
+  data/calibration-evidence.json (applied rules) and
+  data/discovery-evidence.json (covered gaps).
 ```
+
+### Tiered Approach
+
+Not all fixtures go through the full pipeline. The tier is based on the current grade:
+
+| Grade | Pipeline | Rationale |
+|-------|----------|-----------|
+| A+ and above | Full 6-step pipeline | High-quality designs benefit from gap analysis |
+| B to B+ | Visual-only (skip gap analysis) | Moderate quality — focus on score calibration |
+| Below B | Skip visual entirely | Too many issues; visual comparison is noisy |
 
 ## Agents
 
 | Agent | Role | Can edit rule-config.ts? |
 |-------|------|------------------------|
 | **Runner** | Runs analysis, extracts proposals | No |
-| **Converter** | Converts Figma nodes to code, assesses difficulty | No |
+| **Converter** | Implements entire design as HTML, runs visual-compare | No |
+| **Gap Analyzer** | Categorizes pixel differences from diff image | No |
+| **Evaluator** | Compares predicted vs actual difficulty | No |
 | **Critic** | Applies rejection heuristics, caps excessive changes | No |
 | **Arbitrator** | Makes final decisions, commits changes | Yes |
 
@@ -89,9 +112,18 @@ These weights were validated through calibration: rules rated "blocking" consist
 | D | 50-64% | Major rework needed |
 | F | 0-49% | Fundamental structural problems |
 
+## Cross-Run Evidence
+
+Evidence accumulates across calibration sessions in `data/`:
+
+- **`data/calibration-evidence.json`** — Overscored/underscored rules. Fed back to the Evaluator in subsequent runs for stronger proposals.
+- **`data/discovery-evidence.json`** — Uncovered gaps not covered by existing rules. Fed to the `/add-rule` Researcher to find recurring patterns worth turning into new rules.
+
+Discovery evidence is filtered to exclude environment/tooling noise (font CDN differences, retina/DPI scaling, network artifacts, CI constraints). Evidence is pruned after rules are applied (calibration) or new rules are created (discovery).
+
 ## Score Adjustment History
 
-Rule scores in `src/rules/rule-config.ts` have been adjusted through multiple calibration cycles across different fixture files (Material 3 Design Kit, HTTP Design, Simple DS Card Grid, Simple DS Panel Sections, Simple DS Page Sections).
+Rule scores in `src/core/rules/rule-config.ts` have been adjusted through multiple calibration cycles across different fixture files (Material 3 Design Kit, HTTP Design, Simple DS Card Grid, Simple DS Panel Sections, Simple DS Page Sections).
 
 Each adjustment requires:
 - Minimum 2 supporting cases at medium+ confidence
@@ -199,56 +231,33 @@ The Critic's conservatism prevented score whiplash — without it, `no-auto-layo
 
 ---
 
-## Calibration Pipeline Structure
+## Gap Analysis
 
-```
-/calibrate-loop <fixture>
+The Gap Analyzer (Step 3) examines the diff image between Figma screenshot and AI-generated code. Each gap is categorized (spacing, color, typography, layout, etc.) and assessed:
+- **Covered by existing rule?** — validates that rule's relevance
+- **Actionable but no rule?** — candidate for rule discovery (appended to `data/discovery-evidence.json`)
+- **Rendering artifact?** — not actionable (font smoothing, anti-aliasing, retina/DPI)
 
-Step 1 — Analysis (CLI): run canicode calibrate-analyze
-Step 2 — Converter: implement ENTIRE design as one HTML page + visual-compare
-Step 3 — Gap Analyzer: analyze diff image, categorize pixel differences
-Step 4 — Evaluation (CLI): compare predicted vs actual difficulty, propose adjustments
-Step 5 — Critic: challenge proposals (50% change cap, evidence thresholds)
-Step 6 — Arbitrator: apply approved changes to rule-config.ts
-```
-
-### Gap Analysis
-
-The Gap Analyzer examines the diff image between Figma screenshot and AI-generated code. Each gap is categorized (spacing, color, typography, layout, etc.) and assessed:
-- **Covered by existing rule?** → validates that rule's relevance
-- **Actionable but no rule?** → candidate for rule discovery
-- **Rendering artifact?** → not actionable (font smoothing, anti-aliasing)
-
-Gap data accumulates in each run's `gaps.json` file (`logs/calibration/*/gaps.json`). The rule discovery pipeline reads this data to find recurring patterns worth turning into new rules.
+Gap data is also saved per run in `logs/calibration/*/gaps.json`.
 
 ---
 
 ## Rule Discovery Pipeline
 
-New rules are added through a 5-agent debate pipeline (`/add-rule`):
+New rules are added through a 6-agent pipeline (`/add-rule`). See [CALIBRATION-PLAYBOOK.md](./CALIBRATION-PLAYBOOK.md) for operational details.
 
 ```
-/add-rule "concept" fixture.json
+/add-rule "concept" fixtures/path
 
-Step 1 — Researcher: explore fixture data + accumulated gap data
+Step 1 — Researcher: explore fixture data + data/discovery-evidence.json
 Step 2 — Designer: propose rule spec (ID, category, severity, score)
 Step 3 — Implementer: write rule code + tests
-Step 4 — A/B Visual Validation: implement entire design with/without the rule's data, compare similarity
+Step 4 — A/B Visual Validation: implement design with/without the rule's data, compare similarity
 Step 5 — Evaluator: measure impact, false positives, visual improvement
 Step 6 — Critic: decide KEEP / ADJUST / DROP
 ```
 
-### Gap → Rule Discovery Flow
-
-```
-Calibration runs accumulate gap data
-    ↓
-logs/calibration/*/gaps.json  (one per run directory)
-    ↓
-Researcher reads accumulated gaps
-    ↓
-Recurring actionable patterns → new rule candidates
-```
+After KEEP or ADJUST, discovery evidence for the rule's category is pruned from `data/discovery-evidence.json`.
 
 ### Known Limitations
 
@@ -257,9 +266,3 @@ Recurring actionable patterns → new rule candidates
 2. **Test fixtures with both positive and negative cases needed.** Current fixtures tend to be all-or-nothing (e.g., 0% description coverage). Effective evaluation requires controlled fixtures.
 
 3. **Font rendering differences.** Playwright uses system fonts; Figma renders with embedded fonts. This creates a baseline similarity gap (~3-5%) that is not actionable.
-
-### Next Steps
-
-- Design controlled test fixtures per concept
-- Accumulate gap data across 10+ fixture runs to identify patterns
-- Build gap-to-rule-candidate pipeline automation

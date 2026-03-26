@@ -35,10 +35,10 @@ npx canicode save-fixture "https://www.figma.com/design/ABC123/MyDesign?node-id=
 | 0 | Orchestrator | Run directory created | `logs/calibration/<name>--<timestamp>/` |
 | 1 | CLI | `analysis.json` | Rule analysis — which rules flagged what |
 | 2 | Converter | `output.html`, `figma.png`, `code.png`, `diff.png`, `conversion.json` | Implements the entire design as HTML, runs visual-compare |
-| 3 | Gap Analyzer | `gaps.json` | Categorizes pixel differences between Figma and code |
-| 4 | CLI | `summary.md` | Score vs actual impact comparison |
+| 3 | Gap Analyzer | `gaps.json` | Categorizes pixel differences, appends uncovered gaps to `data/discovery-evidence.json` |
+| 4 | Evaluator | `summary.md` | Score vs actual impact comparison, appends to `data/calibration-evidence.json` |
 | 5 | Critic | `debate.json` | Reviews proposals: APPROVE / REJECT / REVISE |
-| 6 | Arbitrator | `debate.json` (appended), `rule-config.ts` | Makes final decisions, applies approved changes, commits |
+| 6 | Arbitrator | `debate.json` (appended), `rule-config.ts` | Makes final decisions, applies approved changes, commits, prunes evidence |
 
 ### What you see
 
@@ -56,18 +56,13 @@ None — fully automatic. Review the commit if you want.
 
 ## 3. Nightly Calibration (Multiple Fixtures)
 
-### In Claude Code / Cursor
+### In Claude Code
 
 ```
-/calibrate-night
+/calibrate-night fixtures/
 ```
 
-### On a server
-
-```bash
-./scripts/calibrate-night.sh
-./scripts/calibrate-night.sh --deep  # uses Figma MCP for richer data
-```
+Input: fixture directory path. Auto-discovers active fixtures (`fixtures/*/data.json`).
 
 ### What happens
 
@@ -100,7 +95,7 @@ Open `logs/calibration/REPORT.md` the next morning. Key sections:
 |---------|-----------------|--------|
 | **Similarity per run** | Low similarity = hard design | Consider adding more rules for that pattern |
 | **Repeating patterns** | Same gap in 3+ fixtures | Strong candidate for `/add-rule` |
-| **Rule score vs impact** | Overscored in most runs | Score will auto-adjust in next calibration |
+| **Rule score vs impact** | Overscored (penalty too harsh) or underscored (penalty too mild) | Score will auto-adjust in next calibration |
 | **New rule candidates** | `text-alignment-mismatch` in 4/6 | Run `/add-rule` |
 | **Never flagged rules** | Rule never triggered | Consider `enabled: false` in `rule-config.ts` |
 
@@ -125,10 +120,10 @@ When the report identifies a new pattern worth codifying:
 | Step | Agent | Output | Description |
 |------|-------|--------|-------------|
 | 0 | Orchestrator | Run directory | `logs/rule-discovery/<concept>--<date>/` |
-| 1 | Researcher | `research.json` | Checks if the concept exists in fixture data, reads accumulated gaps |
+| 1 | Researcher | `research.json` | Checks fixture data + `data/discovery-evidence.json` for recurring patterns |
 | 2 | Designer | `design.json` | Proposes rule spec: ID, category, severity, score, trigger logic |
 | 3 | Implementer | Source code | Writes rule code + tests, builds |
-| 4 | Orchestrator | `visual-a.html`, `visual-b.html` | A/B test: converts design with/without the rule's data |
+| 4 | Orchestrator | `visual-a.html`, `visual-b.html` | A/B test: implements design with/without the rule's data, compares pixel similarity |
 | 5 | Evaluator | `evaluation.json` | Measures false positive rate, visual improvement |
 | 6 | Critic | `decision.json` | Final verdict |
 
@@ -145,6 +140,10 @@ When the report identifies a new pattern worth codifying:
 - **Researcher says not feasible** → Pipeline stops at Step 1
 - **Build/test fails** → Implementer attempts fix; if can't, pipeline stops
 - **A/B shows no improvement** → Evaluator likely recommends DROP
+
+### Evidence pruning
+
+After KEEP or ADJUST, discovery evidence for the rule's category is pruned from `data/discovery-evidence.json`. This prevents the same pattern from being proposed again.
 
 ### Your decision
 
