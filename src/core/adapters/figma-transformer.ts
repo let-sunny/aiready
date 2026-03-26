@@ -239,7 +239,11 @@ export function transformFileNodesResponse(
 ): AnalysisFile {
   const entries = Object.values(response.nodes);
   const first = entries[0];
-  if (!first) throw new Error("No nodes returned from Figma API");
+  if (!first)
+    throw new Error(
+      "No nodes returned from Figma API — the node-id in the URL may be invalid or deleted. " +
+        "Try selecting the frame in Figma and copying the link again."
+    );
 
   return {
     fileKey,

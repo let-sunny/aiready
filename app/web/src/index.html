@@ -329,12 +329,12 @@
       } catch (e) { setLoading(false); showError('Network error', 'Could not reach Figma API.'); return; }
 
       setLoading(true, 'Analyzing...');
-      var analysisFile = nodeId
-        ? CanICode.transformFileNodesResponse(fileKey, response)
-        : CanICode.transformFigmaResponse(fileKey, response);
-      var options = nodeId ? { targetNodeId: nodeId } : {};
-      var result, scores;
+      var analysisFile, options, result, scores;
       try {
+        analysisFile = nodeId
+          ? CanICode.transformFileNodesResponse(fileKey, response)
+          : CanICode.transformFigmaResponse(fileKey, response);
+        options = nodeId ? { targetNodeId: nodeId } : {};
         result = CanICode.analyzeFile(analysisFile, options);
         scores = CanICode.calculateScores(result);
       } catch (e) { setLoading(false); showError('Analysis error', e.message); window._trackError && window._trackError(e, { context: 'analysis' }); window._trackEvent && window._trackEvent('cic_analysis_failed', { error: e.message }); return; }
