@@ -405,7 +405,7 @@
 
     function renderRow(issue, fk) {
       var sev = issue.config.severity, def = issue.rule.definition, link = CanICode.buildFigmaDeepLink(fk, issue.violation.nodeId);
-      var commentBtn = getToken() ? ' <button onclick="postComment(this)" data-file-key="' + esc(fk) + '" data-node-id="' + esc(issue.violation.nodeId) + '" data-rule="' + esc(def.name) + '" data-message="' + esc(issue.violation.message) + '" data-path="' + esc(issue.violation.nodePath) + '" data-fix="' + esc(def.fix) + '" data-why="' + esc(def.why) + '" data-impact="' + esc(def.impact) + '" class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium border border-border rounded-md hover:bg-muted transition-colors cursor-pointer">Comment on Figma</button>' : '';
+      var commentBtn = getToken() ? ' <button onclick="postComment(this)" data-file-key="' + esc(fk) + '" data-node-id="' + esc(issue.violation.nodeId) + '" data-message="' + esc(issue.violation.message) + '" class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium border border-border rounded-md hover:bg-muted transition-colors cursor-pointer">Comment on Figma</button>' : '';
       return '<details class="border border-border rounded-md overflow-hidden"><summary class="flex items-center gap-2.5 px-3 py-2 text-sm cursor-pointer hover:bg-muted/50 transition-colors"><span class="w-1.5 h-1.5 rounded-full ' + SEVERITY_DOT_CLASS[sev] + ' shrink-0"></span><span class="font-medium shrink-0">' + esc(def.name) + '</span><span class="text-muted-foreground truncate text-xs flex-1">' + esc(issue.violation.message) + '</span><span class="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded border ' + SEVERITY_BADGE_CLASS[sev] + ' shrink-0">' + issue.calculatedScore + '</span></summary><div class="px-3 py-3 bg-muted/30 border-t border-border text-sm space-y-2"><div class="font-mono text-xs text-muted-foreground break-all">' + esc(issue.violation.nodePath) + '</div><div class="text-muted-foreground leading-relaxed space-y-1"><p><span class="font-medium text-foreground">Why:</span> ' + esc(def.why) + '</p><p><span class="font-medium text-foreground">Impact:</span> ' + esc(def.impact) + '</p><p><span class="font-medium text-foreground">Fix:</span> ' + esc(def.fix) + '</p></div><div class="flex items-center gap-2 mt-1"><a href="' + link + '" target="_blank" rel="noopener" class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium border border-border rounded-md hover:bg-muted transition-colors">Open in Figma <span>\u2192</span></a>' + commentBtn + '</div></div></details>';
     }
 
@@ -414,22 +414,28 @@
       if (!token) return;
       var fileKey = btn.dataset.fileKey;
       var nodeId = btn.dataset.nodeId.replace(/-/g, ':');
-      var commentBody = '[CanICode] ' + btn.dataset.rule + '\n\nFix: ' + btn.dataset.fix + '\nWhy: ' + btn.dataset.why + '\nImpact: ' + btn.dataset.impact + '\n\n' + btn.dataset.message + '\nNode: ' + btn.dataset.path;
+      var commentBody = '[CanICode] ' + btn.dataset.message;
       btn.disabled = true;
       btn.textContent = 'Sending...';
+      btn.title = '';
       try {
         var res = await fetch('https://api.figma.com/v1/files/' + fileKey + '/comments', {
           method: 'POST',
           headers: { 'X-FIGMA-TOKEN': token, 'Content-Type': 'application/json' },
           body: JSON.stringify({ message: commentBody, client_meta: { node_id: nodeId, node_offset: { x: 0, y: 0 } } }),
         });
-        if (!res.ok) throw new Error(await res.text());
+        if (!res.ok) {
+          var errBody = await res.text().catch(function() { return ''; });
+          var errMsg = res.status === 400 ? 'Bad request — check node ID format' : res.status === 403 ? 'Token lacks file access' : res.status === 404 ? 'File not found' : res.status === 429 ? 'Rate limited — try again later' : 'HTTP ' + res.status;
+          throw new Error(errMsg + (errBody ? ': ' + errBody.slice(0, 100) : ''));
+        }
         btn.textContent = 'Sent \u2713';
         btn.classList.remove('hover:bg-muted');
         btn.classList.add('text-green-600', 'border-green-500/30');
-        window._trackEvent && window._trackEvent('cic_comment_posted', { rule: btn.dataset.rule });
+        window._trackEvent && window._trackEvent('cic_comment_posted', {});
       } catch (e) {
-        btn.textContent = 'Failed \u2717';
+        btn.textContent = 'Failed';
+        btn.title = e.message || String(e);
         btn.classList.remove('hover:bg-muted');
         btn.classList.add('text-red-600', 'border-red-500/30');
         btn.disabled = false;

@@ -165,17 +165,13 @@ ${figmaToken ? `  <script>
     async function postComment(btn) {
       const fileKey = btn.dataset.fileKey;
       const nodeId = btn.dataset.nodeId.replace(/-/g, ':');
-      const rule = btn.dataset.rule;
       const message = btn.dataset.message;
-      const path = btn.dataset.path;
-      const fix = btn.dataset.fix;
-      const why = btn.dataset.why;
-      const impact = btn.dataset.impact;
 
-      const commentBody = '[CanICode] ' + rule + '\\n\\nFix: ' + fix + '\\nWhy: ' + why + '\\nImpact: ' + impact + '\\n\\n' + message + '\\nNode: ' + path;
+      const commentBody = '[CanICode] ' + message;
 
       btn.disabled = true;
       btn.textContent = 'Sending...';
+      btn.title = '';
 
       try {
         const res = await fetch('https://api.figma.com/v1/files/' + fileKey + '/comments', {
@@ -183,12 +179,17 @@ ${figmaToken ? `  <script>
           headers: { 'X-FIGMA-TOKEN': FIGMA_TOKEN, 'Content-Type': 'application/json' },
           body: JSON.stringify({ message: commentBody, client_meta: { node_id: nodeId, node_offset: { x: 0, y: 0 } } }),
         });
-        if (!res.ok) throw new Error(await res.text());
+        if (!res.ok) {
+          const errBody = await res.text().catch(() => '');
+          const errMsg = res.status === 400 ? 'Bad request — check node ID format' : res.status === 403 ? 'Token lacks file access' : res.status === 404 ? 'File not found' : res.status === 429 ? 'Rate limited' : 'HTTP ' + res.status;
+          throw new Error(errMsg + (errBody ? ': ' + errBody.slice(0, 100) : ''));
+        }
         btn.textContent = 'Sent \\u2713';
         btn.classList.remove('hover:bg-muted');
         btn.classList.add('text-green-600', 'border-green-500/30');
       } catch (e) {
-        btn.textContent = 'Failed \\u2717';
+        btn.textContent = 'Failed';
+        btn.title = e.message || String(e);
         btn.classList.remove('hover:bg-muted');
         btn.classList.add('text-red-600', 'border-red-500/30');
         btn.disabled = false;
@@ -343,7 +344,7 @@ function renderIssueRow(
                   </div>${screenshotHtml}
                   <div class="flex items-center gap-2 mt-1 no-print">
                     <a href="${link}" target="_blank" rel="noopener" class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium border border-border rounded-md hover:bg-muted transition-colors">Open in Figma <span>→</span></a>${figmaToken ? `
-                    <button onclick="postComment(this)" data-file-key="${esc(fileKey)}" data-node-id="${esc(issue.violation.nodeId)}" data-rule="${esc(def.name)}" data-message="${esc(issue.violation.message)}" data-path="${esc(issue.violation.nodePath)}" data-fix="${esc(def.fix)}" data-why="${esc(def.why)}" data-impact="${esc(def.impact)}" class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium border border-border rounded-md hover:bg-muted transition-colors cursor-pointer">Comment on Figma</button>` : ""}
+                    <button onclick="postComment(this)" data-file-key="${esc(fileKey)}" data-node-id="${esc(issue.violation.nodeId)}" data-message="${esc(issue.violation.message)}" class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium border border-border rounded-md hover:bg-muted transition-colors cursor-pointer">Comment on Figma</button>` : ""}
                   </div>
                 </div>
               </details>`;
