@@ -283,56 +283,20 @@ const missingSizeConstraintCheck: RuleCheckFn = (node, context) => {
   // Only flag FILL containers — FIXED/HUG don't need min/max-width
   if (node.layoutSizingHorizontal !== "FILL") return null;
 
-  const missingMin = node.minWidth === undefined;
-  const missingMax = node.maxWidth === undefined;
+  // Only enforce maxWidth — minWidth is rarely needed (content provides natural minimum)
+  if (node.maxWidth !== undefined) return null;
 
-  // Skip small fixed elements (icons, dividers) for min-width check
-  let skipMinCheck = false;
-  if (node.absoluteBoundingBox) {
-    const { width, height } = node.absoluteBoundingBox;
-    if (width <= 48 && height <= 24) skipMinCheck = true;
-  }
-
-  // Skip small elements for max-width check
-  let skipMaxCheck = false;
-  if (node.absoluteBoundingBox) {
-    const { width } = node.absoluteBoundingBox;
-    if (width <= 200) skipMaxCheck = true;
-  }
-
-  const effectiveMissingMin = missingMin && !skipMinCheck;
-  const effectiveMissingMax = missingMax && !skipMaxCheck;
+  // Skip small elements — they won't stretch problematically
+  if (node.absoluteBoundingBox && node.absoluteBoundingBox.width <= 200) return null;
 
   const currentWidth = node.absoluteBoundingBox ? `${node.absoluteBoundingBox.width}px` : "unknown";
 
-  if (effectiveMissingMin && effectiveMissingMax) {
-    return {
-      ruleId: missingSizeConstraintDef.id,
-      nodeId: node.id,
-      nodePath: context.path.join(" > "),
-      message: `"${node.name}" uses FILL width (currently ${currentWidth}) without min or max constraints — add minWidth and/or maxWidth`,
-    };
-  }
-
-  if (effectiveMissingMin) {
-    return {
-      ruleId: missingSizeConstraintDef.id,
-      nodeId: node.id,
-      nodePath: context.path.join(" > "),
-      message: `"${node.name}" uses FILL width (currently ${currentWidth}) without min-width — add minWidth to prevent collapse on narrow screens`,
-    };
-  }
-
-  if (effectiveMissingMax) {
-    return {
-      ruleId: missingSizeConstraintDef.id,
-      nodeId: node.id,
-      nodePath: context.path.join(" > "),
-      message: `"${node.name}" uses FILL width (currently ${currentWidth}) without max-width — add maxWidth to prevent stretching on large screens`,
-    };
-  }
-
-  return null;
+  return {
+    ruleId: missingSizeConstraintDef.id,
+    nodeId: node.id,
+    nodePath: context.path.join(" > "),
+    message: `"${node.name}" uses FILL width (currently ${currentWidth}) without max-width — add maxWidth to prevent stretching on large screens`,
+  };
 };
 
 export const missingSizeConstraint = defineRule({
