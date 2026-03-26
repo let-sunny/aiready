@@ -214,6 +214,33 @@ Posts analysis as a PR comment. Fails if score is below threshold. See [**canico
 
 </details>
 
+<details>
+<summary><strong>Design Review Skill</strong> (auto-analyze after Figma edits)</summary>
+
+```bash
+cp -r .claude/skills/design-review /your-project/.claude/skills/
+```
+
+Requires both Figma MCP and canicode MCP. Use `/design-review` after editing a design with `use_figma` to get instant quality feedback.
+
+**Claude Code hook** — auto-analyze after every `use_figma` call:
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [{
+      "matcher": "mcp__figma__use_figma",
+      "hooks": [{
+        "type": "command",
+        "command": "echo 'Run /design-review to check design quality after this edit'"
+      }]
+    }]
+  }
+}
+```
+
+</details>
+
 ---
 
 ## Customization
