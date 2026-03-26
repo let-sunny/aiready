@@ -113,6 +113,66 @@ describe("isAbsolutePositionExempt", () => {
 });
 
 describe("isSizeConstraintExempt", () => {
+  it("exempts when node has maxWidth", () => {
+    const node = makeNode({ maxWidth: 800 });
+    expect(isSizeConstraintExempt(node, makeContext())).toBe(true);
+  });
+
+  it("exempts small elements (width <= 200)", () => {
+    const node = makeNode({
+      absoluteBoundingBox: { x: 0, y: 0, width: 150, height: 40 },
+    });
+    expect(isSizeConstraintExempt(node, makeContext())).toBe(true);
+  });
+
+  it("exempts when parent has maxWidth", () => {
+    const parent = makeNode({ maxWidth: 1200 });
+    const node = makeNode({});
+    expect(isSizeConstraintExempt(node, makeContext({ parent }))).toBe(true);
+  });
+
+  it("exempts root-level frames (depth <= 1)", () => {
+    const node = makeNode({});
+    expect(isSizeConstraintExempt(node, makeContext({ depth: 1 }))).toBe(true);
+  });
+
+  it("exempts when all siblings are FILL", () => {
+    const node = makeNode({ layoutSizingHorizontal: "FILL" as any });
+    const sibling = makeNode({ layoutSizingHorizontal: "FILL" as any });
+    const ctx = makeContext({ siblings: [node, sibling] });
+    expect(isSizeConstraintExempt(node, ctx)).toBe(true);
+  });
+
+  it("does not exempt when siblings have mixed sizing", () => {
+    const node = makeNode({
+      absoluteBoundingBox: { x: 0, y: 0, width: 400, height: 100 },
+      layoutSizingHorizontal: "FILL" as any,
+    });
+    const sibling = makeNode({ layoutSizingHorizontal: "FIXED" as any });
+    const ctx = makeContext({ siblings: [node, sibling] });
+    expect(isSizeConstraintExempt(node, ctx)).toBe(false);
+  });
+
+  it("exempts inside GRID layout", () => {
+    const parent = makeNode({ layoutMode: "GRID" as any });
+    const node = makeNode({
+      absoluteBoundingBox: { x: 0, y: 0, width: 400, height: 100 },
+      layoutSizingHorizontal: "FILL" as any,
+    });
+    const sibling = makeNode({ layoutSizingHorizontal: "FIXED" as any });
+    expect(isSizeConstraintExempt(node, makeContext({ parent, siblings: [node, sibling] }))).toBe(true);
+  });
+
+  it("exempts inside flex wrap", () => {
+    const parent = makeNode({ layoutWrap: "WRAP" as any });
+    const node = makeNode({
+      absoluteBoundingBox: { x: 0, y: 0, width: 400, height: 100 },
+      layoutSizingHorizontal: "FILL" as any,
+    });
+    const sibling = makeNode({ layoutSizingHorizontal: "FIXED" as any });
+    expect(isSizeConstraintExempt(node, makeContext({ parent, siblings: [node, sibling] }))).toBe(true);
+  });
+
   it("exempts TEXT nodes", () => {
     const parent = makeNode({ layoutMode: "HORIZONTAL" as any });
     const node = makeNode({ type: "TEXT" as any, layoutSizingHorizontal: "FILL" as any });
