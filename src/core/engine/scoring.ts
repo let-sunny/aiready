@@ -1,7 +1,9 @@
 import type { Category } from "../contracts/category.js";
 import { CATEGORIES } from "../contracts/category.js";
+import type { RuleId } from "../contracts/rule.js";
 import type { Severity } from "../contracts/severity.js";
 import type { AnalysisResult } from "./rule-engine.js";
+import { RULE_CONFIGS, RULE_ID_CATEGORY } from "../rules/rule-config.js";
 import { version as VERSION } from "../../../package.json";
 
 /**
@@ -61,22 +63,23 @@ export type Grade = "S" | "A+" | "A" | "B+" | "B" | "C+" | "C" | "D" | "F";
 
 /**
  * Sum of |score| for all rules in each category — used as denominator for
- * severity-weighted diversity scoring. Must be updated when rules are
- * added/removed or scores change in rule-config.ts.
- *
- * structure: 10+7+3+3+3+5+4+5+2 = 42
- * token:     2+4+2+3+3+2+3      = 19
- * component: 7+5+2+4             = 18
- * naming:    2+2+2+1+1           = 8
- * behavior:  5+2+3+3             = 13
+ * severity-weighted diversity scoring. Computed from RULE_CONFIGS + RULE_ID_CATEGORY
+ * so it stays in sync when rules are added/removed or scores change.
  */
-const TOTAL_SCORE_PER_CATEGORY: Record<Category, number> = {
-  structure: 42,
-  token: 19,
-  component: 18,
-  naming: 8,
-  behavior: 13,
-};
+const TOTAL_SCORE_PER_CATEGORY: Record<Category, number> = (() => {
+  const totals = Object.fromEntries(
+    CATEGORIES.map(c => [c, 0])
+  ) as Record<Category, number>;
+
+  for (const [id, config] of Object.entries(RULE_CONFIGS)) {
+    const category = RULE_ID_CATEGORY[id as RuleId];
+    if (category) {
+      totals[category] += Math.abs(config.score);
+    }
+  }
+
+  return totals;
+})();
 
 /**
  * Category weights for overall score.
@@ -201,9 +204,11 @@ export function calculateScores(result: AnalysisResult): ScoreReport {
     }
     catScore.densityScore = densityScore;
 
-    // Diversity score: weighted by rule severity (|score|).
-    // Triggering a blocking rule (score -10) penalizes more than a suggestion (score -1).
-    // This prevents a single concentrated blocking problem from getting a high diversity score.
+    // Diversity score: weighted by base rule |score| (config.score, not calculatedScore).
+    // Uses base score intentionally — diversity measures "what types of problems exist",
+    // not "where they occur". depthWeight affects density (volume penalty) but not diversity
+    // (breadth penalty). A blocking rule (score -10) penalizes diversity more than a
+    // suggestion (score -1), so low-severity-only designs correctly get high diversity scores.
     let diversityScore = 100;
     if (catScore.issueCount > 0) {
       const ruleScores = ruleScorePerCategory.get(category)!;

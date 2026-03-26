@@ -168,6 +168,24 @@ describe("calculateScores", () => {
     );
   });
 
+  it("low-severity rules have minimal diversity impact (intentional)", () => {
+    // Within structure (total score = 42):
+    // 1 suggestion rule (score -2): ratio = 2/42 ≈ 5% → diversity ≈ 95%
+    // 1 blocking rule (score -10): ratio = 10/42 ≈ 24% → diversity ≈ 76%
+    // Low-severity rules correctly penalize diversity less.
+    const lowSeverity = calculateScores(makeResult([
+      makeIssue({ ruleId: "unnecessary-node", category: "structure", severity: "suggestion", score: -2 }),
+    ], 100));
+
+    const highSeverity = calculateScores(makeResult([
+      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking", score: -10 }),
+    ], 100));
+
+    // Both trigger exactly 1 rule, but severity-weighted diversity differs significantly
+    expect(lowSeverity.byCategory.structure.diversityScore).toBeGreaterThan(90);
+    expect(highSeverity.byCategory.structure.diversityScore).toBeLessThan(80);
+  });
+
   it("combined score = density * 0.7 + diversity * 0.3", () => {
     const issues = [
       makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking" }),
