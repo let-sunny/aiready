@@ -43,28 +43,24 @@ describe("no-auto-layout", () => {
     expect(noAutoLayout.check(node, makeContext())).toBeNull();
   });
 
-  it("returns null for frame with single boolean operation child", () => {
-    const union = makeNode({ id: "b:1", type: "BOOLEAN_OPERATION" as any, name: "Union" });
-    const node = makeNode({ name: "IconStar", children: [union] });
-    expect(noAutoLayout.check(node, makeContext())).toBeNull();
-  });
-
-  it("returns null for frame with single rectangle child", () => {
-    const rect = makeNode({ id: "r:1", type: "RECTANGLE" as any, name: "Bg" });
-    const node = makeNode({ name: "Thumb", children: [rect] });
-    expect(noAutoLayout.check(node, makeContext())).toBeNull();
-  });
-
-  it("flags frame with multiple vector children (no auto-layout)", () => {
+  it("returns null for frame with multiple vector/shape children", () => {
     const v1 = makeNode({ id: "v:1", type: "VECTOR" as any, name: "Path1" });
-    const v2 = makeNode({ id: "v:2", type: "VECTOR" as any, name: "Path2" });
+    const v2 = makeNode({ id: "v:2", type: "BOOLEAN_OPERATION" as any, name: "Union" });
     const node = makeNode({ name: "IconComplex", children: [v1, v2] });
-    expect(noAutoLayout.check(node, makeContext())).not.toBeNull();
+    expect(noAutoLayout.check(node, makeContext())).toBeNull();
   });
 
-  it("flags frame with single non-visual child (e.g. text)", () => {
+  it("returns null for frame with rectangle and ellipse children", () => {
+    const rect = makeNode({ id: "r:1", type: "RECTANGLE" as any, name: "Bg" });
+    const ellipse = makeNode({ id: "e:1", type: "ELLIPSE" as any, name: "Circle" });
+    const node = makeNode({ name: "ShapeGroup", children: [rect, ellipse] });
+    expect(noAutoLayout.check(node, makeContext())).toBeNull();
+  });
+
+  it("flags frame with mixed visual and non-visual children", () => {
+    const vector = makeNode({ id: "v:1", type: "VECTOR" as any, name: "Path" });
     const text = makeNode({ id: "t:1", type: "TEXT" as any, name: "Label" });
-    const node = makeNode({ name: "TextWrap", children: [text] });
+    const node = makeNode({ name: "BadgeWithIcon", children: [vector, text] });
     expect(noAutoLayout.check(node, makeContext())).not.toBeNull();
   });
 

@@ -24,11 +24,9 @@ const VISUAL_LEAF_TYPES = new Set([
   "VECTOR", "BOOLEAN_OPERATION", "ELLIPSE", "LINE", "STAR", "REGULAR_POLYGON", "RECTANGLE",
 ]);
 
-function isSingleVisualChildFrame(node: AnalysisNode): boolean {
-  if (!node.children || node.children.length !== 1) return false;
-  const child = node.children[0];
-  if (!child) return false;
-  return VISUAL_LEAF_TYPES.has(child.type);
+function hasOnlyVisualLeafChildren(node: AnalysisNode): boolean {
+  if (!node.children || node.children.length === 0) return false;
+  return node.children.every((c) => VISUAL_LEAF_TYPES.has(c.type));
 }
 
 function hasOverlappingBounds(a: AnalysisNode, b: AnalysisNode): boolean {
@@ -63,8 +61,8 @@ const noAutoLayoutCheck: RuleCheckFn = (node, context) => {
   if (hasAutoLayout(node)) return null;
   if (!node.children || node.children.length === 0) return null;
 
-  // Single visual child frames (e.g. icon wrapping one vector) don't need auto-layout
-  if (isSingleVisualChildFrame(node)) return null;
+  // Frames with only visual leaf children (e.g. icons, shapes) don't need auto-layout
+  if (hasOnlyVisualLeafChildren(node)) return null;
 
   // Priority 1: Check for overlapping visible children (ambiguous-structure)
   if (node.children.length >= 2) {
