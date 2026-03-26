@@ -126,7 +126,8 @@ const inconsistentSpacingDef: RuleDefinition = {
 };
 
 const inconsistentSpacingCheck: RuleCheckFn = (node, context, options) => {
-  const gridBase = (options?.["gridBase"] as number) ?? getRuleOption("inconsistent-spacing", "gridBase", 4);
+  const configuredGridBase = (options?.["gridBase"] as number) ?? getRuleOption("inconsistent-spacing", "gridBase", 4);
+  const gridBase = Number.isFinite(configuredGridBase) && configuredGridBase > 0 ? configuredGridBase : 4;
 
   // Check padding values
   const paddings = [
@@ -181,7 +182,8 @@ const magicNumberSpacingDef: RuleDefinition = {
 };
 
 const magicNumberSpacingCheck: RuleCheckFn = (node, context, options) => {
-  const gridBase = (options?.["gridBase"] as number) ?? getRuleOption("magic-number-spacing", "gridBase", 4);
+  const configuredGridBase = (options?.["gridBase"] as number) ?? getRuleOption("magic-number-spacing", "gridBase", 4);
+  const gridBase = Number.isFinite(configuredGridBase) && configuredGridBase > 0 ? configuredGridBase : 4;
 
   // Similar to inconsistent-spacing but focuses on finding "magic" numbers
   // Magic numbers are often odd values like 13, 17, 23, etc.
