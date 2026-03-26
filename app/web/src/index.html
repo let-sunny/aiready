@@ -414,7 +414,7 @@
       if (!token) return;
       var fileKey = btn.dataset.fileKey;
       var nodeId = btn.dataset.nodeId.replace(/-/g, ':');
-      var commentBody = '[CanICode] ' + btn.dataset.rule + '\n' + btn.dataset.message + '\nNode: ' + btn.dataset.path;
+      var commentBody = '[CanICode] ' + btn.dataset.message;
       btn.disabled = true;
       btn.textContent = 'Sending...';
       try {

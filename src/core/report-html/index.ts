@@ -169,7 +169,7 @@ ${figmaToken ? `  <script>
       const message = btn.dataset.message;
       const path = btn.dataset.path;
 
-      const commentBody = '[CanICode] ' + rule + '\\n' + message + '\\nNode: ' + path;
+      const commentBody = '[CanICode] ' + message;
 
       btn.disabled = true;
       btn.textContent = 'Sending...';
