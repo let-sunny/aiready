@@ -1,4 +1,41 @@
+import type { Category } from "../contracts/category.js";
 import type { RuleConfig, RuleId } from "../contracts/rule.js";
+
+/**
+ * Maps each rule ID to its category. Kept alongside RULE_CONFIGS so both
+ * are updated together when rules are added or removed.
+ */
+export const RULE_ID_CATEGORY: Record<RuleId, Category> = {
+  "no-auto-layout": "structure",
+  "absolute-position-in-auto-layout": "structure",
+  "fixed-size-in-auto-layout": "structure",
+  "missing-size-constraint": "structure",
+  "missing-responsive-behavior": "structure",
+  "group-usage": "structure",
+  "deep-nesting": "structure",
+  "z-index-dependent-layout": "structure",
+  "unnecessary-node": "structure",
+  "raw-color": "token",
+  "raw-font": "token",
+  "inconsistent-spacing": "token",
+  "magic-number-spacing": "token",
+  "raw-shadow": "token",
+  "raw-opacity": "token",
+  "multiple-fill-colors": "token",
+  "missing-component": "component",
+  "detached-instance": "component",
+  "missing-component-description": "component",
+  "variant-structure-mismatch": "component",
+  "default-name": "naming",
+  "non-semantic-name": "naming",
+  "inconsistent-naming-convention": "naming",
+  "numeric-suffix-name": "naming",
+  "too-long-name": "naming",
+  "text-truncation-unhandled": "behavior",
+  "prototype-link-in-design": "behavior",
+  "overflow-behavior-unknown": "behavior",
+  "wrap-behavior-unknown": "behavior",
+};
 
 /**
  * Central configuration for all rules

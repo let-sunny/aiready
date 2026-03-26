@@ -87,33 +87,41 @@ describe("calculateScores", () => {
   });
 
   it("uses calculatedScore for density: higher score = more density impact", () => {
-    const heavy = calculateScores(makeResult([
-      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking", score: -10 }),
-    ], 100));
+    // Create issue where calculatedScore differs from config.score
+    const heavyIssue = makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking", score: -10 });
+    heavyIssue.calculatedScore = -15; // Simulate depthWeight effect
 
-    const light = calculateScores(makeResult([
-      makeIssue({ ruleId: "unnecessary-node", category: "structure", severity: "suggestion", score: -2 }),
-    ], 100));
+    const lightIssue = makeIssue({ ruleId: "unnecessary-node", category: "structure", severity: "suggestion", score: -2 });
+    lightIssue.calculatedScore = -2; // No depthWeight
 
+    const heavy = calculateScores(makeResult([heavyIssue], 100));
+    const light = calculateScores(makeResult([lightIssue], 100));
+
+    // Density should use calculatedScore (-15 vs -2), not config.score
+    expect(heavy.byCategory.structure.weightedIssueCount).toBe(15);
+    expect(light.byCategory.structure.weightedIssueCount).toBe(2);
     expect(heavy.byCategory.structure.densityScore).toBeLessThan(
       light.byCategory.structure.densityScore
     );
   });
 
   it("differentiates rules within the same severity by score", () => {
-    const highScore = calculateScores(makeResult([
-      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking", score: -10 }),
-    ], 100));
+    // Create issues where calculatedScore differs from config.score
+    const highScoreIssue = makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking", score: -10 });
+    highScoreIssue.calculatedScore = -15; // Simulate depthWeight effect
 
-    const lowScore = calculateScores(makeResult([
-      makeIssue({ ruleId: "absolute-position-in-auto-layout", category: "structure", severity: "blocking", score: -3 }),
-    ], 100));
+    const lowScoreIssue = makeIssue({ ruleId: "absolute-position-in-auto-layout", category: "structure", severity: "blocking", score: -3 });
+    lowScoreIssue.calculatedScore = -5; // Simulate different depthWeight
 
+    const highScore = calculateScores(makeResult([highScoreIssue], 100));
+    const lowScore = calculateScores(makeResult([lowScoreIssue], 100));
+
+    // weightedIssueCount should use calculatedScore, not config.score
     expect(highScore.byCategory.structure.densityScore).toBeLessThan(
       lowScore.byCategory.structure.densityScore
     );
-    expect(highScore.byCategory.structure.weightedIssueCount).toBe(10);
-    expect(lowScore.byCategory.structure.weightedIssueCount).toBe(3);
+    expect(highScore.byCategory.structure.weightedIssueCount).toBe(15);
+    expect(lowScore.byCategory.structure.weightedIssueCount).toBe(5);
   });
 
   it("density score decreases as weighted issue count increases relative to node count", () => {
@@ -136,20 +144,53 @@ describe("calculateScores", () => {
 
   it("diversity score penalizes more unique rules being triggered", () => {
     const concentrated = calculateScores(makeResult([
-      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "risk" }),
-      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "risk" }),
-      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "risk" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "risk", score: -5 }),
+      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "risk", score: -5 }),
+      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "risk", score: -5 }),
     ], 100));
 
     const spread = calculateScores(makeResult([
-      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "risk" }),
-      makeIssue({ ruleId: "group-usage", category: "structure", severity: "risk" }),
-      makeIssue({ ruleId: "deep-nesting", category: "structure", severity: "risk" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "risk", score: -5 }),
+      makeIssue({ ruleId: "group-usage", category: "structure", severity: "risk", score: -5 }),
+      makeIssue({ ruleId: "deep-nesting", category: "structure", severity: "risk", score: -5 }),
     ], 100));
 
     expect(concentrated.byCategory.structure.diversityScore).toBeGreaterThan(
       spread.byCategory.structure.diversityScore
     );
+  });
+
+  it("diversity weights triggered rules by score severity", () => {
+    // One high-severity rule triggered
+    const heavyRule = calculateScores(makeResult([
+      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking", score: -10 }),
+    ], 100));
+
+    // One low-severity rule triggered
+    const lightRule = calculateScores(makeResult([
+      makeIssue({ ruleId: "unnecessary-node", category: "structure", severity: "suggestion", score: -2 }),
+    ], 100));
+
+    expect(heavyRule.byCategory.structure.diversityScore).toBeLessThan(
+      lightRule.byCategory.structure.diversityScore
+    );
+  });
+
+  it("low-severity rules have minimal diversity impact (intentional)", () => {
+    // 1 suggestion rule (score -2) vs 1 blocking rule (score -10).
+    // Weighted ratio for the suggestion is much smaller, so diversity stays high.
+    // Low-severity rules correctly penalize diversity less.
+    const lowSeverity = calculateScores(makeResult([
+      makeIssue({ ruleId: "unnecessary-node", category: "structure", severity: "suggestion", score: -2 }),
+    ], 100));
+
+    const highSeverity = calculateScores(makeResult([
+      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking", score: -10 }),
+    ], 100));
+
+    // Both trigger exactly 1 rule, but severity-weighted diversity differs significantly
+    expect(lowSeverity.byCategory.structure.diversityScore).toBeGreaterThan(90);
+    expect(highSeverity.byCategory.structure.diversityScore).toBeLessThan(80);
   });
 
   it("combined score = density * 0.7 + diversity * 0.3", () => {

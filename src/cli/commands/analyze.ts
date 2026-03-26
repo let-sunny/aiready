@@ -154,8 +154,8 @@ export function registerAnalyze(cli: CAC): void {
         const result = analyzeFile(file, analyzeOptions);
         log(`Nodes: ${result.nodeCount} (max depth: ${result.maxDepth})`);
 
-        // Calculate scores
-        const scores = calculateScores(result);
+        // Calculate scores using the same preset-adjusted configs
+        const scores = calculateScores(result, configs as Record<RuleId, RuleConfig>);
 
         // JSON output mode — only JSON goes to stdout; exit code still applies
         if (options.json) {

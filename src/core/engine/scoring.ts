@@ -1,7 +1,9 @@
 import type { Category } from "../contracts/category.js";
 import { CATEGORIES } from "../contracts/category.js";
+import type { RuleId, RuleConfig } from "../contracts/rule.js";
 import type { Severity } from "../contracts/severity.js";
 import type { AnalysisResult } from "./rule-engine.js";
+import { RULE_CONFIGS, RULE_ID_CATEGORY } from "../rules/rule-config.js";
 import { version as VERSION } from "../../../package.json";
 
 /**
@@ -60,16 +62,27 @@ export type Grade = "S" | "A+" | "A" | "B+" | "B" | "C+" | "C" | "D" | "F";
  */
 
 /**
- * Total rules per category — used as denominator for diversity scoring.
- * Must be updated when rules are added/removed from a category.
+ * Compute sum of |score| for all rules in each category from a given config map.
+ * Used as denominator for severity-weighted diversity scoring.
+ * Must use the same preset-adjusted config map that produced the analysis issues,
+ * otherwise diversity ratios will be incorrect.
  */
-const TOTAL_RULES_PER_CATEGORY: Record<Category, number> = {
-  structure: 9,
-  token: 7,
-  component: 4,
-  naming: 5,
-  behavior: 4,
-};
+function computeTotalScorePerCategory(
+  configs: Record<RuleId, RuleConfig>
+): Record<Category, number> {
+  const totals = Object.fromEntries(
+    CATEGORIES.map(c => [c, 0])
+  ) as Record<Category, number>;
+
+  for (const [id, config] of Object.entries(configs)) {
+    const category = RULE_ID_CATEGORY[id as RuleId];
+    if (category && config.enabled) {
+      totals[category] += Math.abs(config.score);
+    }
+  }
+
+  return totals;
+}
 
 /**
  * Category weights for overall score.
@@ -151,20 +164,35 @@ function clamp(value: number, min: number, max: number): number {
  * Calculate scores from analysis result using density + diversity scoring
  *
  * Density Score = 100 - (weighted issue count / node count) * 100
- * Diversity Score = (1 - unique rules / total category rules) * 100
+ * Diversity Score = (1 - weighted triggered rule scores / total category scores) * 100
  * Final Score = density * 0.7 + diversity * 0.3
+ *
+ * @param result Analysis result with issues
+ * @param configs Optional preset-adjusted config map used to produce the issues.
+ *                If not provided, diversity totals are reconstructed from issue.config values.
  */
-export function calculateScores(result: AnalysisResult): ScoreReport {
+export function calculateScores(
+  result: AnalysisResult,
+  configs?: Record<RuleId, RuleConfig>
+): ScoreReport {
   const categoryScores = initializeCategoryScores();
   const nodeCount = result.nodeCount;
 
-  // Track unique rules per category
+  // Track unique rules and their base |score| per category
   const uniqueRulesPerCategory = new Map<Category, Set<string>>();
+  const ruleScorePerCategory = new Map<Category, Map<string, number>>();
   for (const category of CATEGORIES) {
     uniqueRulesPerCategory.set(category, new Set());
+    ruleScorePerCategory.set(category, new Map());
   }
 
-  // Count issues by severity per category and track unique rules
+  // Compute totals from the config map.
+  // If configs provided: use preset-adjusted totals (recommended when using presets).
+  // If not: fall back to static RULE_CONFIGS — only correct when issues were
+  // produced with default RULE_CONFIGS, otherwise diversity ratios will be skewed.
+  const totalScorePerCategory = computeTotalScorePerCategory(configs ?? RULE_CONFIGS);
+
+  // Count issues by severity per category and track unique rules with scores
   for (const issue of result.issues) {
     const category = issue.rule.definition.category;
     const severity = issue.config.severity;
@@ -174,13 +202,13 @@ export function calculateScores(result: AnalysisResult): ScoreReport {
     categoryScores[category].bySeverity[severity]++;
     categoryScores[category].weightedIssueCount += Math.abs(issue.calculatedScore);
     uniqueRulesPerCategory.get(category)!.add(ruleId);
+    ruleScorePerCategory.get(category)!.set(ruleId, Math.abs(issue.config.score));
   }
 
   // Calculate percentage for each category based on density + diversity
   for (const category of CATEGORIES) {
     const catScore = categoryScores[category];
     const uniqueRules = uniqueRulesPerCategory.get(category)!;
-    const totalRules = TOTAL_RULES_PER_CATEGORY[category];
 
     catScore.uniqueRuleCount = uniqueRules.size;
 
@@ -192,11 +220,17 @@ export function calculateScores(result: AnalysisResult): ScoreReport {
     }
     catScore.densityScore = densityScore;
 
-    // Diversity score: fewer unique rules = higher score (issues are concentrated)
-    // If no issues, diversity score is 100 (perfect)
+    // Diversity score: weighted by base rule |score| (config.score, not calculatedScore).
+    // Uses base score intentionally — diversity measures "what types of problems exist",
+    // not "where they occur". depthWeight affects density (volume penalty) but not diversity
+    // (breadth penalty). A blocking rule (score -10) penalizes diversity more than a
+    // suggestion (score -1), so low-severity-only designs correctly get high diversity scores.
     let diversityScore = 100;
     if (catScore.issueCount > 0) {
-      const diversityRatio = uniqueRules.size / totalRules;
+      const ruleScores = ruleScorePerCategory.get(category)!;
+      const weightedTriggered = Array.from(ruleScores.values()).reduce((sum, s) => sum + s, 0);
+      const weightedTotal = totalScorePerCategory[category];
+      const diversityRatio = weightedTotal > 0 ? weightedTriggered / weightedTotal : 0;
       diversityScore = clamp(Math.round((1 - diversityRatio) * 100), 0, 100);
     }
     catScore.diversityScore = diversityScore;

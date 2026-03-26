@@ -123,7 +123,7 @@ IMPORTANT — Before calling this tool, check which data source is available:
         ...(effectiveNodeId ? { targetNodeId: effectiveNodeId } : {}),
       });
 
-      const scores = calculateScores(result);
+      const scores = calculateScores(result, configs as Record<RuleId, RuleConfig>);
 
       // Generate HTML report (with Figma token for comment buttons)
       const figmaToken = token ?? process.env["FIGMA_TOKEN"];
