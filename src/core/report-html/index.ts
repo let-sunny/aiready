@@ -122,7 +122,7 @@ ${CATEGORIES.map(cat => {
           ${renderGaugeSvg(cs.percentage, 100, 7)}
           <span class="text-xs font-medium mt-2.5 text-center leading-tight">${CATEGORY_LABELS[cat]}</span>
           <span class="text-[11px] text-muted-foreground">${cs.issueCount} issues</span>
-          <div class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:block bg-zinc-900 text-white text-xs px-3 py-2 rounded-md whitespace-nowrap z-10 shadow-lg pointer-events-none">
+          <div class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:block bg-zinc-900 text-white text-xs px-3 py-2 rounded-md max-w-[220px] w-max z-10 shadow-lg pointer-events-none">
             ${esc(desc)}
             <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-zinc-900"></div>
           </div>
@@ -202,11 +202,20 @@ ${figmaToken ? `  <script>
 
 // ---- Components ----
 
+const SEVERITY_TOOLTIPS: Record<string, string> = {
+  Blocking: "Cannot implement correctly without fixing. Direct impact on screen reproduction.",
+  Risk: "Implementable now but will break or increase cost later.",
+  "Missing Info": "Information is absent, forcing AI to guess.",
+  Suggestion: "Not immediately problematic, but improves systemization.",
+};
+
 function renderSummaryDot(dotClass: string, count: number, label: string): string {
-  return `<div class="flex items-center gap-2">
+  const tooltip = SEVERITY_TOOLTIPS[label] ?? "";
+  return `<div class="flex items-center gap-2 relative group cursor-help" title="${escapeHtml(tooltip)}">
           <span class="w-2.5 h-2.5 rounded-full ${dotClass}"></span>
           <span class="text-lg font-bold tracking-tight">${count}</span>
           <span class="text-sm text-muted-foreground">${label}</span>
+          <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block bg-zinc-900 text-white text-xs px-3 py-2 rounded-md max-w-[220px] w-max z-10 shadow-lg pointer-events-none">${escapeHtml(tooltip)}<div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-zinc-900"></div></div>
         </div>`;
 }
 

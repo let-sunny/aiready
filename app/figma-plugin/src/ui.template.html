@@ -150,25 +150,29 @@
         '<div class="grade-score">' + scores.overall.percentage + ' <span>/ 100</span></div>' +
         '<div class="grade-label">Overall Score &middot; ' + result.nodeCount + ' nodes</div>';
 
-      // Category grid
+      // Category list
       var categories = CanICode.CATEGORIES || CATEGORIES;
+      var catTips = { structure: 'Can AI read the layout? (Auto Layout, nesting, positioning)', token: 'Can AI reproduce exact values? (colors, fonts, shadows, spacing)', component: 'Is the design efficient for AI context? (reuse, variants)', naming: 'Can AI infer meaning? (semantic names, conventions)', behavior: 'Can AI know what happens? (overflow, truncation, interactions)' };
       var gridEl = document.getElementById('cat-grid');
       gridEl.innerHTML = categories.map(function(cat) {
         var cs = scores.byCategory[cat];
-        return '<div class="cat-card" data-cat="' + cat + '" onclick="filterCategory(\'' + cat + '\')">' +
+        var barColor = cs.percentage >= 80 ? 'var(--green)' : cs.percentage >= 60 ? 'var(--amber)' : 'var(--red)';
+        return '<div class="cat-row">' +
           '<div class="cat-score ' + scoreClass(cs.percentage) + '">' + cs.percentage + '</div>' +
-          '<div class="cat-label">' + (CATEGORY_LABELS[cat] || cat) + '</div>' +
-          '<div class="cat-issues">' + cs.issueCount + ' issues</div>' +
+          '<div class="cat-label" data-tip="' + esc(catTips[cat] || '') + '">' + (CATEGORY_LABELS[cat] || cat) + '</div>' +
+          '<div class="cat-bar"><div class="cat-bar-fill" style="width:' + cs.percentage + '%;background:' + barColor + '"></div></div>' +
+          '<div class="cat-issues">' + cs.issueCount + '</div>' +
         '</div>';
       }).join('');
 
       // Summary bar
       var s = scores.summary;
+      var sevTips = { blocking: 'Cannot implement correctly without fixing. Direct impact on screen reproduction.', risk: 'Implementable now but will break or increase cost later.', missing: 'Information is absent, forcing AI to guess.', suggestion: 'Not immediately problematic, but improves systemization.' };
       document.getElementById('summary-bar').innerHTML =
-        '<div class="summary-item"><span class="dot dot-blocking"></span><span class="summary-count">' + s.blocking + '</span> Blocking</div>' +
-        '<div class="summary-item"><span class="dot dot-risk"></span><span class="summary-count">' + s.risk + '</span> Risk</div>' +
-        '<div class="summary-item"><span class="dot dot-missing"></span><span class="summary-count">' + s.missingInfo + '</span> Missing</div>' +
-        '<div class="summary-item"><span class="dot dot-suggestion"></span><span class="summary-count">' + s.suggestion + '</span> Suggestion</div>' +
+        '<div class="summary-item" data-tip="' + esc(sevTips.blocking) + '"><span class="dot dot-blocking"></span><span class="summary-count">' + s.blocking + '</span> Blocking</div>' +
+        '<div class="summary-item" data-tip="' + esc(sevTips.risk) + '"><span class="dot dot-risk"></span><span class="summary-count">' + s.risk + '</span> Risk</div>' +
+        '<div class="summary-item" data-tip="' + esc(sevTips.missing) + '"><span class="dot dot-missing"></span><span class="summary-count">' + s.missingInfo + '</span> Missing</div>' +
+        '<div class="summary-item" data-tip="' + esc(sevTips.suggestion) + '"><span class="dot dot-suggestion"></span><span class="summary-count">' + s.suggestion + '</span> Suggestion</div>' +
         '<div class="summary-total">' + s.totalIssues + ' total</div>';
 
       // Filter tabs
@@ -260,10 +264,6 @@
       document.querySelectorAll('.filter-tab').forEach(function(tab) {
         tab.classList.toggle('active', tab.dataset.cat === cat);
       });
-      // Update category card highlights
-      document.querySelectorAll('.cat-card').forEach(function(card) {
-        card.classList.toggle('active', card.dataset.cat === cat);
-      });
       if (currentResult) {
         renderIssues(currentResult.issues, cat);
       }
@@ -343,6 +343,41 @@
         }
       }
     };
+
+    // ---- Tooltip (JS-based, works inside Figma iframe) ----
+    (function() {
+      var tip = document.createElement('div');
+      tip.className = 'cic-tooltip';
+      var arrow = document.createElement('div');
+      arrow.className = 'cic-tooltip-arrow';
+      document.body.appendChild(tip);
+      document.body.appendChild(arrow);
+
+      function hide() { tip.classList.remove('visible'); arrow.classList.remove('visible'); }
+
+      document.addEventListener('mouseover', function(e) {
+        var el = e.target.closest('[data-tip]');
+        if (!el) { hide(); return; }
+        tip.textContent = el.getAttribute('data-tip');
+        tip.classList.add('visible');
+        var rect = el.getBoundingClientRect();
+        var tipH = tip.offsetHeight;
+        var tipW = tip.offsetWidth;
+        var cx = rect.left + rect.width / 2;
+        var tipLeft = Math.max(4, Math.min(cx - tipW / 2, window.innerWidth - tipW - 4));
+        var above = rect.top - tipH - 10 >= 0;
+        var tipTop = above ? rect.top - tipH - 10 : rect.bottom + 10;
+        tip.style.left = tipLeft + 'px';
+        tip.style.top = tipTop + 'px';
+        arrow.style.left = (cx - 4) + 'px';
+        arrow.style.top = (above ? rect.top - 14 : rect.bottom + 6) + 'px';
+        arrow.classList.add('visible');
+      });
+      document.addEventListener('mouseleave', hide);
+      document.addEventListener('mouseout', function(e) {
+        if (!e.target.closest('[data-tip]')) hide();
+      });
+    })();
   </script>
 </body>
 </html>
