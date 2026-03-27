@@ -78,7 +78,7 @@ app/                          # Browser runtime
 - Install: `claude mcp add canicode -- npx -y -p canicode canicode-mcp`
 - Tools: `analyze`, `list-rules`, `visual-compare`, `version`, `docs`
 - Data source: Figma REST API via `input` param (Figma URL or fixture path). Requires FIGMA_TOKEN for live URLs.
-- Note: Figma MCP (`get_metadata`/`get_design_context`) is NOT supported as analysis input — it returns collapsed node trees that produce inaccurate results.
+
 
 **3. Claude Code Skill (`/canicode`)**
 - Location: `.claude/skills/canicode/SKILL.md` (copy to any project)
@@ -108,7 +108,7 @@ Calibration commands are NOT exposed as CLI commands. They run exclusively insid
 - Cross-run evidence: Evaluation appends overscored/underscored findings to `data/calibration-evidence.json`; Gap Analyzer appends uncovered gaps to `data/discovery-evidence.json` (environment/tooling noise is auto-filtered)
 - After Arbitrator applies changes, evidence for applied rules is pruned (`calibrate-prune-evidence`)
 - Each run creates a self-contained directory: `logs/calibration/<fixture>--<timestamp>/`
-- No Figma MCP or API keys needed — works fully offline
+- No API keys needed — works fully offline
 - Auto-commits agreed score changes
 
 **`/calibrate-night` (Claude Code command)**

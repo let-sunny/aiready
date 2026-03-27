@@ -94,10 +94,7 @@ cli.help((sections) => {
   sections.push(
     {
       title: "\nSetup",
-      body: [
-        `  canicode init --token <token>   Save Figma token to ~/.canicode/`,
-        `  canicode init --mcp             Show MCP setup instructions`,
-      ].join("\n"),
+      body: `  canicode init --token <token>   Save Figma token to ~/.canicode/`,
     },
     {
       title: "\nData source",

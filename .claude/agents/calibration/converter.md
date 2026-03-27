@@ -48,7 +48,7 @@ Read and follow `.claude/skills/design-to-code/PROMPT.md` for all code generatio
 ## Steps
 
 1. Read `docs/DESIGN-TO-CODE-PROMPT.md` for code generation rules
-2. Generate design tree (CLI) or get design context (MCP)
+2. Generate design tree (CLI)
 3. Convert the design tree to a single standalone HTML+CSS file
    - Each node in the tree maps 1:1 to an HTML element
    - Copy style values directly — they are already CSS-ready

@@ -143,11 +143,6 @@ Calibration runs inside Claude Code using the `/calibrate-loop` command:
 /calibrate-loop fixtures/my-design
 ```
 
-For live Figma data with MCP:
-```bash
-/calibrate-loop-deep https://www.figma.com/design/ABC123/MyDesign?node-id=1-234
-```
-
 Calibration is an internal development tool — it is not exposed to end users.
 
 ---

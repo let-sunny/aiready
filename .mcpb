@@ -43,7 +43,7 @@
     {
       "name": "analyze",
       "title": "Analyze Figma Design",
-      "description": "Analyze a Figma design for development-friendliness and AI-friendliness. Accepts design data from Figma MCP or a Figma URL. Returns a JSON score summary and generates an HTML report.",
+      "description": "Analyze a Figma design for development-friendliness and AI-friendliness. Provide a Figma URL or fixture path via the input parameter. Returns a JSON score summary and generates an HTML report.",
       "annotations": {
         "readOnlyHint": false,
         "destructiveHint": false,
@@ -51,28 +51,10 @@
       },
       "parameters": [
         {
-          "name": "designData",
-          "type": "string",
-          "required": false,
-          "description": "Figma node data from Figma MCP get_metadata (XML or JSON)"
-        },
-        {
           "name": "input",
           "type": "string",
-          "required": false,
-          "description": "Figma URL (requires FIGMA_TOKEN)"
-        },
-        {
-          "name": "fileKey",
-          "type": "string",
-          "required": false,
-          "description": "Figma file key (used with designData to generate deep links)"
-        },
-        {
-          "name": "fileName",
-          "type": "string",
-          "required": false,
-          "description": "Figma file name (used with designData for display)"
+          "required": true,
+          "description": "Figma URL or local fixture path. Requires FIGMA_TOKEN for live URLs."
         },
         {
           "name": "token",
@@ -97,12 +79,6 @@
           "type": "string",
           "required": false,
           "description": "Path to config JSON file for rule overrides"
-        },
-        {
-          "name": "customRulesPath",
-          "type": "string",
-          "required": false,
-          "description": "Path to custom rules JSON file"
         }
       ]
     },
@@ -139,7 +115,7 @@
   "environment_variables": [
     {
       "name": "FIGMA_TOKEN",
-      "description": "Figma personal access token. Required for fetching designs via REST API and posting comments to Figma. Optional when using Figma MCP to provide design data directly.",
+      "description": "Figma personal access token. Required for fetching designs via REST API and posting comments to Figma.",
       "required": false
     }
   ],
@@ -154,10 +130,6 @@
     {
       "title": "Analyze a Figma design via URL",
       "prompt": "Analyze this Figma design: https://www.figma.com/design/ABC123/MyDesign?node-id=1-234"
-    },
-    {
-      "title": "Analyze with Figma MCP (two-step)",
-      "prompt": "Get the metadata for this Figma page and then analyze it with canicode: https://www.figma.com/design/ABC123/MyDesign?node-id=1-234"
     },
     {
       "title": "List all analysis rules",

@@ -1,4 +1,4 @@
-Run a calibration debate loop using local fixture directories. No Figma MCP needed.
+Run a calibration debate loop using local fixture directories.
 
 Input: $ARGUMENTS (fixture directory path, e.g. `fixtures/material3-kit`)
 
