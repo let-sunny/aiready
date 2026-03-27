@@ -63,6 +63,8 @@ interface RunResult {
   runIndex: number;
   similarity: number;
   interpretationsCount: number;
+  interpretationsParseFailed?: boolean;
+  parseWarnings?: string[];
   inputTokens: number;
   outputTokens: number;
   totalTokens: number;
@@ -93,8 +95,19 @@ interface RankingEntry {
 
 // --- Cache validation ---
 
-/** Version bumped when strip logic, rendering, or comparison changes. */
-const CONFIG_VERSION = "1";
+/** Auto-computed from core source files that affect experiment results. */
+function computeConfigVersion(): string {
+  const coreFiles = [
+    resolve("src/core/engine/design-tree-strip.ts"),
+    resolve("src/core/engine/visual-compare-helpers.ts"),
+  ];
+  const hash = createHash("sha256");
+  for (const f of coreFiles) {
+    if (existsSync(f)) hash.update(readFileSync(f, "utf-8"));
+  }
+  return hash.digest("hex").slice(0, 12);
+}
+const CONFIG_VERSION = computeConfigVersion();
 
 function computePromptHash(prompt: string): string {
   return createHash("sha256").update(prompt).digest("hex").slice(0, 16);
@@ -158,17 +171,19 @@ function isStripNoOp(baselineTree: string, type: DesignTreeInfoType): boolean {
 function parseResponse(text: string): { html: string; interpretations: string[]; parseWarnings: string[]; interpretationsParseFailed?: boolean } {
   const warnings: string[] = [];
 
-  // Extract HTML from fenced code block — find the LARGEST block (skip small snippets)
+  // Extract HTML from fenced code block — prioritize by content, not position
   let html = "";
-  const allBlocks = [...text.matchAll(/```(?:html|css|[a-z]*)?\s*\n([\s\S]*?)```/g)];
+  const allBlocks = [...text.matchAll(/```(?:html|css|[a-z]*)?\s*\n([\s\S]*?)```/g)]
+    .map((m) => m[1]?.trim() ?? "")
+    .filter((block) => block.includes("<") && block.length > 100);
+
   if (allBlocks.length > 0) {
-    // Pick the largest block that looks like HTML (contains < tags)
-    const htmlBlocks = allBlocks
-      .map((m) => m[1]?.trim() ?? "")
-      .filter((block) => block.includes("<") && block.length > 100);
-    if (htmlBlocks.length > 0) {
-      html = htmlBlocks.reduce((a, b) => (a.length >= b.length ? a : b));
-    }
+    // Priority 1: block starting with <!doctype or <html (full document)
+    const fullDoc = allBlocks.find((b) => /^<!doctype|^<html/i.test(b));
+    // Priority 2: block containing <body (partial document)
+    const hasBody = fullDoc ? undefined : allBlocks.find((b) => /<body/i.test(b));
+    // Fallback: largest block
+    html = fullDoc ?? hasBody ?? allBlocks.reduce((a, b) => (a.length >= b.length ? a : b));
   }
   if (!html) warnings.push("No HTML code block found in response");
 
@@ -305,6 +320,8 @@ async function runSingle(
     runIndex,
     similarity: comparison.similarity,
     interpretationsCount: interpretationsParseFailed ? -1 : interpretations.length,
+    ...(interpretationsParseFailed ? { interpretationsParseFailed: true } : {}),
+    ...(parseWarnings.length > 0 ? { parseWarnings } : {}),
     inputTokens: response.usage.input_tokens,
     outputTokens: response.usage.output_tokens,
     totalTokens: response.usage.input_tokens + response.usage.output_tokens,
