@@ -305,7 +305,7 @@ function stripOverflow(lines: string[]): string[] {
     if (!parsed) return line;
     parsed.properties = parsed.properties.filter((p) => {
       const prop = getPropertyName(p);
-      return prop !== "overflow";
+      return p.trim() !== "overflow: hidden";
     });
     return reassembleStyleLine(parsed);
   }).filter((line): line is string => line !== null);
