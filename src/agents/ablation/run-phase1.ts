@@ -336,8 +336,22 @@ async function runSingle(
     for (const w of parseWarnings) console.warn(`    WARNING: ${w}`);
   }
 
+  // Replace Google Fonts CDN with local font to avoid network dependency
+  const fontPath = resolve("assets/fonts/Inter.var.woff2");
+  const localFontCSS = `@font-face { font-family: "Inter"; src: url("file://${fontPath}") format("woff2"); font-weight: 100 900; }`;
+  let finalHtml = html;
+  // Remove Google Fonts <link> tags
+  finalHtml = finalHtml.replace(/<link[^>]*fonts\.googleapis\.com[^>]*>/gi, "");
+  finalHtml = finalHtml.replace(/<link[^>]*fonts\.gstatic\.com[^>]*>/gi, "");
+  // Inject local @font-face at the start of <style> or before </head>
+  if (finalHtml.includes("<style>")) {
+    finalHtml = finalHtml.replace("<style>", `<style>\n${localFontCSS}\n`);
+  } else if (finalHtml.includes("</head>")) {
+    finalHtml = finalHtml.replace("</head>", `<style>${localFontCSS}</style>\n</head>`);
+  }
+
   const htmlPath = join(runDir, "output.html");
-  writeFileSync(htmlPath, html);
+  writeFileSync(htmlPath, finalHtml);
   writeFileSync(join(runDir, "interpretations.json"), JSON.stringify(interpretations, null, 2));
 
   // Copy fixture images to run dir so HTML can reference them
