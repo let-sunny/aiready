@@ -1,7 +1,7 @@
 /**
  * Ablation Phase 1: Priority ranking.
  *
- * For each of 12 information types × 3 fixtures:
+ * For each of 12 information types × N fixtures × M runs:
  *   1. Generate design-tree (baseline or stripped)
  *   2. Send to Claude API with PROMPT.md
  *   3. Parse HTML + interpretations from response
@@ -12,10 +12,16 @@
  * Usage:
  *   ANTHROPIC_API_KEY=sk-... npx tsx src/agents/ablation/run-phase1.ts
  *
+ * Environment variables:
+ *   ANTHROPIC_API_KEY  — required
+ *   ABLATION_FIXTURES  — comma-separated fixture names (default: 3 desktop fixtures)
+ *   ABLATION_RUNS      — runs per condition (default: 1 for Phase 1, set 3 for Phase 2)
+ *
  * Output: logs/ablation/phase1/
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync, copyFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, copyFileSync, readdirSync } from "node:fs";
 import { resolve, join } from "node:path";
 import Anthropic from "@anthropic-ai/sdk";
 
@@ -32,26 +38,27 @@ const MODEL = "claude-sonnet-4-20250514";
 const TEMPERATURE = 0;
 const MAX_TOKENS = 16000;
 
-const FIXTURES = [
+const DEFAULT_FIXTURES = [
   "desktop-product-detail",
   "desktop-landing-page",
   "desktop-ai-chat",
-] as const;
-
-// Skip no-op strip types (nothing to measure)
-const SKIP_TYPES: ReadonlySet<DesignTreeInfoType> = new Set([
-  "position-stacking",
-  "component-descriptions",
-]);
+];
 
 const OUTPUT_DIR = resolve("logs/ablation/phase1");
 const PROMPT_PATH = resolve(".claude/skills/design-to-code/PROMPT.md");
 
 // --- Types ---
 
+interface CacheKey {
+  model: string;
+  promptHash: string;
+  configVersion: string;
+}
+
 interface RunResult {
   fixture: string;
   type: "baseline" | DesignTreeInfoType;
+  runIndex: number;
   similarity: number;
   interpretationsCount: number;
   inputTokens: number;
@@ -60,6 +67,7 @@ interface RunResult {
   htmlPath: string;
   codePngPath: string;
   timestamp: string;
+  cacheKey: CacheKey;
 }
 
 interface Phase1Summary {
@@ -67,6 +75,7 @@ interface Phase1Summary {
   completedAt: string;
   model: string;
   temperature: number;
+  runsPerCondition: number;
   fixtures: string[];
   results: RunResult[];
   rankings: RankingEntry[];
@@ -80,35 +89,100 @@ interface RankingEntry {
   perFixture: Record<string, { deltaV: number; deltaI: number; deltaT: number }>;
 }
 
-// --- Helpers ---
+// --- Cache validation ---
 
-function getRunDir(fixture: string, type: string): string {
-  return resolve(OUTPUT_DIR, fixture, type);
+/** Version bumped when strip logic, rendering, or comparison changes. */
+const CONFIG_VERSION = "1";
+
+function computePromptHash(prompt: string): string {
+  return createHash("sha256").update(prompt).digest("hex").slice(0, 16);
 }
 
-function isRunComplete(fixture: string, type: string): boolean {
-  const dir = getRunDir(fixture, type);
-  return existsSync(join(dir, "result.json"));
+function buildCacheKey(prompt: string): CacheKey {
+  return {
+    model: MODEL,
+    promptHash: computePromptHash(prompt),
+    configVersion: CONFIG_VERSION,
+  };
+}
+
+function isCacheValid(resultPath: string, currentKey: CacheKey): boolean {
+  if (!existsSync(resultPath)) return false;
+  try {
+    const result = JSON.parse(readFileSync(resultPath, "utf-8")) as RunResult;
+    if (!result.cacheKey) return false;
+    return (
+      result.cacheKey.model === currentKey.model &&
+      result.cacheKey.promptHash === currentKey.promptHash &&
+      result.cacheKey.configVersion === currentKey.configVersion
+    );
+  } catch {
+    return false;
+  }
+}
+
+// --- Helpers ---
+
+function getRunDir(fixture: string, type: string, runIndex: number): string {
+  return resolve(OUTPUT_DIR, fixture, type, `run-${runIndex}`);
+}
+
+function getResultPath(fixture: string, type: string, runIndex: number): string {
+  return join(getRunDir(fixture, type, runIndex), "result.json");
+}
+
+/** Detect no-op strip types by comparing output. */
+function isStripNoOp(baselineTree: string, type: DesignTreeInfoType): boolean {
+  const stripped = stripDesignTree(baselineTree, type);
+  return stripped === baselineTree;
 }
 
 /** Extract HTML code block and interpretations from LLM response. */
-function parseResponse(text: string): { html: string; interpretations: string[] } {
+function parseResponse(text: string): { html: string; interpretations: string[]; parseWarnings: string[] } {
+  const warnings: string[] = [];
+
   // Extract HTML from ```html ... ``` block
   const htmlMatch = text.match(/```html\s*\n([\s\S]*?)```/);
-  const html = htmlMatch?.[1]?.trim() ?? "";
-
-  // Extract interpretations
-  const interpMatch = text.match(/\/\/\s*interpretations:\s*([\s\S]*?)(?:```|$)/i);
-  if (!interpMatch || interpMatch[1]?.trim().toLowerCase() === "none") {
-    return { html, interpretations: [] };
+  if (!htmlMatch) {
+    // Fallback: try ```...``` without language
+    const fallback = text.match(/```\s*\n(<!DOCTYPE[\s\S]*?)```/i);
+    if (!fallback) warnings.push("No HTML code block found in response");
+    var html = fallback?.[1]?.trim() ?? "";
+  } else {
+    var html = htmlMatch[1]?.trim() ?? "";
   }
 
-  const interpretations = (interpMatch[1] ?? "")
+  // Extract interpretations — multiple patterns for robustness
+  const patterns = [
+    /\/\/\s*interpretations:\s*([\s\S]*?)(?:```|$)/i,           // // interpretations:
+    /#{1,3}\s*interpretations\s*\n([\s\S]*?)(?:```|#{1,3}|$)/i, // ### Interpretations
+    /\*\*interpretations?\*\*[:\s]*([\s\S]*?)(?:```|$)/i,       // **Interpretations**:
+  ];
+
+  let interpText: string | null = null;
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match?.[1]) {
+      interpText = match[1];
+      break;
+    }
+  }
+
+  if (interpText === null) {
+    warnings.push("No interpretations section found — counting as 0");
+    return { html, interpretations: [], parseWarnings: warnings };
+  }
+
+  if (interpText.trim().toLowerCase() === "none") {
+    return { html, interpretations: [], parseWarnings: warnings };
+  }
+
+  const interpretations = interpText
     .split("\n")
-    .map((line) => line.replace(/^-\s*/, "").trim())
+    .map((line) => line.replace(/^[-*]\s*/, "").trim())
     .filter(Boolean);
 
-  return { html, interpretations };
+  return { html, interpretations, parseWarnings: warnings };
 }
 
 /** Get fixture screenshot path (Figma ground truth). */
@@ -136,15 +210,17 @@ async function runSingle(
   fixture: string,
   type: "baseline" | DesignTreeInfoType,
   designTree: string,
+  runIndex: number,
+  cacheKey: CacheKey,
 ): Promise<RunResult> {
-  const runDir = getRunDir(fixture, type);
+  const runDir = getRunDir(fixture, type, runIndex);
   mkdirSync(runDir, { recursive: true });
 
   // Save design-tree for reference
   writeFileSync(join(runDir, "design-tree.txt"), designTree);
 
   // Call Claude API
-  console.log(`    Calling Claude API...`);
+  console.log(`    Calling Claude API (run ${runIndex + 1})...`);
   const response = await client.messages.create({
     model: MODEL,
     max_tokens: MAX_TOKENS,
@@ -162,9 +238,9 @@ async function runSingle(
   writeFileSync(join(runDir, "response.txt"), responseText);
 
   // Parse HTML and interpretations
-  const { html, interpretations } = parseResponse(responseText);
-  if (!html) {
-    console.warn(`    WARNING: No HTML extracted from response`);
+  const { html, interpretations, parseWarnings } = parseResponse(responseText);
+  if (parseWarnings.length > 0) {
+    for (const w of parseWarnings) console.warn(`    WARNING: ${w}`);
   }
 
   const htmlPath = join(runDir, "output.html");
@@ -176,7 +252,6 @@ async function runSingle(
   if (existsSync(fixtureImagesDir)) {
     const runImagesDir = join(runDir, "images");
     mkdirSync(runImagesDir, { recursive: true });
-    const { readdirSync } = await import("node:fs");
     for (const f of readdirSync(fixtureImagesDir)) {
       copyFileSync(join(fixtureImagesDir, f), join(runImagesDir, f));
     }
@@ -207,6 +282,7 @@ async function runSingle(
   const result: RunResult = {
     fixture,
     type,
+    runIndex,
     similarity: comparison.similarity,
     interpretationsCount: interpretations.length,
     inputTokens: response.usage.input_tokens,
@@ -215,6 +291,7 @@ async function runSingle(
     htmlPath,
     codePngPath,
     timestamp: new Date().toISOString(),
+    cacheKey,
   };
 
   // Save result
@@ -226,27 +303,51 @@ async function runSingle(
 }
 
 function computeRankings(results: RunResult[]): RankingEntry[] {
-  // Get baselines
-  const baselines = new Map<string, RunResult>();
+  // Average baselines per fixture (across runs)
+  const baselinesByFixture = new Map<string, { similarity: number; interp: number; tokens: number; count: number }>();
   for (const r of results) {
-    if (r.type === "baseline") baselines.set(r.fixture, r);
+    if (r.type !== "baseline") continue;
+    const existing = baselinesByFixture.get(r.fixture) ?? { similarity: 0, interp: 0, tokens: 0, count: 0 };
+    existing.similarity += r.similarity;
+    existing.interp += r.interpretationsCount;
+    existing.tokens += r.totalTokens;
+    existing.count++;
+    baselinesByFixture.set(r.fixture, existing);
   }
 
-  // Compute deltas per type × fixture
-  const typeResults = new Map<DesignTreeInfoType, Map<string, { deltaV: number; deltaI: number; deltaT: number }>>();
-
+  // Average ablation results per type × fixture (across runs)
+  const ablationByTypeFixture = new Map<string, { similarity: number; interp: number; tokens: number; count: number }>();
   for (const r of results) {
     if (r.type === "baseline") continue;
-    const baseline = baselines.get(r.fixture);
-    if (!baseline) continue;
+    const key = `${r.type}:${r.fixture}`;
+    const existing = ablationByTypeFixture.get(key) ?? { similarity: 0, interp: 0, tokens: 0, count: 0 };
+    existing.similarity += r.similarity;
+    existing.interp += r.interpretationsCount;
+    existing.tokens += r.totalTokens;
+    existing.count++;
+    ablationByTypeFixture.set(key, existing);
+  }
 
-    const type = r.type as DesignTreeInfoType;
+  // Compute deltas
+  const typeResults = new Map<DesignTreeInfoType, Map<string, { deltaV: number; deltaI: number; deltaT: number }>>();
+
+  for (const [key, abl] of ablationByTypeFixture) {
+    const [type, fixture] = key.split(":") as [DesignTreeInfoType, string];
+    const base = baselinesByFixture.get(fixture);
+    if (!base || base.count === 0) continue;
+
+    const avgBaseSim = base.similarity / base.count;
+    const avgBaseInterp = base.interp / base.count;
+    const avgBaseTokens = base.tokens / base.count;
+    const avgAblSim = abl.similarity / abl.count;
+    const avgAblInterp = abl.interp / abl.count;
+    const avgAblTokens = abl.tokens / abl.count;
+
     if (!typeResults.has(type)) typeResults.set(type, new Map());
-
-    typeResults.get(type)!.set(r.fixture, {
-      deltaV: baseline.similarity - r.similarity,
-      deltaI: r.interpretationsCount - baseline.interpretationsCount,
-      deltaT: r.totalTokens - baseline.totalTokens,
+    typeResults.get(type)!.set(fixture, {
+      deltaV: avgBaseSim - avgAblSim,
+      deltaI: avgAblInterp - avgBaseInterp,
+      deltaT: avgAblTokens - avgBaseTokens,
     });
   }
 
@@ -272,9 +373,7 @@ function computeRankings(results: RunResult[]): RankingEntry[] {
     });
   }
 
-  // Sort by avgDeltaV descending (highest impact first)
   rankings.sort((a, b) => b.avgDeltaV - a.avgDeltaV);
-
   return rankings;
 }
 
@@ -306,28 +405,31 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
+  // Configuration from environment
+  const fixtures = process.env["ABLATION_FIXTURES"]
+    ? process.env["ABLATION_FIXTURES"].split(",").map((s) => s.trim())
+    : DEFAULT_FIXTURES;
+  const runsPerCondition = process.env["ABLATION_RUNS"]
+    ? parseInt(process.env["ABLATION_RUNS"], 10)
+    : 1;
+
   const prompt = readFileSync(PROMPT_PATH, "utf-8");
+  const cacheKey = buildCacheKey(prompt);
   const client = new Anthropic({ apiKey });
 
   mkdirSync(OUTPUT_DIR, { recursive: true });
 
+  console.log(`Model: ${MODEL}`);
+  console.log(`Fixtures: ${fixtures.join(", ")}`);
+  console.log(`Runs per condition: ${runsPerCondition}`);
+  console.log(`Prompt hash: ${cacheKey.promptHash}`);
+  console.log(`Config version: ${cacheKey.configVersion}`);
+  console.log("");
+
   const startedAt = new Date().toISOString();
   const allResults: RunResult[] = [];
 
-  // Load existing results (resume support)
-  for (const fixture of FIXTURES) {
-    for (const type of ["baseline", ...DESIGN_TREE_INFO_TYPES] as const) {
-      if (type !== "baseline" && SKIP_TYPES.has(type as DesignTreeInfoType)) continue;
-      if (isRunComplete(fixture, type)) {
-        const existing = JSON.parse(readFileSync(join(getRunDir(fixture, type), "result.json"), "utf-8")) as RunResult;
-        allResults.push(existing);
-        console.log(`  [cached] ${fixture}/${type} → similarity=${(existing.similarity * 100).toFixed(1)}%`);
-      }
-    }
-  }
-
-  // Run missing experiments
-  for (const fixture of FIXTURES) {
+  for (const fixture of fixtures) {
     console.log(`\n=== ${fixture} ===\n`);
 
     // Validate fixture exists
@@ -348,22 +450,40 @@ async function main(): Promise<void> {
     const options = getDesignTreeOptions(fixture);
     const baselineTree = generateDesignTree(file, options);
 
-    // Baseline
-    if (!isRunComplete(fixture, "baseline")) {
-      console.log(`  [baseline]`);
-      const result = await runSingle(client, prompt, fixture, "baseline", baselineTree);
-      allResults.push(result);
+    // Detect no-op strip types for this fixture
+    const skipTypes = new Set<DesignTreeInfoType>();
+    for (const type of DESIGN_TREE_INFO_TYPES) {
+      if (isStripNoOp(baselineTree, type)) {
+        skipTypes.add(type);
+      }
+    }
+    if (skipTypes.size > 0) {
+      console.log(`  Skipping no-op types: ${[...skipTypes].join(", ")}`);
     }
 
-    // Strip each type
-    for (const type of DESIGN_TREE_INFO_TYPES) {
-      if (SKIP_TYPES.has(type)) continue;
-      if (isRunComplete(fixture, type)) continue;
+    // All conditions: baseline + non-skipped types
+    const conditions: Array<"baseline" | DesignTreeInfoType> = [
+      "baseline",
+      ...DESIGN_TREE_INFO_TYPES.filter((t) => !skipTypes.has(t)),
+    ];
 
-      console.log(`  [${type}]`);
-      const strippedTree = stripDesignTree(baselineTree, type);
-      const result = await runSingle(client, prompt, fixture, type, strippedTree);
-      allResults.push(result);
+    for (const type of conditions) {
+      for (let run = 0; run < runsPerCondition; run++) {
+        const resultPath = getResultPath(fixture, type, run);
+
+        // Check cache with key validation
+        if (isCacheValid(resultPath, cacheKey)) {
+          const cached = JSON.parse(readFileSync(resultPath, "utf-8")) as RunResult;
+          allResults.push(cached);
+          console.log(`  [cached] ${type} run ${run + 1} → similarity=${(cached.similarity * 100).toFixed(1)}%`);
+          continue;
+        }
+
+        console.log(`  [${type}] run ${run + 1}/${runsPerCondition}`);
+        const tree = type === "baseline" ? baselineTree : stripDesignTree(baselineTree, type);
+        const result = await runSingle(client, prompt, fixture, type, tree, run, cacheKey);
+        allResults.push(result);
+      }
     }
   }
 
@@ -377,7 +497,8 @@ async function main(): Promise<void> {
     completedAt: new Date().toISOString(),
     model: MODEL,
     temperature: TEMPERATURE,
-    fixtures: [...FIXTURES],
+    runsPerCondition,
+    fixtures: [...fixtures],
     results: allResults,
     rankings,
   };
@@ -385,7 +506,7 @@ async function main(): Promise<void> {
   writeFileSync(join(OUTPUT_DIR, "summary.json"), JSON.stringify(summary, null, 2));
   console.log(`Summary saved to ${join(OUTPUT_DIR, "summary.json")}`);
 
-  // Print cost estimate
+  // Print cost estimate (Sonnet pricing: $3/MTok input, $15/MTok output)
   const totalInputTokens = allResults.reduce((s, r) => s + r.inputTokens, 0);
   const totalOutputTokens = allResults.reduce((s, r) => s + r.outputTokens, 0);
   const estimatedCost = (totalInputTokens * 3 / 1_000_000) + (totalOutputTokens * 15 / 1_000_000);
