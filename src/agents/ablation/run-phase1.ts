@@ -113,6 +113,7 @@ function computeConfigVersion(): string {
     resolve("src/core/engine/design-tree.ts"),
     resolve("src/core/engine/visual-compare.ts"),
     resolve("src/core/engine/visual-compare-helpers.ts"),
+    resolve("src/core/adapters/figma-file-loader.ts"),
     resolve("src/agents/ablation/run-phase1.ts"),
   ];
   const hash = createHash("sha256");
@@ -342,8 +343,12 @@ async function runSingle(
   let finalHtml = html;
   // Remove "// filename: ..." line if present at the start
   finalHtml = finalHtml.replace(/^\/\/\s*filename:.*\n/i, "");
-  // Sanitize: remove <script> tags (untrusted model HTML rendered in Chromium)
+  // Sanitize untrusted model HTML (rendered in Chromium via Playwright)
   finalHtml = finalHtml.replace(/<script[\s\S]*?<\/script>/gi, "");
+  finalHtml = finalHtml.replace(/\s+on\w+\s*=\s*"[^"]*"/gi, "");   // onclick="..." etc.
+  finalHtml = finalHtml.replace(/\s+on\w+\s*=\s*'[^']*'/gi, "");   // onclick='...' etc.
+  finalHtml = finalHtml.replace(/href\s*=\s*"javascript:[^"]*"/gi, 'href="#"');
+  finalHtml = finalHtml.replace(/href\s*=\s*'javascript:[^']*'/gi, "href='#'");
   // Remove Google Fonts <link> tags
   finalHtml = finalHtml.replace(/<link[^>]*fonts\.googleapis\.com[^>]*>/gi, "");
   finalHtml = finalHtml.replace(/<link[^>]*fonts\.gstatic\.com[^>]*>/gi, "");
@@ -381,9 +386,32 @@ async function runSingle(
 
   await renderCodeScreenshot(htmlPath, codePngPath, { width: logicalW, height: logicalH }, exportScale);
 
-  // Copy Figma screenshot to run dir
+  // Copy Figma screenshot to run dir first (before any cropping)
   const figmaCopyPath = join(runDir, "figma.png");
   copyFileSync(figmaScreenshotPath, figmaCopyPath);
+
+  // Crop both to matching dimensions for fair comparison
+  const codeImage = PNG.sync.read(readFileSync(codePngPath));
+  const figmaCopy = PNG.sync.read(readFileSync(figmaCopyPath));
+  const cropW = Math.min(codeImage.width, figmaCopy.width);
+  const cropH = Math.min(codeImage.height, figmaCopy.height);
+
+  if (codeImage.width !== cropW || codeImage.height !== cropH) {
+    const cropped = new PNG({ width: cropW, height: cropH });
+    for (let y = 0; y < cropH; y++) {
+      codeImage.data.copy(cropped.data, y * cropW * 4, y * codeImage.width * 4, y * codeImage.width * 4 + cropW * 4);
+    }
+    writeFileSync(codePngPath, PNG.sync.write(cropped));
+    console.log(`    Cropped code.png: ${codeImage.width}x${codeImage.height} → ${cropW}x${cropH}`);
+  }
+  if (figmaCopy.width !== cropW || figmaCopy.height !== cropH) {
+    const cropped = new PNG({ width: cropW, height: cropH });
+    for (let y = 0; y < cropH; y++) {
+      figmaCopy.data.copy(cropped.data, y * cropW * 4, y * figmaCopy.width * 4, y * figmaCopy.width * 4 + cropW * 4);
+    }
+    writeFileSync(figmaCopyPath, PNG.sync.write(cropped));
+    console.log(`    Cropped figma.png: ${figmaCopy.width}x${figmaCopy.height} → ${cropW}x${cropH}`);
+  }
 
   // Compare
   console.log(`    Comparing screenshots...`);

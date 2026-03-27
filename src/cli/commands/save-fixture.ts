@@ -131,16 +131,19 @@ export function registerSaveFixture(cli: CAC): void {
               vectorNodes.map(n => n.id),
               { format: "svg" },
             );
+            // Build mapping + download in a single pass to keep filenames consistent
+            const mapping: Record<string, string> = {};
             const usedNames = new Map<string, number>();
             let downloaded = 0;
             for (const { id, name } of vectorNodes) {
-              const svgUrl = svgUrls[id];
-              if (!svgUrl) continue;
               let base = sanitizeFilename(name);
               const count = usedNames.get(base) ?? 0;
               usedNames.set(base, count + 1);
               if (count > 0) base = `${base}-${count + 1}`;
               const filename = `${base}.svg`;
+              mapping[id] = filename;
+              const svgUrl = svgUrls[id];
+              if (!svgUrl) continue;
               try {
                 const resp = await fetch(svgUrl);
                 if (resp.ok) {
@@ -151,16 +154,6 @@ export function registerSaveFixture(cli: CAC): void {
               } catch {
                 // Skip failed downloads
               }
-            }
-            // Write mapping.json for design-tree
-            const mapping: Record<string, string> = {};
-            const usedNamesForMapping = new Map<string, number>();
-            for (const { id, name } of vectorNodes) {
-              let base = sanitizeFilename(name);
-              const cnt = usedNamesForMapping.get(base) ?? 0;
-              usedNamesForMapping.set(base, cnt + 1);
-              if (cnt > 0) base = `${base}-${cnt + 1}`;
-              mapping[id] = `${base}.svg`;
             }
             await writeFile(resolve(vectorDir, "mapping.json"), JSON.stringify(mapping, null, 2), "utf-8");
 

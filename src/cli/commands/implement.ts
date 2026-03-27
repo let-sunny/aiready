@@ -144,16 +144,19 @@ export function registerImplement(cli: CAC): void {
                   vectorNodes.map(n => n.id),
                   { format: "svg" },
                 );
+                // Build mapping + download in a single pass to keep filenames consistent
+                const mapping: Record<string, string> = {};
                 const usedNames = new Map<string, number>();
                 let downloaded = 0;
                 for (const { id, name } of vectorNodes) {
-                  const svgUrl = svgUrls[id];
-                  if (!svgUrl) continue;
                   let base = sanitizeFilename(name);
                   const count = usedNames.get(base) ?? 0;
                   usedNames.set(base, count + 1);
                   if (count > 0) base = `${base}-${count + 1}`;
                   const filename = `${base}.svg`;
+                  mapping[id] = filename;
+                  const svgUrl = svgUrls[id];
+                  if (!svgUrl) continue;
                   try {
                     const resp = await fetch(svgUrl);
                     if (resp.ok) {
@@ -162,16 +165,6 @@ export function registerImplement(cli: CAC): void {
                       downloaded++;
                     }
                   } catch { /* skip */ }
-                }
-                // Write mapping.json for design-tree
-                const mapping: Record<string, string> = {};
-                const usedNamesForMapping = new Map<string, number>();
-                for (const { id, name } of vectorNodes) {
-                  let base = sanitizeFilename(name);
-                  const cnt = usedNamesForMapping.get(base) ?? 0;
-                  usedNamesForMapping.set(base, cnt + 1);
-                  if (cnt > 0) base = `${base}-${cnt + 1}`;
-                  mapping[id] = `${base}.svg`;
                 }
                 await writeFile(resolve(vecOutDir, "mapping.json"), JSON.stringify(mapping, null, 2), "utf-8");
 
@@ -192,16 +185,19 @@ export function registerImplement(cli: CAC): void {
                   imgNodes.map(n => n.id),
                   { format: "png", scale: imgScale },
                 );
+                // Build mapping + download in a single pass to keep filenames consistent
+                const mapping: Record<string, string> = {};
                 const usedNames = new Map<string, number>();
                 let downloaded = 0;
                 for (const { id, name } of imgNodes) {
-                  const imgUrl = imgUrls[id];
-                  if (!imgUrl) continue;
                   let base = sanitizeFilename(name);
                   const count = usedNames.get(base) ?? 0;
                   usedNames.set(base, count + 1);
                   if (count > 0) base = `${base}-${count + 1}`;
                   const filename = `${base}@${imgScale}x.png`;
+                  mapping[id] = filename;
+                  const imgUrl = imgUrls[id];
+                  if (!imgUrl) continue;
                   try {
                     const resp = await fetch(imgUrl);
                     if (resp.ok) {
@@ -210,16 +206,6 @@ export function registerImplement(cli: CAC): void {
                       downloaded++;
                     }
                   } catch { /* skip */ }
-                }
-                // Write mapping.json for design-tree
-                const mapping: Record<string, string> = {};
-                const usedNamesForMapping = new Map<string, number>();
-                for (const { id, name } of imgNodes) {
-                  let base = sanitizeFilename(name);
-                  const cnt = usedNamesForMapping.get(base) ?? 0;
-                  usedNamesForMapping.set(base, cnt + 1);
-                  if (cnt > 0) base = `${base}-${cnt + 1}`;
-                  mapping[id] = `${base}@${imgScale}x.png`;
                 }
                 await writeFile(resolve(imgOutDir, "mapping.json"), JSON.stringify(mapping, null, 2), "utf-8");
 
