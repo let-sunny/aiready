@@ -89,7 +89,7 @@ interface Phase1Summary {
   runsPerCondition: number;
   fixtures: string[];
   skippedFixtures: Array<{ fixture: string; reason: string }>;
-  cacheStats: { hits: number; misses: number };
+  cacheStats: { hits: number; newCalls: number };
   parseFailureCount: number;
   results: RunResult[];
   rankings: RankingEntry[];
@@ -112,6 +112,7 @@ function computeConfigVersion(): string {
     resolve("src/core/engine/design-tree.ts"),
     resolve("src/core/engine/visual-compare.ts"),
     resolve("src/core/engine/visual-compare-helpers.ts"),
+    resolve("src/agents/ablation/run-phase1.ts"),
   ];
   const hash = createHash("sha256");
   for (const f of coreFiles) {
@@ -561,7 +562,7 @@ async function main(): Promise<void> {
     runsPerCondition,
     fixtures: [...fixtures],
     skippedFixtures,
-    cacheStats: { hits: cacheHits, misses: newResults.length },
+    cacheStats: { hits: cacheHits, newCalls: newResults.length },
     parseFailureCount: allResults.filter((r) => r.interpretationsParseFailed).length,
     results: allResults,
     rankings,
