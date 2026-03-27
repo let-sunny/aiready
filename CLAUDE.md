@@ -6,9 +6,9 @@ A CLI tool that analyzes Figma design structures to provide development-friendli
 
 **Help teams implement Figma designs exactly as designed, with zero unnecessary AI token cost.**
 
-The design-tree format converts Figma data into a curated, CSS-ready representation that AI can implement directly. Experiments showed design-tree achieves 94% pixel accuracy with 5× fewer tokens than raw Figma JSON (79%). The key insight: **information curation > information abundance** — AI works better with focused, noise-free input.
+The design-tree format converts Figma data into a curated, CSS-ready representation that AI can implement directly. Early ablation experiments suggest design-tree produces higher pixel accuracy with significantly fewer tokens than raw Figma JSON. The key insight: **information curation > information abundance** — AI works better with focused, noise-free input.
 
-Structure (auto-layout) is the dominant factor: designs without auto-layout drop from 95% to 63% at different viewports. The design-tree's flex-based output is inherently responsive — only the root width needs adjustment, unlike MCP code which hardcodes widths in child elements and requires LLM post-processing for responsive behavior.
+See [Experiment Wiki](https://github.com/let-sunny/canicode/wiki) for detailed data and methodology.
 
 ## Target Environment
 
@@ -22,7 +22,7 @@ This means:
 - Component-related rule scores (missing-component, etc.) should NOT be lowered based on small fixture calibration
 - Token consumption is a first-class metric — designs that waste tokens on repeated structures are penalized
 - Calibration fixtures must be large-scale (270+ nodes) — experiments showed small fixtures (50-100 nodes) produce misleading results
-- Structure (auto-layout) is the most impactful category — empirically validated via ablation experiments
+- `no-auto-layout` is the single highest-impact rule (score -10) — empirically validated via ablation experiments
 
 ## Tech Stack
 
