@@ -80,10 +80,26 @@ Currently all categories are weighted equally (1.0). Ablation experiments sugges
 
 ## Calibration
 
-Rule scores are validated through ablation experiments:
+Rule scores are continuously refined through two methods:
+
+### 1. Calibration loop (`/calibrate-loop`)
+
+The primary calibration pipeline — runs within Claude Code:
+
+1. Analyze a real Figma fixture
+2. Implement the entire design as one HTML page (Converter)
+3. Compare pixel-level accuracy against Figma screenshot (`visual-compare`)
+4. Analyze diff images to categorize pixel gaps (Gap Analyzer)
+5. 6-agent debate loop: Analysis → Converter → Gap Analyzer → Evaluation → Critic → Arbitrator
+
+Cross-run evidence accumulates in `data/calibration-evidence.json`. Score adjustments in `rule-config.ts` are always reviewed by the developer.
+
+### 2. Ablation experiments
+
+Controlled experiments that measure the impact of each design category:
 
 1. Create good/bad fixture pairs (each breaking exactly one category)
-2. Implement via AI and measure pixel accuracy (visual-compare)
+2. Implement via AI and measure pixel accuracy
 3. Test at multiple viewports (375px, 500px) for responsive impact
 4. Compare input methods (design-tree vs raw JSON vs MCP)
 

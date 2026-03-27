@@ -163,8 +163,9 @@ describe("RuleEngine.analyze — node exclusion", () => {
   });
 
   it("skips nodes matching excludeNodeNames pattern", () => {
-    const ignoredNode = makeNode({ id: "i:1", name: "IgnoreMe", type: "FRAME" });
-    const normalNode = makeNode({ id: "n:1", name: "Normal", type: "FRAME" });
+    // Use GROUP type to trigger group-usage rule (enabled)
+    const ignoredNode = makeNode({ id: "i:1", name: "IgnoreMe", type: "GROUP", children: [makeNode({ id: "i:2", name: "Child", type: "FRAME" })] });
+    const normalNode = makeNode({ id: "n:1", name: "Normal", type: "GROUP", children: [makeNode({ id: "n:2", name: "Child", type: "FRAME" })] });
     const doc = makeNode({
       id: "0:1",
       name: "Document",
