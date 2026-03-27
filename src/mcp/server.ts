@@ -7,7 +7,7 @@ import { z } from "zod";
 import { writeFile } from "node:fs";
 import { exec } from "node:child_process";
 import { analyzeFile } from "../core/engine/rule-engine.js";
-import { loadFile } from "../core/engine/loader.js";
+import { loadFile, isJsonFile, isFixtureDir } from "../core/engine/loader.js";
 import { calculateScores, buildResultJson } from "../core/engine/scoring.js";
 import { generateHtmlReport } from "../core/report-html/index.js";
 import { getReportsDir, ensureReportsDir } from "../core/engine/config-store.js";
@@ -100,7 +100,7 @@ Provide a Figma URL or fixture path via the input parameter. Requires FIGMA_TOKE
         issueCount: result.issues.length,
         grade: scores.overall.grade,
         percentage: scores.overall.percentage,
-        source: "url",
+        source: isJsonFile(input) || isFixtureDir(input) ? "fixture" : "figma",
       });
 
       return {

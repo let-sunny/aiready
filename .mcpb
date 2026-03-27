@@ -1,7 +1,7 @@
 {
   "name": "canicode",
   "display_name": "CanICode",
-  "description": "Analyze Figma design structures for development-friendliness and AI-friendliness. Scores designs across 39 rules in 6 categories (layout, design tokens, components, naming, AI readability, handoff risk) and generates detailed HTML reports with actionable issues.",
+  "description": "Analyze Figma design structures for development-friendliness and AI-friendliness. Scores designs across 29 rules in 5 categories (structure, token, component, naming, behavior) and generates detailed HTML reports with actionable issues.",
   "version": "0.5.1",
   "author": "minseon",
   "repository": "https://github.com/let-sunny/canicode",
@@ -96,7 +96,7 @@
     {
       "name": "docs",
       "title": "Get Customization Guide",
-      "description": "Get documentation on config overrides, custom rules, all 39 rule IDs with default scores, and example configurations.",
+      "description": "Get documentation on config overrides, custom rules, all 29 rule IDs with default scores, and example configurations.",
       "annotations": {
         "readOnlyHint": true,
         "destructiveHint": false,
