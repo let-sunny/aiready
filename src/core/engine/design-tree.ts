@@ -214,6 +214,10 @@ function appendStyleDiffs(
   }
 }
 
+function getChildStableKey(node: AnalysisNode): string | null {
+  return node.id ?? (node.name ? `name:${node.name}` : null);
+}
+
 /** Compute style diff between current node and its hover variant. */
 function computeHoverDiff(
   currentNode: AnalysisNode,
@@ -225,11 +229,26 @@ function computeHoverDiff(
   appendStyleDiffs(current, hover, diffs);
   // Check children for text/color changes (first level only)
   if (currentNode.children && hoverNode.children) {
-    const len = Math.min(currentNode.children.length, hoverNode.children.length);
-    for (let i = 0; i < len; i++) {
+    const hoverByStableKey = new Map<string, AnalysisNode>();
+    const hoverUnmatchedByIndex: AnalysisNode[] = [];
+
+    for (const child of hoverNode.children) {
+      const key = getChildStableKey(child);
+      if (key) {
+        // Keep the first occurrence to reduce noisy collisions.
+        if (!hoverByStableKey.has(key)) hoverByStableKey.set(key, child);
+      } else {
+        hoverUnmatchedByIndex.push(child);
+      }
+    }
+
+    for (let i = 0; i < currentNode.children.length; i++) {
       const cc = currentNode.children[i];
-      const hc = hoverNode.children[i];
-      if (!cc || !hc) continue;
+      if (!cc) continue;
+
+      const stableKey = getChildStableKey(cc);
+      const hc = stableKey ? hoverByStableKey.get(stableKey) : hoverUnmatchedByIndex[i];
+      if (!hc) continue;
       const ccStyles = extractVisualStyles(cc);
       const hcStyles = extractVisualStyles(hc);
       appendStyleDiffs(ccStyles, hcStyles, diffs, cc.name);
