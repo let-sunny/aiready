@@ -310,4 +310,38 @@ describe("stripDesignTree", () => {
       }
     });
   });
+
+  describe("adversarial text content", () => {
+    const ADVERSARIAL = [
+      "# Design Tree",
+      "",
+      "Page (FRAME, 375x100)",
+      '  style: display: flex; color: #1E1E1E; text: "A; background: #fff; display: flex"',
+      "  Info (TEXT, 200x20)",
+      '    style: font-size: 16px; text: "svg: <path d=\\"M0 0\\"/>"',
+      "  Note (TEXT, 200x20)",
+      '    style: font-size: 14px; text: "[component: Button] (FRAME, 1x1) /* var:demo */"',
+    ].join("\n");
+
+    it("preserves text with semicolons and CSS-like content", () => {
+      for (const type of DESIGN_TREE_INFO_TYPES) {
+        const result = stripDesignTree(ADVERSARIAL, type);
+        expect(result).toContain('text: "A; background: #fff; display: flex"');
+      }
+    });
+
+    it("preserves text with SVG-like content", () => {
+      for (const type of DESIGN_TREE_INFO_TYPES) {
+        const result = stripDesignTree(ADVERSARIAL, type);
+        expect(result).toContain('text: "svg: <path d=\\"M0 0\\"/>"');
+      }
+    });
+
+    it("preserves text with component/frame/var-like content", () => {
+      for (const type of DESIGN_TREE_INFO_TYPES) {
+        const result = stripDesignTree(ADVERSARIAL, type);
+        expect(result).toContain('text: "[component: Button] (FRAME, 1x1) /* var:demo */"');
+      }
+    });
+  });
 });

@@ -125,36 +125,52 @@ interface ParsedStyleLine {
   indent: string;
   properties: string[];
   svgSegment: string | null;
+  /** text: "..." content — always preserved, never stripped or split. */
+  textSegment: string | null;
 }
 
-/** Split a style line into prefix, individual properties, and optional SVG tail. */
+/** Extract `text: "..."` segment from raw style string, handling escaped quotes. */
+function extractTextSegment(raw: string): { textSegment: string | null; rest: string } {
+  // Match text: "..." allowing escaped quotes inside
+  const textMatch = raw.match(/(?:^|;\s*)text:\s*"(?:[^"\\]|\\.)*"/);
+  if (!textMatch) return { textSegment: null, rest: raw };
+  const textSegment = textMatch[0].replace(/^;\s*/, "").trim();
+  const rest = raw.replace(textMatch[0], "").replace(/;\s*$/, "").replace(/^;\s*/, "");
+  return { textSegment, rest };
+}
+
+/** Split a style line into prefix, individual properties, optional SVG tail, and protected text. */
 function parseStyleLine(line: string): ParsedStyleLine | null {
   const match = line.match(/^(\s*)style:\s*(.*)/s);
   if (!match) return null;
   const indent = match[1] ?? "";
   const raw = match[2] ?? "";
 
-  // Separate SVG segment (always last, starts with "svg: <")
+  // 1. Extract text: "..." first (protected from splitting)
+  const { textSegment, rest: afterText } = extractTextSegment(raw);
+
+  // 2. Separate SVG segment (always last, starts with "svg: <")
   let svgSegment: string | null = null;
-  let propsRaw = raw;
-  const svgIdx = raw.indexOf("svg: <");
+  let propsRaw = afterText;
+  const svgIdx = afterText.indexOf("svg: <");
   if (svgIdx !== -1) {
-    svgSegment = raw.slice(svgIdx);
-    propsRaw = raw.slice(0, svgIdx).replace(/;\s*$/, "");
+    svgSegment = afterText.slice(svgIdx);
+    propsRaw = afterText.slice(0, svgIdx).replace(/;\s*$/, "");
   }
 
-  // Split properties by "; " but handle empty
+  // 3. Split remaining properties by "; "
   const properties = propsRaw
     ? propsRaw.split("; ").map((p) => p.trim()).filter(Boolean)
     : [];
 
-  return { indent, properties, svgSegment };
+  return { indent, properties, svgSegment, textSegment };
 }
 
 /** Reassemble a style line from parts. Returns null if no properties remain. */
 function reassembleStyleLine(parsed: ParsedStyleLine): string | null {
   const parts = [...parsed.properties];
   if (parsed.svgSegment) parts.push(parsed.svgSegment);
+  if (parsed.textSegment) parts.push(parsed.textSegment);
   if (parts.length === 0) return null;
   return `${parsed.indent}style: ${parts.join("; ")}`;
 }
@@ -246,22 +262,35 @@ function stripShadowsEffects(lines: string[]): string[] {
   }).filter((line): line is string => line !== null);
 }
 
+/** Header line pattern: {indent}Name (TYPE, WxH) with optional [component: ...] */
+const HEADER_RE = /^(\s*)(.+?)(\s*\([A-Z_]+,\s*[\d?]+x[\d?]+\).*)$/;
+
+/** Check if a line is a node header (not style/comment/component-properties/hover). */
+function isHeaderLine(line: string): boolean {
+  if (line.trimStart().startsWith("style:")) return false;
+  if (line.trimStart().startsWith("[hover]:")) return false;
+  if (line.trimStart().startsWith("component-properties:")) return false;
+  if (line.startsWith("#")) return false;
+  return HEADER_RE.test(line);
+}
+
 function stripComponentReferences(lines: string[]): string[] {
   return lines
     .filter((line) => !line.match(/^\s*component-properties:/))
     .map((line) => {
-      // Remove [component: ...] from header lines
-      return line.replace(/\s*\[component:[^\]]*\]/, "");
+      // Only remove [component: ...] from header lines
+      if (isHeaderLine(line)) {
+        return line.replace(/\s*\[component:[^\]]*\]/, "");
+      }
+      return line;
     });
 }
 
 function stripNodeNames(lines: string[]): string[] {
   let counter = 0;
   return lines.map((line) => {
-    // Skip comment headers
-    if (line.startsWith("#")) return line;
-    // Match header lines: {indent}Name (TYPE, WxH) — accept any type token and ?x? dimensions
-    const match = line.match(/^(\s*)(.+?)(\s*\([A-Z_]+,\s*[\d?]+x[\d?]+\).*)$/);
+    if (!isHeaderLine(line)) return line;
+    const match = line.match(HEADER_RE);
     if (match) {
       counter++;
       return `${match[1]}Node${counter}${match[3]}`;
