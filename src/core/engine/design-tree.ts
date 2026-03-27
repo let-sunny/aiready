@@ -215,7 +215,9 @@ function appendStyleDiffs(
 }
 
 function getChildStableKey(node: AnalysisNode): string | null {
-  return node.id ?? (node.name ? `name:${node.name}` : null);
+  // Prefer name over id: variant children share the same name but have different ids
+  if (node.name) return `name:${node.name}`;
+  return node.id ?? null;
 }
 
 /** Compute style diff between current node and its hover variant. */
