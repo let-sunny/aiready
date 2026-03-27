@@ -303,10 +303,9 @@ function stripOverflow(lines: string[]): string[] {
   return lines.map((line) => {
     const parsed = parseStyleLine(line);
     if (!parsed) return line;
-    parsed.properties = parsed.properties.filter((p) => {
-      const prop = getPropertyName(p);
-      return p.trim() !== "overflow: hidden";
-    });
+    parsed.properties = parsed.properties.filter((p) =>
+      p.trim() !== "overflow: hidden"
+    );
     return reassembleStyleLine(parsed);
   }).filter((line): line is string => line !== null);
 }
