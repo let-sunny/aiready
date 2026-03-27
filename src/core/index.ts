@@ -3,3 +3,4 @@
 export * from "./engine/rule-engine.js";
 export * from "./engine/scoring.js";
 export * from "./engine/design-tree.js";
+export * from "./engine/design-tree-strip.js";

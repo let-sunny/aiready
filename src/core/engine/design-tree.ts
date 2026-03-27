@@ -464,7 +464,7 @@ function renderNode(
 
   // Text content
   if (node.type === "TEXT" && node.characters) {
-    styles.push(`text: "${node.characters}"`);
+    styles.push(`text: "${node.characters.replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/"/g, '\\"')}"`);
   }
 
   // Vector SVG inline (when vector dir with downloaded SVGs is available)
@@ -474,7 +474,7 @@ function renderNode(
       ? join(vectorDir, mappedFile)
       : join(vectorDir, `${node.id.replace(/:/g, "-")}.svg`); // fallback to legacy ID-based naming
     if (existsSync(svgPath)) {
-      const svg = readFileSync(svgPath, "utf-8").trim();
+      const svg = readFileSync(svgPath, "utf-8").trim().replace(/\n\s*/g, " ");
       styles.push(`svg: ${svg}`);
     }
   }
