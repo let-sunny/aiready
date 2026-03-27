@@ -455,7 +455,8 @@ function computeRankings(results: RunResult[]): RankingEntry[] {
     if (baseline.interpretationsCount >= 0 && r.interpretationsCount >= 0) {
       deltas.deltaI.push(r.interpretationsCount - baseline.interpretationsCount);
     }
-    deltas.deltaT.push(r.totalTokens - baseline.totalTokens);
+    // ΔT: positive = ablation used fewer tokens (good for efficiency)
+    deltas.deltaT.push(baseline.totalTokens - r.totalTokens);
   }
 
   // Average paired deltas per fixture, then across fixtures
@@ -527,6 +528,14 @@ async function main(): Promise<void> {
   if (fixtures.length === 0) {
     console.error("Error: No fixtures specified. Set ABLATION_FIXTURES or use defaults.");
     process.exit(1);
+  }
+  // Validate fixture names — prevent path traversal
+  const SAFE_NAME = /^[a-z0-9][a-z0-9_-]*$/;
+  for (const f of fixtures) {
+    if (!SAFE_NAME.test(f)) {
+      console.error(`Error: Invalid fixture name "${f}". Only lowercase alphanumeric, hyphens, underscores allowed.`);
+      process.exit(1);
+    }
   }
   const rawRuns = process.env["ABLATION_RUNS"];
   let runsPerCondition = 1;
