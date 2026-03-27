@@ -276,6 +276,7 @@ function renderNode(
   vectorMapping?: Record<string, string>,
   fileStyles?: AnalysisFile["styles"],
   interactionDests?: Record<string, AnalysisNode>,
+  parentBBox?: { x: number; y: number; width: number; height: number },
 ): string {
   if (node.visible === false) return "";
 
@@ -332,7 +333,8 @@ function renderNode(
         styles.push(`${crossGap}: ${node.counterAxisSpacing}px${getVarRef(node, "counterAxisSpacing")}`);
       }
       if (node.primaryAxisAlignItems) styles.push(`justify-content: ${mapAlign(node.primaryAxisAlignItems)}`);
-      if (node.counterAxisAlignItems) styles.push(`align-items: ${mapAlign(node.counterAxisAlignItems)}`);
+      // Figma default is MIN (flex-start), CSS default is stretch — emit explicitly
+      styles.push(`align-items: ${mapAlign(node.counterAxisAlignItems ?? "MIN")}`);
       if (node.counterAxisAlignContent && node.counterAxisAlignContent !== "AUTO") {
         styles.push(`align-content: ${mapAlign(node.counterAxisAlignContent)}`);
       }
@@ -346,6 +348,21 @@ function renderNode(
     styles.push("flex-grow: 1");
   }
 
+  // Absolute positioning (child placed outside normal auto-layout flow)
+  if (node.layoutPositioning === "ABSOLUTE") {
+    styles.push("position: absolute");
+    if (parentBBox && node.absoluteBoundingBox) {
+      const top = Math.round(node.absoluteBoundingBox.y - parentBBox.y);
+      const left = Math.round(node.absoluteBoundingBox.x - parentBBox.x);
+      styles.push(`top: ${top}px`);
+      styles.push(`left: ${left}px`);
+    }
+  }
+  // If any child is absolute, parent needs position: relative (but not if already absolute)
+  if (node.layoutPositioning !== "ABSOLUTE" && node.children?.some((c) => c.layoutPositioning === "ABSOLUTE")) {
+    styles.push("position: relative");
+  }
+
   // Padding
   const pt = node.paddingTop ?? 0;
   const pr = node.paddingRight ?? 0;
@@ -356,8 +373,8 @@ function renderNode(
     styles.push(`padding: ${pt}px ${pr}px ${pb}px ${pl}px${padRef}`);
   }
 
-  // Sizing
-  if (node.layoutSizingHorizontal === "FILL") styles.push("width: 100%");
+  // Sizing — FILL = stretch to parent. If flex-grow is already set, skip width: 100% (redundant + breaks wrap layouts)
+  if (node.layoutSizingHorizontal === "FILL" && node.layoutGrow !== 1) styles.push("width: 100%");
   if (node.layoutSizingVertical === "FILL") styles.push("height: 100%");
 
   // Fill (not for TEXT — text fill is color)
@@ -464,8 +481,9 @@ function renderNode(
     if (s["textAlignHorizontal"]) {
       styles.push(`text-align: ${mapTextAlignHorizontal(String(s["textAlignHorizontal"]))}`);
     }
-    if (s["textAlignVertical"]) {
+    if (s["textAlignVertical"] && s["textAlignVertical"] !== "TOP") {
       // CSS has no direct text vertical-align in a text box; emit flex hint.
+      // TOP is the default — only emit for CENTER/BOTTOM.
       styles.push("display: flex");
       styles.push(`align-items: ${mapTextAlignVertical(String(s["textAlignVertical"]))}`);
     }
@@ -521,7 +539,7 @@ function renderNode(
   // Children
   if (node.children) {
     for (const child of node.children) {
-      const childOutput = renderNode(child, indent + 1, vectorDir, components, imageMapping, vectorMapping, fileStyles, interactionDests);
+      const childOutput = renderNode(child, indent + 1, vectorDir, components, imageMapping, vectorMapping, fileStyles, interactionDests, node.absoluteBoundingBox ?? undefined);
       if (childOutput) lines.push(childOutput);
     }
   }

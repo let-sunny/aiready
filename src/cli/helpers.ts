@@ -41,24 +41,33 @@ export function collectVectorNodeIds(node: { id: string; type: string; children?
   return ids;
 }
 
-export function collectVectorNodes(node: { id: string; name: string; type: string; children?: readonly unknown[] | undefined }): Array<{ id: string; name: string }> {
+export function collectVectorNodes(node: { id: string; name: string; type: string; children?: readonly unknown[] | undefined }, parentName?: string): Array<{ id: string; name: string }> {
   const nodes: Array<{ id: string; name: string }> = [];
-  if (node.type === "VECTOR") nodes.push({ id: node.id, name: node.name });
+  if (node.type === "VECTOR") {
+    // Include parent name for unique filenames (all vectors are often named "Icon")
+    const qualifiedName = parentName ? `${parentName}-${node.name}` : node.name;
+    nodes.push({ id: node.id, name: qualifiedName });
+  }
   if (node.children) {
     for (const child of node.children) {
-      nodes.push(...collectVectorNodes(child as typeof node));
+      nodes.push(...collectVectorNodes(child as typeof node, node.name));
     }
   }
   return nodes;
 }
 
-export function collectImageNodes(node: AnalysisNode): Array<{ id: string; name: string }> {
-  const nodes: Array<{ id: string; name: string }> = [];
+export function collectImageNodes(node: AnalysisNode): Array<{ id: string; name: string; imageRef?: string }> {
+  const nodes: Array<{ id: string; name: string; imageRef?: string }> = [];
   function walk(n: AnalysisNode): void {
     if (n.fills && Array.isArray(n.fills)) {
       for (const fill of n.fills) {
-        if ((fill as { type?: string }).type === "IMAGE") {
-          nodes.push({ id: n.id, name: n.name });
+        const f = fill as { type?: string; imageRef?: string };
+        if (f.type === "IMAGE") {
+          if (f.imageRef) {
+            nodes.push({ id: n.id, name: n.name, imageRef: f.imageRef });
+          } else {
+            nodes.push({ id: n.id, name: n.name });
+          }
           break;
         }
       }
