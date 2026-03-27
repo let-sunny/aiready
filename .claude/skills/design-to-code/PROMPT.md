@@ -115,7 +115,9 @@ Do not silently guess — always declare what you assumed.
 ## Output
 
 ### 1. Code
-Output as a code block with filename:
+- Place the entire design inside a single root `<div>` as the first child of `<body>` — do NOT apply design styles directly to `<body>` or `<html>`
+- Output as a code block with filename:
+
 ```html
 // filename: index.html
 <!DOCTYPE html>
