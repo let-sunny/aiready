@@ -43,6 +43,7 @@ describe("stripDesignTree", () => {
       expect(result).not.toContain("padding:");
       expect(result).not.toContain("justify-content:");
       expect(result).not.toContain("align-items:");
+      expect(result).not.toContain("align-self:");
     });
 
     it("preserves colors, typography, and other properties", () => {
@@ -66,12 +67,11 @@ describe("stripDesignTree", () => {
   describe("size-constraints", () => {
     const result = stripDesignTree(FIXTURE, "size-constraints");
 
-    it("removes width: 100%, height: 100%, min-width, flex-grow, align-self", () => {
+    it("removes width: 100%, height: 100%, min-width, flex-grow", () => {
       expect(result).not.toContain("width: 100%");
       expect(result).not.toContain("height: 100%");
       expect(result).not.toContain("min-width:");
       expect(result).not.toContain("flex-grow:");
-      expect(result).not.toContain("align-self:");
     });
 
     it("preserves layout and colors", () => {
@@ -316,7 +316,7 @@ describe("stripDesignTree", () => {
       "# Design Tree",
       "",
       "Page (FRAME, 375x100)",
-      '  style: display: flex; color: #1E1E1E; text: "A; background: #fff; display: flex"',
+      '  style: display: flex; color: #1E1E1E; text: "A; background: #FFFFFF; display: flex"',
       "  Info (TEXT, 200x20)",
       '    style: font-size: 16px; text: "svg: <path d=\\"M0 0\\"/>"',
       "  Note (TEXT, 200x20)",
@@ -326,7 +326,7 @@ describe("stripDesignTree", () => {
     it("preserves text with semicolons and CSS-like content", () => {
       for (const type of DESIGN_TREE_INFO_TYPES) {
         const result = stripDesignTree(ADVERSARIAL, type);
-        expect(result).toContain('text: "A; background: #fff; display: flex"');
+        expect(result).toContain('text: "A; background: #FFFFFF; display: flex"');
       }
     });
 

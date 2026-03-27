@@ -51,6 +51,7 @@ const LAYOUT_PROPS = new Set([
   "padding",
   "grid-template-columns",
   "grid-template-rows",
+  "align-self",
 ]);
 
 const SIZE_PROPS = new Set([
@@ -59,7 +60,6 @@ const SIZE_PROPS = new Set([
   "min-height",
   "max-height",
   "flex-grow",
-  "align-self",
 ]);
 
 const TYPOGRAPHY_PROPS = new Set([
@@ -280,7 +280,7 @@ function stripComponentReferences(lines: string[]): string[] {
     .map((line) => {
       // Only remove [component: ...] from header lines
       if (isHeaderLine(line)) {
-        return line.replace(/\s*\[component:[^\]]*\]/, "");
+        return line.replace(/\s*\[component:[^\]]*\]$/, "");
       }
       return line;
     });
