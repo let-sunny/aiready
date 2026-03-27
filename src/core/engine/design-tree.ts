@@ -276,6 +276,7 @@ function renderNode(
   vectorMapping?: Record<string, string>,
   fileStyles?: AnalysisFile["styles"],
   interactionDests?: Record<string, AnalysisNode>,
+  parentBBox?: { x: number; y: number; width: number; height: number },
 ): string {
   if (node.visible === false) return "";
 
@@ -344,6 +345,21 @@ function renderNode(
   }
   if (node.layoutGrow === 1) {
     styles.push("flex-grow: 1");
+  }
+
+  // Absolute positioning (child placed outside normal auto-layout flow)
+  if (node.layoutPositioning === "ABSOLUTE") {
+    styles.push("position: absolute");
+    if (parentBBox && node.absoluteBoundingBox) {
+      const top = Math.round(node.absoluteBoundingBox.y - parentBBox.y);
+      const left = Math.round(node.absoluteBoundingBox.x - parentBBox.x);
+      styles.push(`top: ${top}px`);
+      styles.push(`left: ${left}px`);
+    }
+  }
+  // If any child is absolute, parent needs position: relative
+  if (node.children?.some((c) => c.layoutPositioning === "ABSOLUTE")) {
+    styles.push("position: relative");
   }
 
   // Padding
@@ -521,7 +537,7 @@ function renderNode(
   // Children
   if (node.children) {
     for (const child of node.children) {
-      const childOutput = renderNode(child, indent + 1, vectorDir, components, imageMapping, vectorMapping, fileStyles, interactionDests);
+      const childOutput = renderNode(child, indent + 1, vectorDir, components, imageMapping, vectorMapping, fileStyles, interactionDests, node.absoluteBoundingBox ?? undefined);
       if (childOutput) lines.push(childOutput);
     }
   }
