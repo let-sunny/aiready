@@ -180,23 +180,20 @@ export function registerImplement(cli: CAC): void {
               const imgOutDir = resolve(outputDir, "images");
               mkdirSync(imgOutDir, { recursive: true });
               try {
-                const imgUrls = await client.getNodeImages(
-                  file.fileKey,
-                  imgNodes.map(n => n.id),
-                  { format: "png", scale: imgScale },
-                );
-                // Build mapping + download in a single pass to keep filenames consistent
+                // Use image fills API to get original images (not node renders which include children)
+                const imageFills = await client.getImageFills(file.fileKey);
                 const mapping: Record<string, string> = {};
                 const usedNames = new Map<string, number>();
                 let downloaded = 0;
-                for (const { id, name } of imgNodes) {
+                for (const { id, name, imageRef } of imgNodes) {
                   let base = sanitizeFilename(name);
                   const count = usedNames.get(base) ?? 0;
                   usedNames.set(base, count + 1);
                   if (count > 0) base = `${base}-${count + 1}`;
                   const filename = `${base}@${imgScale}x.png`;
                   mapping[id] = filename;
-                  const imgUrl = imgUrls[id];
+                  if (!imageRef) continue;
+                  const imgUrl = imageFills[imageRef];
                   if (!imgUrl) continue;
                   try {
                     const resp = await fetch(imgUrl);

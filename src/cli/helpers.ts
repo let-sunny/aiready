@@ -56,13 +56,18 @@ export function collectVectorNodes(node: { id: string; name: string; type: strin
   return nodes;
 }
 
-export function collectImageNodes(node: AnalysisNode): Array<{ id: string; name: string }> {
-  const nodes: Array<{ id: string; name: string }> = [];
+export function collectImageNodes(node: AnalysisNode): Array<{ id: string; name: string; imageRef?: string }> {
+  const nodes: Array<{ id: string; name: string; imageRef?: string }> = [];
   function walk(n: AnalysisNode): void {
     if (n.fills && Array.isArray(n.fills)) {
       for (const fill of n.fills) {
-        if ((fill as { type?: string }).type === "IMAGE") {
-          nodes.push({ id: n.id, name: n.name });
+        const f = fill as { type?: string; imageRef?: string };
+        if (f.type === "IMAGE") {
+          if (f.imageRef) {
+            nodes.push({ id: n.id, name: n.name, imageRef: f.imageRef });
+          } else {
+            nodes.push({ id: n.id, name: n.name });
+          }
           break;
         }
       }

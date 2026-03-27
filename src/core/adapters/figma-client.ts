@@ -99,6 +99,27 @@ export class FigmaClient {
   }
 
   /**
+   * Get original image fill URLs by imageRef.
+   * Returns a mapping of imageRef → download URL for all image fills in the file.
+   */
+  async getImageFills(fileKey: string): Promise<Record<string, string>> {
+    const url = `${FIGMA_API_BASE}/files/${fileKey}/images`;
+    const response = await fetch(url, {
+      headers: { "X-Figma-Token": this.token },
+    });
+    if (!response.ok) {
+      const error = await response.text().catch(() => "");
+      throw new FigmaClientError(
+        `Failed to fetch image fills: ${response.status} ${response.statusText}`,
+        response.status,
+        error
+      );
+    }
+    const data = await response.json() as { meta?: { images?: Record<string, string> } };
+    return data.meta?.images ?? {};
+  }
+
+  /**
    * Download an image URL and return as base64
    */
   async fetchImageAsBase64(imageUrl: string): Promise<string> {

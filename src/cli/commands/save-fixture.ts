@@ -168,42 +168,32 @@ export function registerSaveFixture(cli: CAC): void {
             const imageDir = resolve(fixtureDir, "images");
             mkdirSync(imageDir, { recursive: true });
 
-            const imageUrls = await client.getNodeImages(
-              file.fileKey,
-              imageNodes.map((n) => n.id),
-              { format: "png", scale: imgScale }
-            );
+            // Use image fills API to get original images (not node renders which include children)
+            const imageFills = await client.getImageFills(file.fileKey);
 
             const usedNames = new Map<string, number>();
-            const nodeIdToFilename = new Map<string, string>();
-            for (const { id, name } of imageNodes) {
+            const mapping: Record<string, string> = {};
+            let imgDownloaded = 0;
+            for (const { id, name, imageRef } of imageNodes) {
               let base = sanitizeFilename(name);
               const count = usedNames.get(base) ?? 0;
               usedNames.set(base, count + 1);
               if (count > 0) base = `${base}-${count + 1}`;
-              nodeIdToFilename.set(id, `${base}@${imgScale}x.png`);
-            }
-
-            let imgDownloaded = 0;
-            for (const [id, imgUrl] of Object.entries(imageUrls)) {
+              const filename = `${base}@${imgScale}x.png`;
+              mapping[id] = filename;
+              if (!imageRef) continue;
+              const imgUrl = imageFills[imageRef];
               if (!imgUrl) continue;
-              const filename = nodeIdToFilename.get(id);
-              if (!filename) continue;
               try {
                 const resp = await fetch(imgUrl);
                 if (resp.ok) {
                   const buf = Buffer.from(await resp.arrayBuffer());
-                  await writeFile(resolve(fixtureDir, "images", filename), buf);
+                  await writeFile(resolve(imageDir, filename), buf);
                   imgDownloaded++;
                 }
               } catch {
                 // Skip failed downloads
               }
-            }
-
-            const mapping: Record<string, string> = {};
-            for (const [id, filename] of nodeIdToFilename) {
-              mapping[id] = filename;
             }
             await writeFile(
               resolve(imageDir, "mapping.json"),
