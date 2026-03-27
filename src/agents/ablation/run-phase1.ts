@@ -71,6 +71,13 @@ interface RunResult {
   htmlPath: string;
   codePngPath: string;
   timestamp: string;
+  context?: {
+    screenshotPath: string;
+    logicalViewport: { width: number; height: number };
+    exportScale: number;
+    htmlExtractMethod: string;
+    designTreeTokens: number;
+  };
   cacheKey: CacheKey;
 }
 
@@ -82,6 +89,8 @@ interface Phase1Summary {
   runsPerCondition: number;
   fixtures: string[];
   skippedFixtures: Array<{ fixture: string; reason: string }>;
+  cacheStats: { hits: number; misses: number };
+  parseFailureCount: number;
   results: RunResult[];
   rankings: RankingEntry[];
 }
@@ -317,6 +326,9 @@ async function runSingle(
   const diffPath = join(runDir, "diff.png");
   const comparison = compareScreenshots(figmaCopyPath, codePngPath, diffPath);
 
+  // Track how HTML was selected for debugging
+  const htmlExtractMethod = html.match(/^<!doctype/i) ? "doctype" : html.match(/<body/i) ? "body" : html ? "largest" : "none";
+
   const result: RunResult = {
     fixture,
     type,
@@ -332,6 +344,13 @@ async function runSingle(
     codePngPath,
     timestamp: new Date().toISOString(),
     cacheKey,
+    context: {
+      screenshotPath: figmaScreenshotPath,
+      logicalViewport: { width: logicalW, height: logicalH },
+      exportScale,
+      htmlExtractMethod,
+      designTreeTokens: Math.ceil(designTree.length / 4),
+    },
   };
 
   // Save result
@@ -467,6 +486,7 @@ async function main(): Promise<void> {
   const allResults: RunResult[] = [];
   const newResults: RunResult[] = [];  // Only this session (for cost tracking)
   const skippedFixtures: Array<{ fixture: string; reason: string }> = [];
+  let cacheHits = 0;
 
   for (const fixture of fixtures) {
     console.log(`\n=== ${fixture} ===\n`);
@@ -514,6 +534,7 @@ async function main(): Promise<void> {
         if (isCacheValid(fixture, type, run, cacheKey)) {
           const cached = JSON.parse(readFileSync(getResultPath(fixture, type, run), "utf-8")) as RunResult;
           allResults.push(cached);
+          cacheHits++;
           console.log(`  [cached] ${type} run ${run + 1} → similarity=${(cached.similarity * 100).toFixed(1)}%`);
           continue;
         }
@@ -540,6 +561,8 @@ async function main(): Promise<void> {
     runsPerCondition,
     fixtures: [...fixtures],
     skippedFixtures,
+    cacheStats: { hits: cacheHits, misses: newResults.length },
+    parseFailureCount: allResults.filter((r) => r.interpretationsParseFailed).length,
     results: allResults,
     rankings,
   };
