@@ -27,18 +27,31 @@ function getFillInfo(node: AnalysisNode): FillInfo {
   const result: FillInfo = { color: null, hasImage: false };
   if (!node.fills || !Array.isArray(node.fills)) return result;
   for (const fill of node.fills) {
-    const f = fill as { type?: string; visible?: boolean; color?: { r?: number; g?: number; b?: number; a?: number }; opacity?: number };
+    const f = fill as {
+      type?: string;
+      visible?: boolean;
+      color?: { r?: number; g?: number; b?: number; a?: number };
+      opacity?: number;
+      boundVariables?: { color?: { id?: string } };
+    };
     // Skip invisible fills
     if (f.visible === false) continue;
     if (f.type === "SOLID" && f.color) {
       const opacity = f.opacity ?? f.color.a ?? 1;
+      let colorValue: string;
       if (opacity < 1) {
         const r = Math.round((f.color.r ?? 0) * 255);
         const g = Math.round((f.color.g ?? 0) * 255);
         const b = Math.round((f.color.b ?? 0) * 255);
-        result.color = `rgba(${r}, ${g}, ${b}, ${opacity})`;
+        colorValue = `rgba(${r}, ${g}, ${b}, ${opacity})`;
       } else {
-        result.color = rgbaToHex(f.color);
+        colorValue = rgbaToHex(f.color) ?? "#000";
+      }
+      // Append variable reference if available
+      if (f.boundVariables?.color?.id) {
+        result.color = `${colorValue} /* var:${f.boundVariables.color.id} */`;
+      } else {
+        result.color = colorValue;
       }
     } else if (f.type === "IMAGE") {
       result.hasImage = true;
@@ -94,6 +107,18 @@ function mapAlign(figmaAlign: string): string {
   return map[figmaAlign] ?? figmaAlign;
 }
 
+/** Get variable reference comment from boundVariables if available. */
+function getVarRef(node: AnalysisNode, prop: string): string {
+  const bv = node.boundVariables as Record<string, unknown> | undefined;
+  if (!bv) return "";
+  const ref = bv[prop];
+  if (!ref) return "";
+  if (typeof ref === "object" && ref !== null && "id" in ref) {
+    return ` /* var:${(ref as { id: string }).id} */`;
+  }
+  return "";
+}
+
 /** Render a single node and its children as indented design-tree text. */
 function renderNode(
   node: AnalysisNode,
@@ -102,6 +127,7 @@ function renderNode(
   components?: AnalysisFile["components"],
   imageMapping?: Record<string, string>,
   vectorMapping?: Record<string, string>,
+  fileStyles?: AnalysisFile["styles"],
 ): string {
   if (node.visible === false) return "";
 
@@ -145,11 +171,11 @@ function renderNode(
       if (node.layoutWrap === "WRAP") styles.push(`flex-wrap: wrap`);
       if (node.itemSpacing != null) {
         const mainGap = node.layoutMode === "VERTICAL" ? "row-gap" : "column-gap";
-        styles.push(`${mainGap}: ${node.itemSpacing}px`);
+        styles.push(`${mainGap}: ${node.itemSpacing}px${getVarRef(node, "itemSpacing")}`);
       }
       if (node.counterAxisSpacing != null) {
         const crossGap = node.layoutMode === "VERTICAL" ? "column-gap" : "row-gap";
-        styles.push(`${crossGap}: ${node.counterAxisSpacing}px`);
+        styles.push(`${crossGap}: ${node.counterAxisSpacing}px${getVarRef(node, "counterAxisSpacing")}`);
       }
       if (node.primaryAxisAlignItems) styles.push(`justify-content: ${mapAlign(node.primaryAxisAlignItems)}`);
       if (node.counterAxisAlignItems) styles.push(`align-items: ${mapAlign(node.counterAxisAlignItems)}`);
@@ -165,7 +191,8 @@ function renderNode(
   const pb = node.paddingBottom ?? 0;
   const pl = node.paddingLeft ?? 0;
   if (pt || pr || pb || pl) {
-    styles.push(`padding: ${pt}px ${pr}px ${pb}px ${pl}px`);
+    const padRef = getVarRef(node, "paddingTop") || getVarRef(node, "paddingLeft");
+    styles.push(`padding: ${pt}px ${pr}px ${pb}px ${pl}px${padRef}`);
   }
 
   // Sizing
@@ -202,16 +229,43 @@ function renderNode(
   }
 
   // Border radius
-  if (node.cornerRadius) styles.push(`border-radius: ${node.cornerRadius}px`);
+  if (node.cornerRadius) {
+    const radiusRef = getVarRef(node, "rectangleCornerRadii");
+    styles.push(`border-radius: ${node.cornerRadius}px${radiusRef}`);
+  }
 
   // Shadow
   const shadow = getShadow(node);
   if (shadow) styles.push(`box-shadow: ${shadow}`);
 
+  // Overflow
+  if (node.clipsContent) styles.push("overflow: hidden");
+
+  // Opacity
+  if (node.opacity !== undefined && node.opacity < 1) {
+    styles.push(`opacity: ${Math.round(node.opacity * 100) / 100}`);
+  }
+
+  // Min/max constraints
+  if (node.minWidth !== undefined) styles.push(`min-width: ${Math.round(node.minWidth)}px`);
+  if (node.maxWidth !== undefined) styles.push(`max-width: ${Math.round(node.maxWidth)}px`);
+  if (node.minHeight !== undefined) styles.push(`min-height: ${Math.round(node.minHeight)}px`);
+  if (node.maxHeight !== undefined) styles.push(`max-height: ${Math.round(node.maxHeight)}px`);
+
   // Typography
   if (node.type === "TEXT" && node.style) {
+    // Add text style name if available
+    const nodeStyles = node.styles as Record<string, string> | undefined;
+    const textStyleId = nodeStyles?.["text"];
+    if (textStyleId && fileStyles) {
+      const styleInfo = fileStyles[textStyleId] as { name?: string } | undefined;
+      if (styleInfo?.name) {
+        styles.push(`/* text-style: ${styleInfo.name} */`);
+      }
+    }
+
     const s = node.style as Record<string, unknown>;
-    if (s["fontFamily"]) styles.push(`font-family: "${s["fontFamily"]}"`);
+    if (s["fontFamily"]) styles.push(`font-family: "${s["fontFamily"]}"${getVarRef(node, "fontFamily")}`);
     if (s["fontWeight"]) styles.push(`font-weight: ${s["fontWeight"]}`);
     if (s["fontSize"]) styles.push(`font-size: ${s["fontSize"]}px`);
     if (s["lineHeightPx"]) {
@@ -255,7 +309,7 @@ function renderNode(
   // Children
   if (node.children) {
     for (const child of node.children) {
-      const childOutput = renderNode(child, indent + 1, vectorDir, components, imageMapping, vectorMapping);
+      const childOutput = renderNode(child, indent + 1, vectorDir, components, imageMapping, vectorMapping, fileStyles);
       if (childOutput) lines.push(childOutput);
     }
   }
@@ -321,7 +375,7 @@ export function generateDesignTreeWithStats(file: AnalysisFile, options?: Design
     }
   }
 
-  const tree = renderNode(root, 0, options?.vectorDir, file.components, imageMapping, vectorMapping);
+  const tree = renderNode(root, 0, options?.vectorDir, file.components, imageMapping, vectorMapping, file.styles);
 
   const result = [
     "# Design Tree",
