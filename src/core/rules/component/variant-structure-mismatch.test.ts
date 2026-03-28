@@ -4,7 +4,7 @@ import { variantStructureMismatch } from "./index.js";
 describe("variant-structure-mismatch", () => {
   it("has correct rule definition metadata", () => {
     expect(variantStructureMismatch.definition.id).toBe("variant-structure-mismatch");
-    expect(variantStructureMismatch.definition.category).toBe("component");
+    expect(variantStructureMismatch.definition.category).toBe("code-quality");
   });
 
   it("flags COMPONENT_SET with mismatched variant structures", () => {

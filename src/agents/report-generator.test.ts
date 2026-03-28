@@ -8,11 +8,10 @@ import {
 } from "./report-generator.js";
 
 const ALL_CATEGORIES: Category[] = [
-  "structure",
-  "token",
-  "component",
-  "naming",
-  "behavior",
+  "pixel-critical",
+  "token-management",
+  "code-quality",
+  "minor",
 ];
 
 function buildCategoryScore(
@@ -150,7 +149,7 @@ describe("generateCalibrationReport", () => {
 
   it("renders proposedDisable indicator in adjustment table and application guide", () => {
     const adjustment: ScoreAdjustment = {
-      ruleId: "raw-color",
+      ruleId: "raw-value",
       currentScore: -3,
       proposedScore: -1,
       currentSeverity: "risk",
@@ -166,7 +165,7 @@ describe("generateCalibrationReport", () => {
     // Table should show disable indicator
     expect(report).toContain("⛔ YES");
     // Application guide should show DISABLE with enabled: false hint
-    expect(report).toContain("// raw-color: DISABLE (high confidence, 3 cases)");
+    expect(report).toContain("// raw-value: DISABLE (high confidence, 3 cases)");
     expect(report).toContain("//   enabled: false");
   });
 
@@ -190,7 +189,7 @@ describe("generateCalibrationReport", () => {
 
   it("omits severity line when proposedDisable is true even with proposedSeverity", () => {
     const adjustment: ScoreAdjustment = {
-      ruleId: "raw-color",
+      ruleId: "raw-value",
       currentScore: -3,
       proposedScore: -1,
       currentSeverity: "risk",
@@ -206,7 +205,7 @@ describe("generateCalibrationReport", () => {
 
     // Should show disable indicator
     expect(report).toContain("⛔ YES");
-    expect(report).toContain("// raw-color: DISABLE (high confidence, 3 cases)");
+    expect(report).toContain("// raw-value: DISABLE (high confidence, 3 cases)");
     // Should NOT show severity change line in application guide
     expect(report).not.toContain('severity: "risk" -> "suggestion"');
   });
@@ -221,7 +220,7 @@ describe("generateCalibrationReport", () => {
   it("renders new rule proposals when they exist", () => {
     const proposal: NewRuleProposal = {
       suggestedId: "shadow-complexity",
-      category: "structure",
+      category: "pixel-critical",
       description: "Detects complex shadow configurations",
       suggestedSeverity: "risk",
       suggestedScore: -4,
@@ -233,7 +232,7 @@ describe("generateCalibrationReport", () => {
     const report = generateCalibrationReport(data);
 
     expect(report).toContain("### shadow-complexity");
-    expect(report).toContain("structure");
+    expect(report).toContain("pixel-critical");
     expect(report).toContain("Detects complex shadow configurations");
     expect(report).toContain("risk");
     expect(report).toContain("-4");

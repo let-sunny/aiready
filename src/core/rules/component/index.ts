@@ -107,7 +107,7 @@ function getSeenStage4(context: RuleContext): Set<string> {
 const missingComponentDef: RuleDefinition = {
   id: "missing-component",
   name: "Missing Component",
-  category: "component",
+  category: "code-quality",
   why: "Repeated structures, unused components, and divergent instance overrides indicate missing or underutilized components. This inflates AI token consumption and forces manual maintenance.",
   impact: "AI code generators reproduce each repeated frame independently instead of emitting a reusable component. Divergent instance overrides produce inconsistent implementations.",
   fix: "Create components from repeated structures, use instances instead of duplicated frames, and create variants for instances with significantly different overrides.",
@@ -278,7 +278,7 @@ export const missingComponent = defineRule({
 const detachedInstanceDef: RuleDefinition = {
   id: "detached-instance",
   name: "Detached Instance",
-  category: "component",
+  category: "code-quality",
   why: "Detached instances lose component relationship — AI sees a one-off frame instead of a reusable component reference",
   impact: "AI generates duplicate code instead of reusing the component, inflating output and causing inconsistencies",
   fix: "Reset the instance or create a new variant if customization is needed",
@@ -315,62 +315,13 @@ export const detachedInstance = defineRule({
 });
 
 // ============================================
-// missing-component-description
-// ============================================
-
-/** State key for per-analysis deduplication via RuleContext.analysisState */
-const SEEN_MISSING_DESC_KEY = "missing-component-description:seenComponentIds";
-
-function getSeenMissingDescription(context: RuleContext): Set<string> {
-  return getAnalysisState(context, SEEN_MISSING_DESC_KEY, () => new Set<string>());
-}
-
-const missingComponentDescriptionDef: RuleDefinition = {
-  id: "missing-component-description",
-  name: "Missing Component Description",
-  category: "component",
-  why: "Component descriptions in Figma are the primary channel for communicating intent, usage guidelines, and prop expectations to developers. Without them, developers must reverse-engineer purpose from visual appearance alone.",
-  impact: "Increases implementation ambiguity, especially for icon-only components, compound components with multiple variants, and components whose names are variant key strings that give no prose context.",
-  fix: "Open the component in Figma, select it, and add a description in the right-hand panel under the component's properties. Include: what the component is, when to use it, any accessibility or interaction notes, and the owning team or design token set if applicable.",
-};
-
-const missingComponentDescriptionCheck: RuleCheckFn = (node, context) => {
-  if (node.type !== "INSTANCE") return null;
-
-  const componentId = node.componentId;
-  if (!componentId) return null;
-
-  const componentMeta = context.file.components[componentId];
-  if (!componentMeta) return null;
-
-  if (componentMeta.description.trim() !== "") return null;
-
-  // Deduplicate: emit at most one issue per unique componentId
-  const seenDesc = getSeenMissingDescription(context);
-  if (seenDesc.has(componentId)) return null;
-  seenDesc.add(componentId);
-
-  return {
-    ruleId: missingComponentDescriptionDef.id,
-    nodeId: node.id,
-    nodePath: context.path.join(" > "),
-    message: `Component "${componentMeta.name}" has no description — add usage guidelines in the component's description field`,
-  };
-};
-
-export const missingComponentDescription = defineRule({
-  definition: missingComponentDescriptionDef,
-  check: missingComponentDescriptionCheck,
-});
-
-// ============================================
 // variant-structure-mismatch
 // ============================================
 
 const variantStructureMismatchDef: RuleDefinition = {
   id: "variant-structure-mismatch",
   name: "Variant Structure Mismatch",
-  category: "component",
+  category: "code-quality",
   why: "Variants with different child structures prevent AI from creating a unified component template",
   impact: "AI must generate separate implementations for each variant instead of a single parameterized component",
   fix: "Ensure all variants share the same child structure, using visibility toggles for optional elements",

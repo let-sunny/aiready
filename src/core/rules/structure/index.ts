@@ -41,7 +41,7 @@ function hasOverlappingBounds(a: AnalysisNode, b: AnalysisNode): boolean {
 const noAutoLayoutDef: RuleDefinition = {
   id: "no-auto-layout",
   name: "No Auto Layout",
-  category: "structure",
+  category: "pixel-critical",
   why: "Without Auto Layout, AI must guess positioning from absolute coordinates instead of reading explicit layout rules",
   impact: "Generated code uses hardcoded positions that break on any content or screen size change",
   fix: "Apply Auto Layout to create clear, explicit structure — enables AI to generate flexbox/grid instead of absolute positioning",
@@ -130,7 +130,7 @@ export const noAutoLayout = defineRule({
 const absolutePositionInAutoLayoutDef: RuleDefinition = {
   id: "absolute-position-in-auto-layout",
   name: "Absolute Position in Auto Layout",
-  category: "structure",
+  category: "pixel-critical",
   why: "Absolute positioning inside Auto Layout contradicts the parent's layout rules — AI sees conflicting instructions",
   impact: "AI must decide whether to follow the parent's flexbox or the child's absolute position — often gets it wrong",
   fix: "Remove absolute positioning or use proper Auto Layout alignment",
@@ -163,7 +163,7 @@ export const absolutePositionInAutoLayout = defineRule({
 const fixedSizeInAutoLayoutDef: RuleDefinition = {
   id: "fixed-size-in-auto-layout",
   name: "Fixed Size in Auto Layout",
-  category: "structure",
+  category: "responsive-critical",
   why: "Fixed sizing inside Auto Layout contradicts the flexible layout intent",
   impact: "AI generates a rigid element inside a flex container — the layout won't respond to content changes",
   fix: "Use 'Hug' or 'Fill' for at least one axis. Both-axes FIXED → layout completely rigid; horizontal-only FIXED → width won't adapt to parent resize",
@@ -231,7 +231,7 @@ export const fixedSizeInAutoLayout = defineRule({
 const missingSizeConstraintDef: RuleDefinition = {
   id: "missing-size-constraint",
   name: "Missing Size Constraint",
-  category: "structure",
+  category: "responsive-critical",
   why: "Without min/max-width, AI has no bounds — generated code may collapse or stretch indefinitely",
   impact: "Content becomes unreadable or invisible at extreme screen sizes",
   fix: "Set min-width and/or max-width so AI can generate proper size constraints",
@@ -269,7 +269,7 @@ export const missingSizeConstraint = defineRule({
 const missingResponsiveBehaviorDef: RuleDefinition = {
   id: "missing-responsive-behavior",
   name: "Missing Responsive Behavior",
-  category: "structure",
+  category: "responsive-critical",
   why: "Without constraints, AI has no information about how elements should behave when the container resizes",
   impact: "AI generates static layouts that break on any screen size other than the one in the design",
   fix: "Set appropriate constraints so AI can generate responsive CSS (min/max-width, flex-grow, etc.)",
@@ -307,7 +307,7 @@ export const missingResponsiveBehavior = defineRule({
 const groupUsageDef: RuleDefinition = {
   id: "group-usage",
   name: "Group Usage",
-  category: "structure",
+  category: "pixel-critical",
   why: "Groups have no layout rules — AI sees children with absolute coordinates but no container logic",
   impact: "AI wraps grouped elements in a plain div with no spacing/alignment, producing fragile layouts",
   fix: "Convert Group to Frame with Auto Layout so AI can generate proper flex/grid containers",
@@ -336,7 +336,7 @@ export const groupUsage = defineRule({
 const deepNestingDef: RuleDefinition = {
   id: "deep-nesting",
   name: "Deep Nesting",
-  category: "structure",
+  category: "code-quality",
   why: "Deep nesting consumes AI context exponentially — each level adds indentation and structural overhead",
   impact: "AI may lose track of parent-child relationships in deeply nested trees, producing wrong layout hierarchy",
   fix: "Flatten the structure by extracting deeply nested groups into sub-components",
@@ -361,141 +361,3 @@ export const deepNesting = defineRule({
   check: deepNestingCheck,
 });
 
-// ============================================
-// z-index-dependent-layout
-// ============================================
-
-const zIndexDependentLayoutDef: RuleDefinition = {
-  id: "z-index-dependent-layout",
-  name: "Z-Index Dependent Layout",
-  category: "structure",
-  why: "Using overlapping layers to create visual layout is hard to interpret",
-  impact: "Code generation may misinterpret the intended layout",
-  fix: "Restructure using Auto Layout to express the visual relationship explicitly",
-};
-
-const zIndexDependentLayoutCheck: RuleCheckFn = (node, context) => {
-  if (!isContainerNode(node)) return null;
-  if (!node.children || node.children.length < 2) return null;
-
-  let significantOverlapCount = 0;
-
-  for (let i = 0; i < node.children.length; i++) {
-    for (let j = i + 1; j < node.children.length; j++) {
-      const childA = node.children[i];
-      const childB = node.children[j];
-
-      if (!childA || !childB) continue;
-      if (childA.visible === false || childB.visible === false) continue;
-
-      const boxA = childA.absoluteBoundingBox;
-      const boxB = childB.absoluteBoundingBox;
-
-      if (!boxA || !boxB) continue;
-
-      if (hasOverlappingBounds(childA, childB)) {
-        const overlapX = Math.min(boxA.x + boxA.width, boxB.x + boxB.width) -
-          Math.max(boxA.x, boxB.x);
-        const overlapY = Math.min(boxA.y + boxA.height, boxB.y + boxB.height) -
-          Math.max(boxA.y, boxB.y);
-
-        if (overlapX > 0 && overlapY > 0) {
-          const overlapArea = overlapX * overlapY;
-          const smallerArea = Math.min(
-            boxA.width * boxA.height,
-            boxB.width * boxB.height
-          );
-
-          if (overlapArea > smallerArea * 0.2) {
-            significantOverlapCount++;
-          }
-        }
-      }
-    }
-  }
-
-  if (significantOverlapCount > 0) {
-    return {
-      ruleId: zIndexDependentLayoutDef.id,
-      nodeId: node.id,
-      nodePath: context.path.join(" > "),
-      message: `"${node.name}" uses layer stacking for layout (${significantOverlapCount} overlaps) — restructure using auto-layout to express relationships explicitly`,
-    };
-  }
-
-  return null;
-};
-
-export const zIndexDependentLayout = defineRule({
-  definition: zIndexDependentLayoutDef,
-  check: zIndexDependentLayoutCheck,
-});
-
-// ============================================
-// unnecessary-node (merged: invisible-layer + empty-frame)
-// ============================================
-
-const unnecessaryNodeDef: RuleDefinition = {
-  id: "unnecessary-node",
-  name: "Unnecessary Node",
-  category: "structure",
-  why: "Hidden layers and empty frames add noise to the design tree without contributing to the visual output",
-  impact: "Increases API response size and may generate unnecessary wrapper elements in code",
-  fix: "Remove unused hidden layers or empty frames. If hidden layers represent states, consider using Figma Slots.",
-};
-
-const unnecessaryNodeCheck: RuleCheckFn = (node, context) => {
-  // Check 1: Invisible layer (from invisible-layer rule)
-  if (node.visible === false) {
-    // Skip if parent is also invisible (only report top-level invisible)
-    if (context.parent?.visible === false) return null;
-
-    // Check if parent has many hidden children — suggest Slot
-    const slotThreshold =
-      getRuleOption("unnecessary-node", "slotRecommendationThreshold", 3);
-    const hiddenSiblingCount = context.siblings
-      ? context.siblings.filter((s) => s.visible === false).length
-      : 0;
-
-    if (hiddenSiblingCount >= slotThreshold) {
-      return {
-        ruleId: unnecessaryNodeDef.id,
-        nodeId: node.id,
-        nodePath: context.path.join(" > "),
-        message: `"${node.name}" is hidden (${hiddenSiblingCount} hidden siblings) — if these represent states, consider using Figma Slots instead`,
-      };
-    }
-
-    return {
-      ruleId: unnecessaryNodeDef.id,
-      nodeId: node.id,
-      nodePath: context.path.join(" > "),
-      message: `"${node.name}" is hidden — no impact on code generation, clean up if unused`,
-    };
-  }
-
-  // Check 2: Empty frame (from empty-frame rule)
-  if (node.type === "FRAME") {
-    if (node.children && node.children.length > 0) return null;
-
-    // Allow empty frames that are clearly placeholders (small size)
-    if (node.absoluteBoundingBox) {
-      const { width, height } = node.absoluteBoundingBox;
-      if (width <= 48 && height <= 48) return null;
-    }
-
-    return {
-      ruleId: unnecessaryNodeDef.id,
-      nodeId: node.id,
-      nodePath: context.path.join(" > "),
-      message: `"${node.name}" is an empty frame${node.absoluteBoundingBox ? ` (${node.absoluteBoundingBox.width}×${node.absoluteBoundingBox.height})` : ""} — remove or replace with auto-layout spacing`,
-    };
-  }
-
-  return null;
-};
-
-export const unnecessaryNode = defineRule({
-  definition: unnecessaryNodeDef,
-  check: unnecessaryNodeCheck,
-});

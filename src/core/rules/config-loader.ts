@@ -14,7 +14,6 @@ const ConfigFileSchema = z.object({
   excludeNodeTypes: z.array(z.string()).optional(),
   excludeNodeNames: z.array(z.string()).optional(),
   gridBase: z.number().int().positive().optional(),
-  colorTolerance: z.number().int().positive().optional(),
   rules: z.record(z.string(), RuleOverrideSchema).optional(),
 });
 
@@ -43,18 +42,6 @@ export function mergeConfigs(
         merged[id] = {
           ...config,
           options: { ...config.options, gridBase: overrides.gridBase },
-        };
-      }
-    }
-  }
-
-  // Apply global colorTolerance
-  if (overrides.colorTolerance !== undefined) {
-    for (const [id, config] of Object.entries(merged)) {
-      if (config.options && "tolerance" in config.options) {
-        merged[id] = {
-          ...config,
-          options: { ...config.options, tolerance: overrides.colorTolerance },
         };
       }
     }

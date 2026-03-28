@@ -22,7 +22,6 @@ describe("loadConfigFile", () => {
       excludeNodeTypes: ["SLICE"],
       excludeNodeNames: ["_ignore"],
       gridBase: 4,
-      colorTolerance: 5,
       rules: {
         "no-auto-layout": { score: -8, severity: "blocking", enabled: false },
       },
@@ -32,7 +31,7 @@ describe("loadConfigFile", () => {
 
     const result = await loadConfigFile(filePath);
     expect(result.gridBase).toBe(4);
-    expect(result.colorTolerance).toBe(5);
+
     expect(result.excludeNodeTypes).toEqual(["SLICE"]);
     expect(result.excludeNodeNames).toEqual(["_ignore"]);
     expect(result.rules?.["no-auto-layout"]?.score).toBe(-8);
@@ -89,23 +88,16 @@ describe("loadConfigFile", () => {
 
 describe("mergeConfigs", () => {
   const baseConfigs: Record<string, RuleConfig> = {
-    "inconsistent-spacing": {
-      severity: "risk",
-      score: -3,
-      enabled: true,
-      options: { gridBase: 4 },
-    },
-    "magic-number-spacing": {
-      severity: "suggestion",
-      score: -1,
-      enabled: true,
-      options: { gridBase: 4 },
-    },
-    "multiple-fill-colors": {
-      severity: "risk",
+    "irregular-spacing": {
+      severity: "missing-info",
       score: -2,
       enabled: true,
-      options: { tolerance: 10 },
+      options: { gridBase: 4 },
+    },
+    "raw-value": {
+      severity: "missing-info",
+      score: -3,
+      enabled: true,
     },
     "no-auto-layout": {
       severity: "blocking",
@@ -118,7 +110,7 @@ describe("mergeConfigs", () => {
     const overrides: ConfigFile = {};
     const result = mergeConfigs(baseConfigs, overrides);
 
-    expect(result["inconsistent-spacing"]?.score).toBe(-3);
+    expect(result["irregular-spacing"]?.score).toBe(-2);
     expect(result["no-auto-layout"]?.score).toBe(-5);
   });
 
@@ -157,35 +149,19 @@ describe("mergeConfigs", () => {
   });
 
   it("applies gridBase to rules with gridBase in options", () => {
-    const overrides: ConfigFile = { gridBase: 4 };
+    const overrides: ConfigFile = { gridBase: 8 };
     const result = mergeConfigs(baseConfigs, overrides);
 
     expect(
-      (result["inconsistent-spacing"]?.options as Record<string, unknown>)?.["gridBase"]
-    ).toBe(4);
-    expect(
-      (result["magic-number-spacing"]?.options as Record<string, unknown>)?.["gridBase"]
-    ).toBe(4);
+      (result["irregular-spacing"]?.options as Record<string, unknown>)?.["gridBase"]
+    ).toBe(8);
     // no-auto-layout has no options, should be unaffected
     expect(result["no-auto-layout"]?.options).toBeUndefined();
   });
 
-  it("applies colorTolerance to rules with tolerance in options", () => {
-    const overrides: ConfigFile = { colorTolerance: 20 };
-    const result = mergeConfigs(baseConfigs, overrides);
-
-    expect(
-      (result["multiple-fill-colors"]?.options as Record<string, unknown>)?.["tolerance"]
-    ).toBe(20);
-    // gridBase rules unaffected
-    expect(
-      (result["inconsistent-spacing"]?.options as Record<string, unknown>)?.["gridBase"]
-    ).toBe(4);
-  });
-
   it("does not modify base configs object", () => {
     const overrides: ConfigFile = {
-      gridBase: 4,
+      gridBase: 8,
       rules: {
         "no-auto-layout": { score: -10 },
       },
@@ -195,7 +171,7 @@ describe("mergeConfigs", () => {
     // Original should be unchanged
     expect(baseConfigs["no-auto-layout"]?.score).toBe(-5);
     expect(
-      (baseConfigs["inconsistent-spacing"]?.options as Record<string, unknown>)?.["gridBase"]
+      (baseConfigs["irregular-spacing"]?.options as Record<string, unknown>)?.["gridBase"]
     ).toBe(4);
   });
 

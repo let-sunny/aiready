@@ -2,15 +2,14 @@
   "excludeNodeTypes": ["SLICE", "STICKY"],
   "excludeNodeNames": ["chatbot", "ad-banner", "prototype", "wip"],
   "gridBase": 4,
-  "colorTolerance": 5,
   "rules": {
     "no-auto-layout": {
       "score": -15,
       "severity": "blocking"
     },
-    "raw-color": {
-      "score": -12,
-      "severity": "blocking"
+    "raw-value": {
+      "score": -5,
+      "severity": "risk"
     },
     "default-name": {
       "enabled": false

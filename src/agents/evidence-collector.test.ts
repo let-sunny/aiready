@@ -192,25 +192,25 @@ describe("evidence-collector", () => {
       const file = {
         schemaVersion: DISCOVERY_EVIDENCE_SCHEMA_VERSION,
         entries: [
-          { description: "gap1", category: "structure", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
+          { description: "gap1", category: "pixel-critical", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
         ],
       };
       writeFileSync(disPath, JSON.stringify(file), "utf-8");
 
       const result = loadDiscoveryEvidence(disPath);
       expect(result).toHaveLength(1);
-      expect(result[0]!.category).toBe("structure");
+      expect(result[0]!.category).toBe("pixel-critical");
     });
 
     it("loads entries from legacy plain-array format (v0 fallback)", () => {
       const entries: DiscoveryEvidenceEntry[] = [
-        { description: "gap1", category: "structure", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
+        { description: "gap1", category: "pixel-critical", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
       ];
       writeFileSync(disPath, JSON.stringify(entries), "utf-8");
 
       const result = loadDiscoveryEvidence(disPath);
       expect(result).toHaveLength(1);
-      expect(result[0]!.category).toBe("structure");
+      expect(result[0]!.category).toBe("pixel-critical");
     });
 
     it("handles malformed JSON gracefully", () => {
@@ -221,7 +221,7 @@ describe("evidence-collector", () => {
 
     it("skips invalid entries in legacy array", () => {
       writeFileSync(disPath, JSON.stringify([
-        { description: "gap1", category: "structure", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
+        { description: "gap1", category: "pixel-critical", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
         { bad: "entry" },
       ]), "utf-8");
 
@@ -233,7 +233,7 @@ describe("evidence-collector", () => {
       const file = {
         schemaVersion: DISCOVERY_EVIDENCE_SCHEMA_VERSION,
         entries: [
-          { description: "good", category: "structure", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
+          { description: "good", category: "pixel-critical", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
           { bad: "entry" },
           { description: "also good", category: "color", impact: "easy", fixture: "fx2", timestamp: "t2", source: "gap-analysis" },
         ],
@@ -250,7 +250,7 @@ describe("evidence-collector", () => {
       const file = {
         schemaVersion: 999,
         entries: [
-          { description: "gap1", category: "structure", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
+          { description: "gap1", category: "pixel-critical", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
         ],
       };
       writeFileSync(disPath, JSON.stringify(file), "utf-8");
@@ -262,7 +262,7 @@ describe("evidence-collector", () => {
   describe("appendDiscoveryEvidence", () => {
     it("creates file in versioned format", () => {
       appendDiscoveryEvidence([
-        { description: "gap1", category: "structure", impact: "hard", fixture: "fx1", timestamp: "t1", source: "gap-analysis" },
+        { description: "gap1", category: "pixel-critical", impact: "hard", fixture: "fx1", timestamp: "t1", source: "gap-analysis" },
       ], disPath);
 
       const raw = JSON.parse(readFileSync(disPath, "utf-8")) as { schemaVersion: number; entries: DiscoveryEvidenceEntry[] };
@@ -273,7 +273,7 @@ describe("evidence-collector", () => {
 
     it("appends to existing entries (different keys)", () => {
       appendDiscoveryEvidence([
-        { description: "gap1", category: "structure", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
+        { description: "gap1", category: "pixel-critical", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
       ], disPath);
 
       appendDiscoveryEvidence([
@@ -286,12 +286,12 @@ describe("evidence-collector", () => {
 
     it("deduplicates by (category + description + fixture), last-write-wins", () => {
       appendDiscoveryEvidence([
-        { description: "gap1", category: "structure", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
+        { description: "gap1", category: "pixel-critical", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
       ], disPath);
 
       // Same category+description+fixture, different impact/timestamp → replaces
       appendDiscoveryEvidence([
-        { description: "gap1", category: "structure", impact: "moderate", fixture: "fx1", timestamp: "t2", source: "evaluation" },
+        { description: "gap1", category: "pixel-critical", impact: "moderate", fixture: "fx1", timestamp: "t2", source: "evaluation" },
       ], disPath);
 
       const raw = JSON.parse(readFileSync(disPath, "utf-8")) as { entries: DiscoveryEvidenceEntry[] };
@@ -302,11 +302,11 @@ describe("evidence-collector", () => {
 
     it("dedupe is case-insensitive for category and description", () => {
       appendDiscoveryEvidence([
-        { description: "Gap One", category: "Structure", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
+        { description: "Gap One", category: "Pixel-critical", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
       ], disPath);
 
       appendDiscoveryEvidence([
-        { description: "gap one", category: "structure", impact: "easy", fixture: "fx1", timestamp: "t2", source: "evaluation" },
+        { description: "gap one", category: "pixel-critical", impact: "easy", fixture: "fx1", timestamp: "t2", source: "evaluation" },
       ], disPath);
 
       const raw = JSON.parse(readFileSync(disPath, "utf-8")) as { entries: DiscoveryEvidenceEntry[] };
@@ -316,11 +316,11 @@ describe("evidence-collector", () => {
 
     it("dedupe is case-insensitive for fixture", () => {
       appendDiscoveryEvidence([
-        { description: "gap1", category: "structure", impact: "hard", fixture: "FX1", timestamp: "t1", source: "evaluation" },
+        { description: "gap1", category: "pixel-critical", impact: "hard", fixture: "FX1", timestamp: "t1", source: "evaluation" },
       ], disPath);
 
       appendDiscoveryEvidence([
-        { description: "gap1", category: "structure", impact: "easy", fixture: "fx1", timestamp: "t2", source: "evaluation" },
+        { description: "gap1", category: "pixel-critical", impact: "easy", fixture: "fx1", timestamp: "t2", source: "evaluation" },
       ], disPath);
 
       const raw = JSON.parse(readFileSync(disPath, "utf-8")) as { entries: DiscoveryEvidenceEntry[] };
@@ -330,8 +330,8 @@ describe("evidence-collector", () => {
 
     it("dedupes within a single append call (last row wins)", () => {
       appendDiscoveryEvidence([
-        { description: "gap1", category: "structure", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
-        { description: "gap1", category: "structure", impact: "easy", fixture: "fx1", timestamp: "t2", source: "evaluation" },
+        { description: "gap1", category: "pixel-critical", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
+        { description: "gap1", category: "pixel-critical", impact: "easy", fixture: "fx1", timestamp: "t2", source: "evaluation" },
       ], disPath);
 
       const raw = JSON.parse(readFileSync(disPath, "utf-8")) as { entries: DiscoveryEvidenceEntry[] };
@@ -341,8 +341,8 @@ describe("evidence-collector", () => {
 
     it("same description different fixture → kept as separate entries", () => {
       appendDiscoveryEvidence([
-        { description: "gap1", category: "structure", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
-        { description: "gap1", category: "structure", impact: "hard", fixture: "fx2", timestamp: "t1", source: "evaluation" },
+        { description: "gap1", category: "pixel-critical", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
+        { description: "gap1", category: "pixel-critical", impact: "hard", fixture: "fx2", timestamp: "t1", source: "evaluation" },
       ], disPath);
 
       const raw = JSON.parse(readFileSync(disPath, "utf-8")) as { entries: DiscoveryEvidenceEntry[] };
@@ -352,7 +352,7 @@ describe("evidence-collector", () => {
     it("migrates legacy array to versioned format on append", () => {
       // Write legacy format
       writeFileSync(disPath, JSON.stringify([
-        { description: "old", category: "structure", impact: "hard", fixture: "fx1", timestamp: "t0", source: "evaluation" },
+        { description: "old", category: "pixel-critical", impact: "hard", fixture: "fx1", timestamp: "t0", source: "evaluation" },
       ]), "utf-8");
 
       appendDiscoveryEvidence([
@@ -366,7 +366,7 @@ describe("evidence-collector", () => {
 
     it("does nothing for empty entries", () => {
       appendDiscoveryEvidence([
-        { description: "gap1", category: "structure", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
+        { description: "gap1", category: "pixel-critical", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
       ], disPath);
       const before = readFileSync(disPath, "utf-8");
 
@@ -382,7 +382,7 @@ describe("evidence-collector", () => {
       const before = readFileSync(disPath, "utf-8");
 
       expect(() => appendDiscoveryEvidence([
-        { description: "new", category: "structure", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
+        { description: "new", category: "pixel-critical", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
       ], disPath)).toThrow(/Unsupported discovery-evidence schemaVersion/);
 
       // File must not be overwritten
@@ -393,12 +393,12 @@ describe("evidence-collector", () => {
   describe("pruneDiscoveryEvidence", () => {
     it("removes entries for specified categories (case-insensitive)", () => {
       appendDiscoveryEvidence([
-        { description: "gap1", category: "Structure", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
-        { description: "gap2", category: "structure", impact: "hard", fixture: "fx2", timestamp: "t2", source: "gap-analysis" },
+        { description: "gap1", category: "Pixel-critical", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
+        { description: "gap2", category: "pixel-critical", impact: "hard", fixture: "fx2", timestamp: "t2", source: "gap-analysis" },
         { description: "gap3", category: "color", impact: "moderate", fixture: "fx1", timestamp: "t1", source: "evaluation" },
       ], disPath);
 
-      pruneDiscoveryEvidence(["structure"], disPath);
+      pruneDiscoveryEvidence(["pixel-critical"], disPath);
 
       const raw = JSON.parse(readFileSync(disPath, "utf-8")) as { entries: DiscoveryEvidenceEntry[] };
       expect(raw.entries).toHaveLength(1);
@@ -407,10 +407,10 @@ describe("evidence-collector", () => {
 
     it("writes versioned format after prune", () => {
       appendDiscoveryEvidence([
-        { description: "gap1", category: "structure", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
+        { description: "gap1", category: "pixel-critical", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
       ], disPath);
 
-      pruneDiscoveryEvidence(["structure"], disPath);
+      pruneDiscoveryEvidence(["pixel-critical"], disPath);
 
       const raw = JSON.parse(readFileSync(disPath, "utf-8")) as { schemaVersion: number; entries: DiscoveryEvidenceEntry[] };
       expect(raw.schemaVersion).toBe(DISCOVERY_EVIDENCE_SCHEMA_VERSION);
@@ -419,7 +419,7 @@ describe("evidence-collector", () => {
 
     it("does nothing for empty categories", () => {
       appendDiscoveryEvidence([
-        { description: "gap1", category: "structure", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
+        { description: "gap1", category: "pixel-critical", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
       ], disPath);
 
       pruneDiscoveryEvidence([], disPath);
@@ -430,10 +430,10 @@ describe("evidence-collector", () => {
 
     it("trims categories when matching", () => {
       appendDiscoveryEvidence([
-        { description: "gap1", category: "structure", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
+        { description: "gap1", category: "pixel-critical", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
       ], disPath);
 
-      pruneDiscoveryEvidence(["  structure  "], disPath);
+      pruneDiscoveryEvidence(["  pixel-critical  "], disPath);
 
       const raw = JSON.parse(readFileSync(disPath, "utf-8")) as { entries: DiscoveryEvidenceEntry[] };
       expect(raw.entries).toHaveLength(0);
@@ -441,12 +441,12 @@ describe("evidence-collector", () => {
 
     it("throws when file has unsupported schemaVersion", () => {
       const file = { schemaVersion: 999, entries: [
-        { description: "gap1", category: "structure", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
+        { description: "gap1", category: "pixel-critical", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
       ]};
       writeFileSync(disPath, JSON.stringify(file), "utf-8");
       const before = readFileSync(disPath, "utf-8");
 
-      expect(() => pruneDiscoveryEvidence(["structure"], disPath)).toThrow(/Unsupported discovery-evidence schemaVersion/);
+      expect(() => pruneDiscoveryEvidence(["pixel-critical"], disPath)).toThrow(/Unsupported discovery-evidence schemaVersion/);
 
       expect(readFileSync(disPath, "utf-8")).toBe(before);
     });

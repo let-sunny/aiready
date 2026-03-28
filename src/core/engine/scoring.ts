@@ -57,7 +57,7 @@ export type Grade = "S" | "A+" | "A" | "B+" | "B" | "C+" | "C" | "D" | "F";
  * the per-rule scores in rule-config.ts effectively unused.
  *
  * Now: `no-auto-layout` (score: -10, depthWeight: 1.5) at root contributes 15
- * to density, while `unnecessary-node` (score: -2, no depthWeight) contributes 2.
+ * to density, while `default-name` (score: -1, no depthWeight) contributes 1.
  * This makes calibration loop score adjustments flow through to user-facing scores.
  */
 
@@ -92,11 +92,11 @@ function computeTotalScorePerCategory(
  * more strongly with visual-compare similarity, these weights can be adjusted.
  */
 const CATEGORY_WEIGHT: Record<Category, number> = {
-  structure: 1.0,
-  token: 1.0,
-  component: 1.0,
-  naming: 1.0,
-  behavior: 1.0,
+  "pixel-critical": 1.0,
+  "responsive-critical": 1.0,
+  "code-quality": 1.0,
+  "token-management": 1.0,
+  "minor": 1.0,
 };
 
 /**
@@ -358,11 +358,11 @@ export function formatScoreSummary(report: ScoreReport): string {
  */
 export function getCategoryLabel(category: Category): string {
   const labels: Record<Category, string> = {
-    structure: "Structure",
-    token: "Design Token",
-    component: "Component",
-    naming: "Naming",
-    behavior: "Behavior",
+    "pixel-critical": "Pixel Critical",
+    "responsive-critical": "Responsive Critical",
+    "code-quality": "Code Quality",
+    "token-management": "Token Management",
+    "minor": "Minor",
   };
   return labels[category];
 }

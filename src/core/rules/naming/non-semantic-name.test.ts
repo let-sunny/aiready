@@ -4,7 +4,7 @@ import { nonSemanticName } from "./index.js";
 describe("non-semantic-name", () => {
   it("has correct rule definition metadata", () => {
     expect(nonSemanticName.definition.id).toBe("non-semantic-name");
-    expect(nonSemanticName.definition.category).toBe("naming");
+    expect(nonSemanticName.definition.category).toBe("minor");
   });
 
   it("flags non-semantic name on container node", () => {

@@ -4,7 +4,7 @@ import { detachedInstance } from "./index.js";
 describe("detached-instance", () => {
   it("has correct rule definition metadata", () => {
     expect(detachedInstance.definition.id).toBe("detached-instance");
-    expect(detachedInstance.definition.category).toBe("component");
+    expect(detachedInstance.definition.category).toBe("code-quality");
   });
 
   it("flags FRAME whose name matches a component", () => {

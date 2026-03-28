@@ -91,7 +91,6 @@ STRUCTURE
   - excludeNodeTypes: node types to skip (e.g. VECTOR, BOOLEAN_OPERATION)
   - excludeNodeNames: name patterns to skip (e.g. icon, ico)
   - gridBase: spacing grid unit, default 4
-  - colorTolerance: color diff tolerance, default 10
   - rules: per-rule overrides (score, severity, enabled)
 
 EXAMPLE
@@ -101,7 +100,7 @@ EXAMPLE
     "gridBase": 4,
     "rules": {
       "no-auto-layout": { "score": -15, "severity": "blocking" },
-      "raw-color": { "score": -12 },
+      "raw-value": { "score": -5 },
       "default-name": { "enabled": false }
     }
   }

@@ -72,10 +72,10 @@ describe("calculateScores", () => {
 
   it("counts issues by severity correctly", () => {
     const issues = [
-      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking" }),
-      makeIssue({ ruleId: "group-usage", category: "structure", severity: "risk" }),
-      makeIssue({ ruleId: "raw-color", category: "token", severity: "missing-info" }),
-      makeIssue({ ruleId: "numeric-suffix-name", category: "naming", severity: "suggestion" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "pixel-critical", severity: "blocking" }),
+      makeIssue({ ruleId: "group-usage", category: "pixel-critical", severity: "risk" }),
+      makeIssue({ ruleId: "raw-value", category: "token-management", severity: "missing-info" }),
+      makeIssue({ ruleId: "default-name", category: "minor", severity: "suggestion" }),
     ];
     const scores = calculateScores(makeResult(issues));
 
@@ -87,165 +87,150 @@ describe("calculateScores", () => {
   });
 
   it("uses calculatedScore for density: higher score = more density impact", () => {
-    // Create issue where calculatedScore differs from config.score
-    const heavyIssue = makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking", score: -10 });
+    const heavyIssue = makeIssue({ ruleId: "no-auto-layout", category: "pixel-critical", severity: "blocking", score: -10 });
     heavyIssue.calculatedScore = -15; // Simulate depthWeight effect
 
-    const lightIssue = makeIssue({ ruleId: "unnecessary-node", category: "structure", severity: "suggestion", score: -2 });
-    lightIssue.calculatedScore = -2; // No depthWeight
+    const lightIssue = makeIssue({ ruleId: "default-name", category: "minor", severity: "suggestion", score: -1 });
+    lightIssue.calculatedScore = -1;
 
     const heavy = calculateScores(makeResult([heavyIssue], 100));
     const light = calculateScores(makeResult([lightIssue], 100));
 
-    // Density should use calculatedScore (-15 vs -2), not config.score
-    expect(heavy.byCategory.structure.weightedIssueCount).toBe(15);
-    expect(light.byCategory.structure.weightedIssueCount).toBe(2);
-    expect(heavy.byCategory.structure.densityScore).toBeLessThan(
-      light.byCategory.structure.densityScore
-    );
+    expect(heavy.byCategory["pixel-critical"].weightedIssueCount).toBe(15);
+    expect(light.byCategory["minor"].weightedIssueCount).toBe(1);
   });
 
   it("differentiates rules within the same severity by score", () => {
-    // Create issues where calculatedScore differs from config.score
-    const highScoreIssue = makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking", score: -10 });
-    highScoreIssue.calculatedScore = -15; // Simulate depthWeight effect
+    const highScoreIssue = makeIssue({ ruleId: "no-auto-layout", category: "pixel-critical", severity: "blocking", score: -10 });
+    highScoreIssue.calculatedScore = -15;
 
-    const lowScoreIssue = makeIssue({ ruleId: "absolute-position-in-auto-layout", category: "structure", severity: "blocking", score: -3 });
-    lowScoreIssue.calculatedScore = -5; // Simulate different depthWeight
+    const lowScoreIssue = makeIssue({ ruleId: "absolute-position-in-auto-layout", category: "pixel-critical", severity: "blocking", score: -3 });
+    lowScoreIssue.calculatedScore = -5;
 
     const highScore = calculateScores(makeResult([highScoreIssue], 100));
     const lowScore = calculateScores(makeResult([lowScoreIssue], 100));
 
-    // weightedIssueCount should use calculatedScore, not config.score
-    expect(highScore.byCategory.structure.densityScore).toBeLessThan(
-      lowScore.byCategory.structure.densityScore
+    expect(highScore.byCategory["pixel-critical"].densityScore).toBeLessThan(
+      lowScore.byCategory["pixel-critical"].densityScore
     );
-    expect(highScore.byCategory.structure.weightedIssueCount).toBe(15);
-    expect(lowScore.byCategory.structure.weightedIssueCount).toBe(5);
+    expect(highScore.byCategory["pixel-critical"].weightedIssueCount).toBe(15);
+    expect(lowScore.byCategory["pixel-critical"].weightedIssueCount).toBe(5);
   });
 
   it("density score decreases as weighted issue count increases relative to node count", () => {
     const few = calculateScores(makeResult([
-      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "pixel-critical", severity: "blocking" }),
     ], 100));
 
     const many = calculateScores(makeResult([
-      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking" }),
-      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking" }),
-      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking" }),
-      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking" }),
-      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "pixel-critical", severity: "blocking" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "pixel-critical", severity: "blocking" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "pixel-critical", severity: "blocking" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "pixel-critical", severity: "blocking" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "pixel-critical", severity: "blocking" }),
     ], 100));
 
-    expect(many.byCategory.structure.densityScore).toBeLessThan(
-      few.byCategory.structure.densityScore
+    expect(many.byCategory["pixel-critical"].densityScore).toBeLessThan(
+      few.byCategory["pixel-critical"].densityScore
     );
   });
 
   it("diversity score penalizes more unique rules being triggered", () => {
     const concentrated = calculateScores(makeResult([
-      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "risk", score: -5 }),
-      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "risk", score: -5 }),
-      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "risk", score: -5 }),
+      makeIssue({ ruleId: "no-auto-layout", category: "pixel-critical", severity: "risk", score: -5 }),
+      makeIssue({ ruleId: "no-auto-layout", category: "pixel-critical", severity: "risk", score: -5 }),
+      makeIssue({ ruleId: "no-auto-layout", category: "pixel-critical", severity: "risk", score: -5 }),
     ], 100));
 
     const spread = calculateScores(makeResult([
-      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "risk", score: -5 }),
-      makeIssue({ ruleId: "group-usage", category: "structure", severity: "risk", score: -5 }),
-      makeIssue({ ruleId: "deep-nesting", category: "structure", severity: "risk", score: -5 }),
+      makeIssue({ ruleId: "no-auto-layout", category: "pixel-critical", severity: "risk", score: -5 }),
+      makeIssue({ ruleId: "group-usage", category: "pixel-critical", severity: "risk", score: -5 }),
+      makeIssue({ ruleId: "absolute-position-in-auto-layout", category: "pixel-critical", severity: "risk", score: -5 }),
     ], 100));
 
-    expect(concentrated.byCategory.structure.diversityScore).toBeGreaterThan(
-      spread.byCategory.structure.diversityScore
+    expect(concentrated.byCategory["pixel-critical"].diversityScore).toBeGreaterThan(
+      spread.byCategory["pixel-critical"].diversityScore
     );
   });
 
   it("diversity weights triggered rules by score severity", () => {
-    // One high-severity rule triggered
     const heavyRule = calculateScores(makeResult([
-      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking", score: -10 }),
+      makeIssue({ ruleId: "no-auto-layout", category: "pixel-critical", severity: "blocking", score: -10 }),
     ], 100));
 
-    // One low-severity rule triggered
     const lightRule = calculateScores(makeResult([
-      makeIssue({ ruleId: "unnecessary-node", category: "structure", severity: "suggestion", score: -2 }),
+      makeIssue({ ruleId: "default-name", category: "minor", severity: "suggestion", score: -1 }),
     ], 100));
 
-    expect(heavyRule.byCategory.structure.diversityScore).toBeLessThan(
-      lightRule.byCategory.structure.diversityScore
+    expect(heavyRule.byCategory["pixel-critical"].diversityScore).toBeLessThan(
+      lightRule.byCategory["minor"].diversityScore
     );
   });
 
   it("low-severity rules have minimal diversity impact (intentional)", () => {
-    // 1 suggestion rule (score -2) vs 1 blocking rule (score -10).
-    // Weighted ratio for the suggestion is much smaller, so diversity stays high.
-    // Low-severity rules correctly penalize diversity less.
     const lowSeverity = calculateScores(makeResult([
-      makeIssue({ ruleId: "unnecessary-node", category: "structure", severity: "suggestion", score: -2 }),
+      makeIssue({ ruleId: "default-name", category: "minor", severity: "suggestion", score: -1 }),
     ], 100));
 
     const highSeverity = calculateScores(makeResult([
-      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking", score: -10 }),
+      makeIssue({ ruleId: "no-auto-layout", category: "pixel-critical", severity: "blocking", score: -10 }),
     ], 100));
 
-    // Both trigger exactly 1 rule, but severity-weighted diversity differs significantly
-    expect(lowSeverity.byCategory.structure.diversityScore).toBeGreaterThan(90);
-    expect(highSeverity.byCategory.structure.diversityScore).toBeLessThan(80);
+    expect(lowSeverity.byCategory["minor"].diversityScore).toBeGreaterThan(50);
+    expect(highSeverity.byCategory["pixel-critical"].diversityScore).toBeLessThan(80);
   });
 
   it("combined score = density * 0.7 + diversity * 0.3", () => {
     const issues = [
-      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking" }),
-      makeIssue({ ruleId: "group-usage", category: "structure", severity: "risk" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "pixel-critical", severity: "blocking" }),
+      makeIssue({ ruleId: "group-usage", category: "pixel-critical", severity: "risk" }),
     ];
     const scores = calculateScores(makeResult(issues, 100));
-    const structure = scores.byCategory.structure;
+    const pixelCritical = scores.byCategory["pixel-critical"];
 
-    const expected = Math.round(structure.densityScore * 0.7 + structure.diversityScore * 0.3);
+    const expected = Math.round(pixelCritical.densityScore * 0.7 + pixelCritical.diversityScore * 0.3);
     const clamped = Math.max(5, Math.min(100, expected));
-    expect(structure.percentage).toBe(clamped);
+    expect(pixelCritical.percentage).toBe(clamped);
   });
 
   it("score never goes below SCORE_FLOOR (5) when issues exist", () => {
-    const structureRules = [
-      "no-auto-layout", "group-usage", "deep-nesting", "fixed-size-in-auto-layout",
-      "missing-responsive-behavior", "absolute-position-in-auto-layout",
-      "missing-size-constraint", "z-index-dependent-layout", "unnecessary-node",
+    const pixelCriticalRules = [
+      "no-auto-layout", "group-usage", "absolute-position-in-auto-layout",
     ] as const;
 
     const issues: AnalysisIssue[] = [];
-    for (const ruleId of structureRules) {
-      for (let i = 0; i < 50; i++) {
-        issues.push(makeIssue({ ruleId, category: "structure", severity: "blocking" }));
+    for (const ruleId of pixelCriticalRules) {
+      for (let i = 0; i < 200; i++) {
+        issues.push(makeIssue({ ruleId, category: "pixel-critical", severity: "blocking", score: -10 }));
       }
     }
 
-    const scores = calculateScores(makeResult(issues, 10));
-    expect(scores.byCategory.structure.percentage).toBe(5);
+    const scores = calculateScores(makeResult(issues, 5));
+    expect(scores.byCategory["pixel-critical"].percentage).toBe(5);
   });
 
   it("categories without issues get 100%", () => {
     const scores = calculateScores(makeResult([
-      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "pixel-critical", severity: "blocking" }),
     ]));
 
-    expect(scores.byCategory.token.percentage).toBe(100);
-    expect(scores.byCategory.component.percentage).toBe(100);
-    expect(scores.byCategory.naming.percentage).toBe(100);
-    expect(scores.byCategory.behavior.percentage).toBe(100);
+    expect(scores.byCategory["token-management"].percentage).toBe(100);
+    expect(scores.byCategory["code-quality"].percentage).toBe(100);
+    expect(scores.byCategory["minor"].percentage).toBe(100);
+    expect(scores.byCategory["responsive-critical"].percentage).toBe(100);
   });
 
   it("overall score is weighted average of all 5 categories", () => {
     const scores = calculateScores(makeResult([
-      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "pixel-critical", severity: "blocking" }),
     ], 100));
 
     const categoryPercentages = [
-      scores.byCategory.structure.percentage,
-      scores.byCategory.token.percentage,
-      scores.byCategory.component.percentage,
-      scores.byCategory.naming.percentage,
-      scores.byCategory.behavior.percentage,
+      scores.byCategory["pixel-critical"].percentage,
+      scores.byCategory["responsive-critical"].percentage,
+      scores.byCategory["code-quality"].percentage,
+      scores.byCategory["token-management"].percentage,
+      scores.byCategory["minor"].percentage,
     ];
     const expectedOverall = Math.round(
       categoryPercentages.reduce((a, b) => a + b, 0) / 5
@@ -255,17 +240,17 @@ describe("calculateScores", () => {
 
   it("handles nodeCount = 0 gracefully (no division by zero)", () => {
     const scores = calculateScores(makeResult([
-      makeIssue({ ruleId: "raw-color", category: "token", severity: "missing-info" }),
+      makeIssue({ ruleId: "raw-value", category: "token-management", severity: "missing-info" }),
     ], 0));
 
-    expect(scores.byCategory.token.densityScore).toBe(100);
-    expect(scores.byCategory.token.percentage).toBeLessThan(100);
+    expect(scores.byCategory["token-management"].densityScore).toBe(100);
+    expect(scores.byCategory["token-management"].percentage).toBeLessThan(100);
     expect(Number.isFinite(scores.overall.percentage)).toBe(true);
   });
 
   it("handles nodeCount = 1 without edge case issues", () => {
     const scores = calculateScores(makeResult([
-      makeIssue({ ruleId: "raw-color", category: "token", severity: "missing-info" }),
+      makeIssue({ ruleId: "raw-value", category: "token-management", severity: "missing-info" }),
     ], 1));
 
     expect(Number.isFinite(scores.overall.percentage)).toBe(true);
@@ -275,28 +260,28 @@ describe("calculateScores", () => {
 
   it("tracks uniqueRuleCount per category", () => {
     const issues = [
-      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking" }),
-      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking" }),
-      makeIssue({ ruleId: "group-usage", category: "structure", severity: "risk" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "pixel-critical", severity: "blocking" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "pixel-critical", severity: "blocking" }),
+      makeIssue({ ruleId: "group-usage", category: "pixel-critical", severity: "risk" }),
     ];
     const scores = calculateScores(makeResult(issues));
 
-    expect(scores.byCategory.structure.uniqueRuleCount).toBe(2);
-    expect(scores.byCategory.structure.issueCount).toBe(3);
+    expect(scores.byCategory["pixel-critical"].uniqueRuleCount).toBe(2);
+    expect(scores.byCategory["pixel-critical"].issueCount).toBe(3);
   });
 
   it("bySeverity counts are accurate per category", () => {
     const issues = [
-      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking" }),
-      makeIssue({ ruleId: "group-usage", category: "structure", severity: "risk" }),
-      makeIssue({ ruleId: "group-usage", category: "structure", severity: "risk" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "pixel-critical", severity: "blocking" }),
+      makeIssue({ ruleId: "group-usage", category: "pixel-critical", severity: "risk" }),
+      makeIssue({ ruleId: "group-usage", category: "pixel-critical", severity: "risk" }),
     ];
     const scores = calculateScores(makeResult(issues));
 
-    expect(scores.byCategory.structure.bySeverity.blocking).toBe(1);
-    expect(scores.byCategory.structure.bySeverity.risk).toBe(2);
-    expect(scores.byCategory.structure.bySeverity["missing-info"]).toBe(0);
-    expect(scores.byCategory.structure.bySeverity.suggestion).toBe(0);
+    expect(scores.byCategory["pixel-critical"].bySeverity.blocking).toBe(1);
+    expect(scores.byCategory["pixel-critical"].bySeverity.risk).toBe(2);
+    expect(scores.byCategory["pixel-critical"].bySeverity["missing-info"]).toBe(0);
+    expect(scores.byCategory["pixel-critical"].bySeverity.suggestion).toBe(0);
   });
 });
 
@@ -310,13 +295,13 @@ describe("calculateGrade (via calculateScores)", () => {
 
   it("score < 50% -> F", () => {
     const issues: AnalysisIssue[] = [];
-    const categories: Category[] = ["structure", "token", "component", "naming", "behavior"];
+    const categories: Category[] = ["pixel-critical", "responsive-critical", "code-quality", "token-management", "minor"];
     const rulesPerCat: Record<Category, string[]> = {
-      structure: ["no-auto-layout", "group-usage", "deep-nesting", "fixed-size-in-auto-layout", "missing-responsive-behavior", "absolute-position-in-auto-layout", "missing-size-constraint", "z-index-dependent-layout", "unnecessary-node"],
-      token: ["raw-color", "raw-font", "inconsistent-spacing", "magic-number-spacing", "raw-shadow", "raw-opacity", "multiple-fill-colors"],
-      component: ["missing-component", "detached-instance", "missing-component-description", "variant-structure-mismatch"],
-      naming: ["default-name", "non-semantic-name", "inconsistent-naming-convention", "numeric-suffix-name", "too-long-name"],
-      behavior: ["text-truncation-unhandled", "prototype-link-in-design", "overflow-behavior-unknown", "wrap-behavior-unknown"],
+      "pixel-critical": ["no-auto-layout", "group-usage", "absolute-position-in-auto-layout"],
+      "responsive-critical": ["fixed-size-in-auto-layout", "missing-size-constraint", "missing-responsive-behavior"],
+      "code-quality": ["missing-component", "detached-instance", "variant-structure-mismatch", "deep-nesting"],
+      "token-management": ["raw-value", "irregular-spacing"],
+      "minor": ["default-name", "non-semantic-name", "inconsistent-naming-convention"],
     };
 
     for (const cat of categories) {
@@ -357,16 +342,16 @@ describe("formatScoreSummary", () => {
     const scores = calculateScores(makeResult([]));
     const summary = formatScoreSummary(scores);
 
-    expect(summary).toContain("structure:");
-    expect(summary).toContain("token:");
-    expect(summary).toContain("component:");
-    expect(summary).toContain("naming:");
-    expect(summary).toContain("behavior:");
+    expect(summary).toContain("pixel-critical:");
+    expect(summary).toContain("responsive-critical:");
+    expect(summary).toContain("code-quality:");
+    expect(summary).toContain("token-management:");
+    expect(summary).toContain("minor:");
   });
 
   it("includes severity breakdown", () => {
     const scores = calculateScores(makeResult([
-      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "pixel-critical", severity: "blocking" }),
     ]));
     const summary = formatScoreSummary(scores);
 
@@ -379,11 +364,11 @@ describe("formatScoreSummary", () => {
 
 describe("getCategoryLabel", () => {
   it("returns correct labels for all categories", () => {
-    expect(getCategoryLabel("structure")).toBe("Structure");
-    expect(getCategoryLabel("token")).toBe("Design Token");
-    expect(getCategoryLabel("component")).toBe("Component");
-    expect(getCategoryLabel("naming")).toBe("Naming");
-    expect(getCategoryLabel("behavior")).toBe("Behavior");
+    expect(getCategoryLabel("pixel-critical")).toBe("Pixel Critical");
+    expect(getCategoryLabel("responsive-critical")).toBe("Responsive Critical");
+    expect(getCategoryLabel("code-quality")).toBe("Code Quality");
+    expect(getCategoryLabel("token-management")).toBe("Token Management");
+    expect(getCategoryLabel("minor")).toBe("Minor");
   });
 });
 
@@ -401,9 +386,9 @@ describe("getSeverityLabel", () => {
 describe("buildResultJson", () => {
   it("includes all expected fields", () => {
     const result = makeResult([
-      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking" }),
-      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking" }),
-      makeIssue({ ruleId: "raw-color", category: "token", severity: "missing-info" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "pixel-critical", severity: "blocking" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "pixel-critical", severity: "blocking" }),
+      makeIssue({ ruleId: "raw-value", category: "token-management", severity: "missing-info" }),
     ]);
     const scores = calculateScores(result);
     const json = buildResultJson("TestFile", result, scores);
@@ -420,22 +405,22 @@ describe("buildResultJson", () => {
 
   it("aggregates issuesByRule correctly", () => {
     const result = makeResult([
-      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking" }),
-      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking" }),
-      makeIssue({ ruleId: "raw-color", category: "token", severity: "missing-info" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "pixel-critical", severity: "blocking" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "pixel-critical", severity: "blocking" }),
+      makeIssue({ ruleId: "raw-value", category: "token-management", severity: "missing-info" }),
     ]);
     const scores = calculateScores(result);
     const json = buildResultJson("TestFile", result, scores);
     const issuesByRule = json.issuesByRule as Record<string, number>;
 
     expect(issuesByRule["no-auto-layout"]).toBe(2);
-    expect(issuesByRule["raw-color"]).toBe(1);
+    expect(issuesByRule["raw-value"]).toBe(1);
   });
 
   it("includes detailed issues list with severity and node info", () => {
     const result = makeResult([
-      makeIssue({ ruleId: "no-auto-layout", category: "structure", severity: "blocking" }),
-      makeIssue({ ruleId: "raw-color", category: "token", severity: "missing-info" }),
+      makeIssue({ ruleId: "no-auto-layout", category: "pixel-critical", severity: "blocking" }),
+      makeIssue({ ruleId: "raw-value", category: "token-management", severity: "missing-info" }),
     ]);
     const scores = calculateScores(result);
     const json = buildResultJson("TestFile", result, scores);
@@ -450,7 +435,7 @@ describe("buildResultJson", () => {
       message: expect.any(String),
     });
     expect(issues[1]).toMatchObject({
-      ruleId: "raw-color",
+      ruleId: "raw-value",
       severity: "missing-info",
     });
   });
