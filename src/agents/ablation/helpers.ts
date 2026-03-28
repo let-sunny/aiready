@@ -162,8 +162,10 @@ export async function renderAndCompare(
   const { PNG } = await import("pngjs");
   const figmaImage = PNG.sync.read(readFileSync(figmaScreenshotPath));
   const figmaWidth = figmaImage.width;
-  // 1920/768 screenshots are @1x, 1200/375 are @2x
-  const exportScale = figmaWidth > 1500 ? 1 : 2;
+  // Figma save-fixture exports at @2x by default. 1920/768 condition screenshots are @1x.
+  // Detect: if width matches a known @1x size (1920, 768), use scale 1. Otherwise @2x.
+  const KNOWN_1X_WIDTHS = [1920, 768];
+  const exportScale = KNOWN_1X_WIDTHS.includes(figmaWidth) ? 1 : 2;
   const logicalW = Math.max(1, Math.round(figmaWidth / exportScale));
   const logicalH = Math.max(1, Math.round(figmaImage.height / exportScale));
 
