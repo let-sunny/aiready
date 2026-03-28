@@ -59,8 +59,18 @@ export const fixedSizeMsg = {
 
 // ── missing-size-constraint ──────────────────────────────────────────────────
 
-export const missingSizeConstraintMsg = (name: string, currentWidth: string) =>
-  `"${name}" uses FILL width (currently ${currentWidth}) without max-width — add maxWidth to prevent stretching on large screens`;
+export type MissingSizeConstraintSubType = "max-width" | "min-width" | "wrap" | "grid";
+
+export const missingSizeConstraintMsg = {
+  maxWidth: (name: string, currentWidth: string) =>
+    `"${name}" uses FILL width (currently ${currentWidth}) without max-width — add maxWidth to prevent stretching on large screens`,
+  minWidth: (name: string, currentWidth: string) =>
+    `"${name}" uses FILL width (currently ${currentWidth}) without min-width — add minWidth to prevent collapsing on small screens`,
+  wrap: (name: string) =>
+    `"${name}" is in a wrap container without min-width — add minWidth to control when wrapping occurs`,
+  grid: (name: string) =>
+    `"${name}" is in a grid layout without size constraints — add min/max-width for proper column sizing`,
+};
 
 // ── non-layout-container (was group-usage) ───────────────────────────────────
 

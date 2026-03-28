@@ -257,9 +257,10 @@ const missingSizeConstraintCheck: RuleCheckFn = (node, context) => {
 
   return {
     ruleId: missingSizeConstraintDef.id,
+    subType: "max-width" as const,
     nodeId: node.id,
     nodePath: context.path.join(" > "),
-    message: missingSizeConstraintMsg(node.name, currentWidth),
+    message: missingSizeConstraintMsg.maxWidth(node.name, currentWidth),
   };
 };
 
