@@ -84,7 +84,7 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
   // ── Code Quality ──
   "missing-component": {
     severity: "risk",
-    score: -5,
+    score: -7,
     enabled: true,
     options: {
       minRepetitions: 3,

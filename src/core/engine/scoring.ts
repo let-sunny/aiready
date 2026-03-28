@@ -1,5 +1,5 @@
 import type { Category } from "../contracts/category.js";
-import { CATEGORIES } from "../contracts/category.js";
+import { CATEGORIES, CATEGORY_LABELS } from "../contracts/category.js";
 import type { RuleId, RuleConfig } from "../contracts/rule.js";
 import type { Severity } from "../contracts/severity.js";
 import type { AnalysisResult } from "./rule-engine.js";
@@ -357,14 +357,7 @@ export function formatScoreSummary(report: ScoreReport): string {
  * Get category label for display
  */
 export function getCategoryLabel(category: Category): string {
-  const labels: Record<Category, string> = {
-    "pixel-critical": "Pixel Critical",
-    "responsive-critical": "Responsive Critical",
-    "code-quality": "Code Quality",
-    "token-management": "Token Management",
-    "minor": "Minor",
-  };
-  return labels[category];
+  return CATEGORY_LABELS[category];
 }
 
 /**

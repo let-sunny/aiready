@@ -133,6 +133,18 @@ describe("runCalibrationEvaluate", () => {
             diversityScore: 100,
             bySeverity: { blocking: 0, risk: 0, "missing-info": 0, suggestion: 0 },
           },
+          "responsive-critical": {
+            category: "responsive-critical" as const,
+            score: 100,
+            maxScore: 100,
+            percentage: 100,
+            issueCount: 0,
+            uniqueRuleCount: 0,
+            weightedIssueCount: 0,
+            densityScore: 100,
+            diversityScore: 100,
+            bySeverity: { blocking: 0, risk: 0, "missing-info": 0, suggestion: 0 },
+          },
         },
         summary: {
           totalIssues: 3,

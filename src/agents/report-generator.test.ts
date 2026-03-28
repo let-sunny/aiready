@@ -9,6 +9,7 @@ import {
 
 const ALL_CATEGORIES: Category[] = [
   "pixel-critical",
+  "responsive-critical",
   "token-management",
   "code-quality",
   "minor",

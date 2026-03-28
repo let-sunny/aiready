@@ -8,8 +8,8 @@
       "severity": "blocking"
     },
     "raw-value": {
-      "score": -5,
-      "severity": "risk"
+      "score": -3,
+      "severity": "missing-info"
     },
     "default-name": {
       "enabled": false

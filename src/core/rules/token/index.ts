@@ -54,7 +54,10 @@ const rawValueCheck: RuleCheckFn = (node, context) => {
 
   // Check 2: Raw font (TEXT nodes without text style)
   if (node.type === "TEXT") {
-    if (!hasStyleReference(node, "text") && !hasBoundVariable(node, "fontFamily") && !hasBoundVariable(node, "fontSize")) {
+    if (
+      !hasStyleReference(node, "text") &&
+      (!hasBoundVariable(node, "fontFamily") || !hasBoundVariable(node, "fontSize"))
+    ) {
       const fontParts: string[] = [];
       const s = node.style;
       if (s) {

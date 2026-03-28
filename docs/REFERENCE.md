@@ -111,7 +111,7 @@ Override score, severity, or enable/disable individual rules:
 
 | Rule ID | Default Score | Default Severity |
 |---------|--------------|-----------------|
-| `missing-component` | -5 | risk |
+| `missing-component` | -7 | risk |
 | `detached-instance` | -4 | risk |
 | `variant-structure-mismatch` | -4 | risk |
 | `deep-nesting` | -3 | risk |
