@@ -13,10 +13,6 @@
     },
     "default-name": {
       "enabled": false
-    },
-    "missing-responsive-behavior": {
-      "score": -8,
-      "severity": "blocking"
     }
   }
 }

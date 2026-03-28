@@ -99,13 +99,12 @@ Override score, severity, or enable/disable individual rules:
 | `absolute-position-in-auto-layout` | -7 | blocking |
 | `group-usage` | -8 | blocking |
 
-**Responsive Critical (3 rules)** — size issues that break at different viewports (ΔV ≥ 15%)
+**Responsive Critical (2 rules)** — size issues that break at different viewports (ΔV ≥ 15%)
 
 | Rule ID | Default Score | Default Severity |
 |---------|--------------|-----------------|
 | `fixed-size-in-auto-layout` | -6 | risk |
 | `missing-size-constraint` | -5 | risk |
-| `missing-responsive-behavior` | -5 | risk |
 
 **Code Quality (4 rules)** — structural issues affecting code reuse (ΔV ≈ 0%, CSS classes -8~15)
 
@@ -162,7 +161,6 @@ Override score, severity, or enable/disable individual rules:
 ```json
 {
   "rules": {
-    "missing-responsive-behavior": { "score": -10, "severity": "blocking" },
     "fixed-size-in-auto-layout": { "score": -8, "severity": "blocking" },
     "no-auto-layout": { "score": -12 }
   }

@@ -298,7 +298,7 @@ describe("calculateGrade (via calculateScores)", () => {
     const categories: Category[] = ["pixel-critical", "responsive-critical", "code-quality", "token-management", "minor"];
     const rulesPerCat: Record<Category, string[]> = {
       "pixel-critical": ["no-auto-layout", "group-usage", "absolute-position-in-auto-layout"],
-      "responsive-critical": ["fixed-size-in-auto-layout", "missing-size-constraint", "missing-responsive-behavior"],
+      "responsive-critical": ["fixed-size-in-auto-layout", "missing-size-constraint"],
       "code-quality": ["missing-component", "detached-instance", "variant-structure-mismatch", "deep-nesting"],
       "token-management": ["raw-value", "irregular-spacing"],
       "minor": ["default-name", "non-semantic-name", "inconsistent-naming-convention"],

@@ -157,25 +157,27 @@ const irregularSpacingCheck: RuleCheckFn = (node, context, options) => {
   const configuredGridBase = (options?.["gridBase"] as number) ?? getRuleOption("irregular-spacing", "gridBase", 4);
   const gridBase = Number.isFinite(configuredGridBase) && configuredGridBase > 0 ? configuredGridBase : 4;
 
-  const allSpacings = [
-    node.paddingLeft,
-    node.paddingRight,
-    node.paddingTop,
-    node.paddingBottom,
-    node.itemSpacing,
-  ].filter((s): s is number => s !== undefined && s > 0);
+  const spacingEntries: Array<{ value: number; subType: "padding" | "gap" }> = [];
+  for (const key of ["paddingLeft", "paddingRight", "paddingTop", "paddingBottom"] as const) {
+    const v = node[key];
+    if (v !== undefined && v > 0) spacingEntries.push({ value: v, subType: "padding" });
+  }
+  if (node.itemSpacing !== undefined && node.itemSpacing > 0) {
+    spacingEntries.push({ value: node.itemSpacing, subType: "gap" });
+  }
 
   // Allow small intentional values
   const commonValues = [1, 2];
 
-  for (const spacing of allSpacings) {
-    if (commonValues.includes(spacing)) continue;
-    if (!isOnGrid(spacing, gridBase)) {
+  for (const entry of spacingEntries) {
+    if (commonValues.includes(entry.value)) continue;
+    if (!isOnGrid(entry.value, gridBase)) {
       return {
         ruleId: irregularSpacingDef.id,
+        subType: entry.subType,
         nodeId: node.id,
         nodePath: context.path.join(" > "),
-        message: irregularSpacingMsg(node.name, spacing, gridBase, Math.round(spacing / gridBase) * gridBase),
+        message: irregularSpacingMsg(node.name, entry.value, gridBase, Math.round(entry.value / gridBase) * gridBase),
       };
     }
   }

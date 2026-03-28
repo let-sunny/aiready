@@ -3,7 +3,7 @@ import type { AnalysisNode } from "../../contracts/figma-node.js";
 import { defineRule } from "../rule-registry.js";
 import { getRuleOption } from "../rule-config.js";
 import { isAutoLayoutExempt, isAbsolutePositionExempt, isSizeConstraintExempt, isFixedSizeExempt } from "../rule-exceptions.js";
-import { noAutoLayoutMsg, absolutePositionMsg, fixedSizeMsg, missingSizeConstraintMsg, missingResponsiveBehaviorMsg, groupUsageMsg, deepNestingMsg } from "../rule-messages.js";
+import { noAutoLayoutMsg, absolutePositionMsg, fixedSizeMsg, missingSizeConstraintMsg, groupUsageMsg, deepNestingMsg } from "../rule-messages.js";
 
 // ============================================
 // Helper functions
@@ -266,44 +266,6 @@ const missingSizeConstraintCheck: RuleCheckFn = (node, context) => {
 export const missingSizeConstraint = defineRule({
   definition: missingSizeConstraintDef,
   check: missingSizeConstraintCheck,
-});
-
-// ============================================
-// missing-responsive-behavior
-// ============================================
-
-const missingResponsiveBehaviorDef: RuleDefinition = {
-  id: "missing-responsive-behavior",
-  name: "Missing Responsive Behavior",
-  category: "responsive-critical",
-  why: "Without constraints, AI has no information about how elements should behave when the container resizes",
-  impact: "AI generates static layouts that break on any screen size other than the one in the design",
-  fix: "Set appropriate constraints so AI can generate responsive CSS (min/max-width, flex-grow, etc.)",
-};
-
-const missingResponsiveBehaviorCheck: RuleCheckFn = (node, context) => {
-  if (!isContainerNode(node)) return null;
-  // Skip if inside Auto Layout (Auto Layout handles responsiveness)
-  if (context.parent && hasAutoLayout(context.parent)) return null;
-  // Skip root-level frames (they define the viewport)
-  if (context.depth < 2) return null;
-
-  // Check for missing layout mode and no parent auto layout
-  if (!hasAutoLayout(node) && !node.layoutAlign) {
-    return {
-      ruleId: missingResponsiveBehaviorDef.id,
-      nodeId: node.id,
-      nodePath: context.path.join(" > "),
-      message: missingResponsiveBehaviorMsg(node.name),
-    };
-  }
-
-  return null;
-};
-
-export const missingResponsiveBehavior = defineRule({
-  definition: missingResponsiveBehaviorDef,
-  check: missingResponsiveBehaviorCheck,
 });
 
 // ============================================

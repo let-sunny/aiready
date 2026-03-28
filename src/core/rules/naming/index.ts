@@ -1,7 +1,7 @@
 import type { RuleCheckFn, RuleDefinition } from "../../contracts/rule.js";
 import { defineRule } from "../rule-registry.js";
 import { isExcludedName } from "../excluded-names.js";
-import { defaultNameMsg, nonSemanticNameMsg, inconsistentNamingMsg } from "../rule-messages.js";
+import { defaultNameMsg, getDefaultNameSubType, nonSemanticNameMsg, inconsistentNamingMsg } from "../rule-messages.js";
 
 // ============================================
 // Helper functions
@@ -73,6 +73,7 @@ const defaultNameCheck: RuleCheckFn = (node, context) => {
 
   return {
     ruleId: defaultNameDef.id,
+    subType: getDefaultNameSubType(node.type),
     nodeId: node.id,
     nodePath: context.path.join(" > "),
     message: defaultNameMsg(node.type, node.name),

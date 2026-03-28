@@ -98,7 +98,6 @@ export type RuleId =
   // Responsive Critical — size issues that break at different viewports (ΔV ≥ 15%)
   | "fixed-size-in-auto-layout"
   | "missing-size-constraint"
-  | "missing-responsive-behavior"
   // Code Quality — structural issues affecting code reuse (ΔV ≈ 0%, CSS classes -8~15)
   | "missing-component"
   | "detached-instance"

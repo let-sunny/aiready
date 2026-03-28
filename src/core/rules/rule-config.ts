@@ -18,7 +18,6 @@ export const RULE_ID_CATEGORY: Record<RuleId, Category> = {
   // Responsive Critical
   "fixed-size-in-auto-layout": "responsive-critical",
   "missing-size-constraint": "responsive-critical",
-  "missing-responsive-behavior": "responsive-critical",
   // Code Quality
   "missing-component": "code-quality",
   "detached-instance": "code-quality",
@@ -72,12 +71,6 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
   "missing-size-constraint": {
     severity: "risk",
     score: -5,
-    enabled: true,
-  },
-  "missing-responsive-behavior": {
-    severity: "risk",
-    score: -5,
-    depthWeight: 1.5,
     enabled: true,
   },
 

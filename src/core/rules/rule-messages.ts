@@ -27,6 +27,8 @@ export const rawValueMsg = {
 
 // ── irregular-spacing ────────────────────────────────────────────────────────
 
+export type IrregularSpacingSubType = "padding" | "gap";
+
 export const irregularSpacingMsg = (name: string, spacing: number, gridBase: number, nearest: number) =>
   `"${name}" has spacing ${spacing}px not on ${gridBase}pt grid — round to nearest ${gridBase}pt multiple (${nearest}px)`;
 
@@ -59,11 +61,6 @@ export const fixedSizeMsg = {
 
 export const missingSizeConstraintMsg = (name: string, currentWidth: string) =>
   `"${name}" uses FILL width (currently ${currentWidth}) without max-width — add maxWidth to prevent stretching on large screens`;
-
-// ── missing-responsive-behavior ──────────────────────────────────────────────
-
-export const missingResponsiveBehaviorMsg = (name: string) =>
-  `"${name}" has no responsive behavior configured — apply auto-layout or set constraints`;
 
 // ── group-usage ──────────────────────────────────────────────────────────────
 
@@ -99,6 +96,28 @@ export const variantStructureMismatchMsg = (name: string, mismatchCount: number,
   `"${name}" has ${mismatchCount}/${totalVariants} variants with different child structures — unify variant structures using visibility toggles for optional elements`;
 
 // ── default-name ─────────────────────────────────────────────────────────────
+
+export type DefaultNameSubType = "frame" | "group" | "vector" | "shape" | "text" | "image" | "component" | "instance";
+
+const DEFAULT_NAME_SUBTYPE_MAP: Record<string, DefaultNameSubType> = {
+  FRAME: "frame",
+  GROUP: "group",
+  RECTANGLE: "shape",
+  ELLIPSE: "shape",
+  VECTOR: "vector",
+  LINE: "vector",
+  STAR: "shape",
+  REGULAR_POLYGON: "shape",
+  TEXT: "text",
+  IMAGE: "image",
+  COMPONENT: "component",
+  COMPONENT_SET: "component",
+  INSTANCE: "instance",
+};
+
+export function getDefaultNameSubType(nodeType: string): DefaultNameSubType {
+  return DEFAULT_NAME_SUBTYPE_MAP[nodeType] ?? "frame";
+}
 
 export const defaultNameMsg = (type: string, name: string) =>
   `${type} "${name}" has a default name — rename to describe its purpose (e.g., "Header", "ProductCard")`;
