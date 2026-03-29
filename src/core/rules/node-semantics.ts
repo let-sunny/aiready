@@ -64,8 +64,15 @@ export function hasImageFill(node: AnalysisNode): boolean {
 
 export function isVisualOnlyNode(node: AnalysisNode): boolean {
   if (VISUAL_LEAF_TYPES.has(node.type)) return true;
-  if (hasImageFill(node)) return true;
-  if (node.children && node.children.length > 0 && node.children.every((c) => VISUAL_LEAF_TYPES.has(c.type))) return true;
+  const hasOnlyVisualChildren =
+    node.children !== undefined &&
+    node.children.length > 0 &&
+    node.children.every((c) => VISUAL_LEAF_TYPES.has(c.type));
+  // Image fill only counts as visual-only when there are no content children
+  if (hasImageFill(node) && (!node.children || node.children.length === 0 || hasOnlyVisualChildren)) {
+    return true;
+  }
+  if (hasOnlyVisualChildren) return true;
   return false;
 }
 

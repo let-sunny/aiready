@@ -161,16 +161,29 @@ function hasInteractionTrigger(node: AnalysisNode, triggerType: string): boolean
   });
 }
 
-/** Check if node (or its component master) has ON_CLICK prototype interaction */
-function hasClickInteraction(node: AnalysisNode, context: RuleContext): boolean {
-  if (hasInteractionTrigger(node, "ON_CLICK")) return true;
+/** Check if node (or its component master) has any of the given trigger types */
+function hasAnyInteraction(node: AnalysisNode, context: RuleContext, triggers: string[]): boolean {
+  for (const trigger of triggers) {
+    if (hasInteractionTrigger(node, trigger)) return true;
+  }
   // INSTANCE nodes don't inherit interactions from master — check master fallback
   if (node.componentId && context.file.componentDefinitions) {
     const master = context.file.componentDefinitions[node.componentId];
-    if (master && hasInteractionTrigger(master, "ON_CLICK")) return true;
+    if (master) {
+      for (const trigger of triggers) {
+        if (hasInteractionTrigger(master, trigger)) return true;
+      }
+    }
   }
   return false;
 }
+
+/** Trigger types to check per subType */
+const PROTOTYPE_TRIGGERS: Record<string, string[]> = {
+  carousel: ["ON_CLICK", "ON_DRAG"],
+};
+
+const DEFAULT_TRIGGERS = ["ON_CLICK"];
 
 const missingPrototypeDef: RuleDefinition = {
   id: "missing-prototype",
@@ -193,8 +206,9 @@ const missingPrototypeCheck: RuleCheckFn = (node, context) => {
   const subType = getPrototypeSubType(node);
   if (!subType) return null;
 
-  // Already has click interaction (check instance + master)
-  if (hasClickInteraction(node, context)) return null;
+  // Already has relevant interaction (click, or drag for carousel)
+  const triggers = PROTOTYPE_TRIGGERS[subType] ?? DEFAULT_TRIGGERS;
+  if (hasAnyInteraction(node, context, triggers)) return null;
 
   // Dedup per componentId + subType
   const seen = getSeenProto(context);
