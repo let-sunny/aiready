@@ -88,7 +88,13 @@ Read and follow `.claude/skills/design-to-code/PROMPT.md` for all code generatio
    - Did this rule's issue actually make the conversion harder?
    - What was its real impact on the final similarity score?
    - Rate as: `easy` (no real difficulty), `moderate` (some guessing needed), `hard` (significant pixel loss), `failed` (could not reproduce)
-7. Note any difficulties NOT covered by existing rules as `uncoveredStruggles`
+7. **Code metrics**: After writing `output.html`, record these in conversion.json:
+   - `htmlBytes`: file size in bytes
+   - `htmlLines`: line count
+   - `cssClassCount`: unique CSS class selectors in `<style>` block
+   - `cssVariableCount`: unique CSS custom properties (`--*:`) in `<style>` block
+   These proxy for token cost — larger/more complex output = more AI work.
+8. Note any difficulties NOT covered by existing rules as `uncoveredStruggles`
    - **Only include design-related issues** — problems in the Figma file structure, missing tokens, ambiguous layout, etc.
    - **Exclude environment/tooling issues** — font CDN availability, screenshot DPI/retina scaling, browser rendering quirks, network issues, CI limitations. These are not design problems and create noise in rule discovery.
 
@@ -106,6 +112,10 @@ Write results to `$RUN_DIR/conversion.json`.
   "responsiveSimilarity": 72,
   "responsiveDelta": 15,
   "responsiveViewport": 1920,
+  "htmlBytes": 42000,
+  "htmlLines": 850,
+  "cssClassCount": 45,
+  "cssVariableCount": 12,
   "difficulty": "moderate",
   "notes": "Summary of the conversion experience",
   "ruleImpactAssessment": [

@@ -157,3 +157,36 @@ export function compareScreenshots(
 
   return { similarity, diffPixels, totalPixels, width, height };
 }
+
+// ── Code metrics (shared with ablation helpers) ─────────────────────────
+
+/** Count unique CSS class selectors in an HTML string's <style> block. */
+export function countCssClasses(html: string): number {
+  const styleMatch = html.match(/<style[\s\S]*?<\/style>/i);
+  if (!styleMatch) return 0;
+  const classes = styleMatch[0].match(/\.[a-zA-Z][\w-]*\s*[{,:]/g);
+  return new Set(classes?.map((c) => c.replace(/\s*[{,:]$/, ""))).size;
+}
+
+/** Count unique CSS custom property definitions in an HTML string's <style> block. */
+export function countCssVariables(html: string): number {
+  const styleMatch = html.match(/<style[\s\S]*?<\/style>/i);
+  if (!styleMatch) return 0;
+  const vars = styleMatch[0].match(/--[\w-]+\s*:/g);
+  return new Set(vars?.map((v) => v.replace(/\s*:$/, ""))).size;
+}
+
+/** Compute code metrics from an HTML string. */
+export function computeCodeMetrics(html: string): {
+  htmlBytes: number;
+  htmlLines: number;
+  cssClassCount: number;
+  cssVariableCount: number;
+} {
+  return {
+    htmlBytes: Buffer.byteLength(html, "utf-8"),
+    htmlLines: html.split("\n").length,
+    cssClassCount: countCssClasses(html),
+    cssVariableCount: countCssVariables(html),
+  };
+}

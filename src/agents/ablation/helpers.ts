@@ -94,21 +94,9 @@ export function getResponseText(response: Anthropic.Message): string {
     .join("\n");
 }
 
-// --- CSS metrics ---
+// --- CSS metrics (re-export from core) ---
 
-export function countCssClasses(html: string): number {
-  const styleMatch = html.match(/<style[\s\S]*?<\/style>/i);
-  if (!styleMatch) return 0;
-  const classes = styleMatch[0].match(/\.[a-zA-Z][\w-]*\s*[{,:]/g);
-  return new Set(classes?.map((c) => c.replace(/\s*[{,:]$/, ""))).size;
-}
-
-export function countCssVariables(html: string): number {
-  const styleMatch = html.match(/<style[\s\S]*?<\/style>/i);
-  if (!styleMatch) return 0;
-  const vars = styleMatch[0].match(/--[\w-]+\s*:/g);
-  return new Set(vars?.map((v) => v.replace(/\s*:$/, ""))).size;
-}
+export { countCssClasses, countCssVariables } from "../../core/engine/visual-compare-helpers.js";
 
 // --- File operations ---
 
