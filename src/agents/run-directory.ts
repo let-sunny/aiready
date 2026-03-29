@@ -253,6 +253,7 @@ export interface ConvergenceSummary {
   applied: number;
   revised: number;
   rejected: number;
+  hold: number;
   kept: number;
   total: number;
   reason: string;
@@ -266,36 +267,44 @@ export function checkConvergence(runDir: string, options?: ConvergenceOptions): 
   const debate = parseDebateResult(runDir);
 
   if (!debate) {
-    return { converged: false, mode, applied: 0, revised: 0, rejected: 0, kept: 0, total: 0, reason: "no debate.json found" };
+    return { converged: false, mode, applied: 0, revised: 0, rejected: 0, hold: 0, kept: 0, total: 0, reason: "no debate.json found" };
   }
   if (debate.skipped) {
-    return { converged: true, mode, applied: 0, revised: 0, rejected: 0, kept: 0, total: 0, reason: debate.skipped };
+    return { converged: true, mode, applied: 0, revised: 0, rejected: 0, hold: 0, kept: 0, total: 0, reason: debate.skipped };
   }
   if (!debate.arbitrator) {
-    return { converged: false, mode, applied: 0, revised: 0, rejected: 0, kept: 0, total: 0, reason: "no arbitrator result" };
+    // Early-stop: Arbitrator skipped because all proposals rejected with high confidence
+    const stoppingReason = (debate as Record<string, unknown>)["stoppingReason"];
+    if (typeof stoppingReason === "string" && stoppingReason.length > 0) {
+      return { converged: true, mode, applied: 0, revised: 0, rejected: 0, hold: 0, kept: 0, total: 0, reason: `early-stop: ${stoppingReason}` };
+    }
+    return { converged: false, mode, applied: 0, revised: 0, rejected: 0, hold: 0, kept: 0, total: 0, reason: "no arbitrator result" };
   }
 
   const decisions = debate.arbitrator.decisions;
   const applied = decisions.filter((d) => d.decision.trim().toLowerCase() === "applied").length;
   const revised = decisions.filter((d) => d.decision.trim().toLowerCase() === "revised").length;
   const rejected = decisions.filter((d) => d.decision.trim().toLowerCase() === "rejected").length;
-  const kept = decisions.length - applied - revised - rejected;
+  const hold = decisions.filter((d) => d.decision.trim().toLowerCase() === "hold").length;
+  const kept = decisions.length - applied - revised - rejected - hold;
   const total = decisions.length;
 
+  // hold = "not enough confidence to decide" → not converged (need more evidence)
   const converged = options?.lenient
-    ? (applied + revised) === 0
-    : (applied + revised) === 0 && rejected === 0;
+    ? (applied + revised + hold) === 0
+    : (applied + revised + hold) === 0 && rejected === 0;
 
   const parts: string[] = [];
   if (applied > 0) parts.push(`${applied} applied`);
   if (revised > 0) parts.push(`${revised} revised`);
   if (rejected > 0) parts.push(`${rejected} rejected`);
+  if (hold > 0) parts.push(`${hold} hold`);
   if (kept > 0) parts.push(`${kept} kept`);
   const countsStr = parts.length > 0 ? parts.join(", ") : "no decisions";
   const verdict = converged ? "converged" : "not converged";
   const reason = `${verdict} (${mode}) — ${countsStr} (${total} total)`;
 
-  return { converged, mode, applied, revised, rejected, kept, total, reason };
+  return { converged, mode, applied, revised, rejected, hold, kept, total, reason };
 }
 
 /** Options for convergence checking. */
@@ -322,9 +331,10 @@ export function isConverged(runDir: string, options?: ConvergenceOptions): boole
     const dec = d.decision.trim().toLowerCase();
     return dec === "applied" || dec === "revised";
   }).length;
+  const hold = decisions.filter((d) => d.decision.trim().toLowerCase() === "hold").length;
   const rejected = decisions.filter((d) => d.decision.trim().toLowerCase() === "rejected").length;
   if (options?.lenient) {
-    return applied === 0;
+    return applied === 0 && hold === 0;
   }
-  return applied === 0 && rejected === 0;
+  return applied === 0 && hold === 0 && rejected === 0;
 }

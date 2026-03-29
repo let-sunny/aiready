@@ -15,6 +15,7 @@ import {
 import {
   pruneCalibrationEvidence,
   pruneDiscoveryEvidence,
+  enrichCalibrationEvidence,
 } from "../../../agents/evidence-collector.js";
 
 export function registerFixtureManagement(cli: CAC): void {
@@ -109,6 +110,42 @@ export function registerFixtureManagement(cli: CAC): void {
         console.error(`Error: fixture not found: ${fixturePath}`);
         process.exitCode = 1;
       }
+    });
+}
+
+export function registerEvidenceEnrich(cli: CAC): void {
+  cli
+    .command(
+      "calibrate-enrich-evidence <runDir>",
+      "Enrich evidence with Critic's pro/con/confidence from debate.json"
+    )
+    .action((runDir: string) => {
+      if (!existsSync(resolve(runDir))) {
+        console.log(`Run directory not found: ${runDir}`);
+        return;
+      }
+      const debate = parseDebateResult(resolve(runDir));
+      if (!debate?.critic) {
+        console.log("No critic reviews in debate.json — nothing to enrich.");
+        return;
+      }
+
+      const reviews = debate.critic.reviews.map((r) => {
+        const raw = r as Record<string, unknown>;
+        const entry: Parameters<typeof enrichCalibrationEvidence>[0][number] = { ruleId: r.ruleId };
+        const conf = raw["confidence"];
+        if (conf === "high" || conf === "medium" || conf === "low") entry.confidence = conf;
+        const pro = raw["pro"];
+        if (Array.isArray(pro)) entry.pro = pro as string[];
+        const con = raw["con"];
+        if (Array.isArray(con)) entry.con = con as string[];
+        const dec = r.decision;
+        if (dec === "APPROVE" || dec === "REJECT" || dec === "REVISE") entry.decision = dec;
+        return entry;
+      });
+
+      enrichCalibrationEvidence(reviews);
+      console.log(`Enriched calibration evidence with ${reviews.length} review(s)`);
     });
 }
 

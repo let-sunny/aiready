@@ -32,7 +32,7 @@ import { registerCalibrateAnalyze } from "./commands/internal/calibrate-analyze.
 import { registerCalibrateEvaluate } from "./commands/internal/calibrate-evaluate.js";
 import { registerCalibrateGapReport } from "./commands/internal/calibrate-gap-report.js";
 import { registerCalibrateRun } from "./commands/internal/calibrate-run.js";
-import { registerFixtureManagement, registerEvidencePrune } from "./commands/internal/fixture-management.js";
+import { registerFixtureManagement, registerEvidenceEnrich, registerEvidencePrune } from "./commands/internal/fixture-management.js";
 
 const require = createRequire(import.meta.url);
 const pkg = require("../../package.json") as { version: string };
@@ -79,6 +79,7 @@ registerCalibrateEvaluate(cli);
 registerCalibrateGapReport(cli);
 registerCalibrateRun(cli);
 registerFixtureManagement(cli);
+registerEvidenceEnrich(cli);
 registerEvidencePrune(cli);
 
 // ============================================

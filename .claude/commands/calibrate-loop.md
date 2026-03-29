@@ -205,13 +205,15 @@ After the Arbitrator returns, **you** update `$RUN_DIR/debate.json` — read the
   "critic": { ... },
   "arbitrator": {
     "timestamp": "<ISO8601>",
-    "summary": "applied=<N> rejected=<N> hold=<N>",
+    "summary": "applied=<N> revised=<N> rejected=<N> hold=<N>",
     "stoppingReason": "normal|all-high-confidence-reject|low-confidence-hold",
     "decisions": [
       {
         "ruleId": "X",
-        "decision": "applied|rejected|hold|disabled",
+        "decision": "applied|revised|rejected|hold|disabled",
         "confidence": "high|medium|low",
+        "before": -10,
+        "after": -7,
         "reason": "..."
       }
     ]
@@ -224,9 +226,17 @@ Append to `$RUN_DIR/activity.jsonl`:
 {"step":"Arbitrator","timestamp":"<ISO8601>","result":"applied=<N> rejected=<N> hold=<N>","durationMs":<ms>}
 ```
 
-### Step 6.5 — Prune evidence
+### Step 6.5 — Enrich and prune evidence
 
-After the Arbitrator applies changes, prune calibration evidence for the applied rules:
+After the debate (or early-stop), enrich `data/calibration-evidence.json` with the Critic's structured pro/con/confidence. This ensures cross-run evidence persists beyond the ephemeral `logs/` directory.
+
+```bash
+npx canicode calibrate-enrich-evidence $RUN_DIR
+```
+
+This reads `debate.json`, extracts the Critic's reviews (pro, con, confidence, decision), and updates matching entries in `data/calibration-evidence.json`. Runs for both normal and early-stop paths.
+
+Then prune calibration evidence for the applied rules:
 
 ```bash
 npx canicode calibrate-prune-evidence $RUN_DIR

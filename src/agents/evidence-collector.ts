@@ -134,6 +134,42 @@ export function pruneCalibrationEvidence(
   writeJsonArray(evidencePath, pruned);
 }
 
+/**
+ * Enrich existing calibration evidence entries with Critic's structured review data.
+ * Matches by ruleId and updates confidence/pro/con/decision fields.
+ * Entries without a matching review are left unchanged.
+ */
+export function enrichCalibrationEvidence(
+  reviews: Array<{
+    ruleId: string;
+    confidence?: "high" | "medium" | "low";
+    pro?: string[];
+    con?: string[];
+    decision?: "APPROVE" | "REJECT" | "REVISE";
+  }>,
+  evidencePath: string = DEFAULT_CALIBRATION_PATH
+): void {
+  if (reviews.length === 0) return;
+  const existing = readValidatedArray(evidencePath, CalibrationEvidenceEntrySchema);
+  if (existing.length === 0) return;
+
+  const reviewByRule = new Map(reviews.map((r) => [r.ruleId.trim(), r]));
+
+  const enriched = existing.map((entry) => {
+    const review = reviewByRule.get(entry.ruleId.trim());
+    if (!review) return entry;
+    return {
+      ...entry,
+      ...(review.confidence && { confidence: review.confidence }),
+      ...(review.pro && { pro: review.pro }),
+      ...(review.con && { con: review.con }),
+      ...(review.decision && { decision: review.decision }),
+    };
+  });
+
+  writeJsonArray(evidencePath, enriched);
+}
+
 // --- Discovery evidence ---
 
 const DEFAULT_DISCOVERY_PATH = resolve("data/discovery-evidence.json");

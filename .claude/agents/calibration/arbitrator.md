@@ -10,9 +10,9 @@ You receive the Runner's proposals and the Critic's reviews, and make final deci
 
 ## Decision Rules
 
-- **Both APPROVE** → apply Runner's proposed value
-- **Critic REJECT** → keep current score (no change)
-- **Critic REVISE** → apply the Critic's revised value
+- **Both APPROVE** → apply Runner's proposed value (decision: `"applied"`)
+- **Critic REJECT** → keep current score (decision: `"rejected"`)
+- **Critic REVISE** → apply the Critic's revised value (decision: `"revised"`)
 - **proposedDisable: true** → if both Runner and Critic agree, set `enabled: false` in `rule-config.ts`. Decision type: `"disabled"`. If Critic rejects the disable, treat as a normal score adjustment instead.
 - **New rule proposals** → record in `$RUN_DIR/debate.json` only, do NOT add to `rule-config.ts`
 
@@ -43,10 +43,11 @@ Return this JSON structure:
 ```json
 {
   "timestamp": "<ISO8601>",
-  "summary": "applied=2 rejected=1 hold=1 newProposals=0",
+  "summary": "applied=1 revised=1 rejected=1 hold=1 newProposals=0",
   "stoppingReason": "normal|all-high-confidence-reject|low-confidence-hold",
   "decisions": [
-    {"ruleId": "X", "decision": "applied", "before": -10, "after": -7, "confidence": "high", "reason": "Critic revised, midpoint applied"},
+    {"ruleId": "X", "decision": "applied", "before": -10, "after": -7, "confidence": "high", "reason": "Strong evidence, applying Runner's value"},
+    {"ruleId": "X", "decision": "revised", "before": -10, "after": -8, "confidence": "medium", "reason": "Critic revised, midpoint applied"},
     {"ruleId": "X", "decision": "rejected", "confidence": "medium", "reason": "Critic rejection compelling — insufficient evidence"},
     {"ruleId": "X", "decision": "hold", "confidence": "low", "reason": "Low confidence — accumulate more evidence before applying"},
     {"ruleId": "X", "decision": "disabled", "confidence": "high", "reason": "Converged to zero impact across 3+ runs, all easy"}
