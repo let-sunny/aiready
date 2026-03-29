@@ -74,7 +74,7 @@ describe("Integration: fixture → analyze → score", () => {
     // Exactly 5 categories present
     const categories = Object.keys(scores.byCategory).sort();
     expect(categories).toEqual(
-      ["code-quality", "minor", "pixel-critical", "responsive-critical", "token-management"],
+      ["code-quality", "interaction", "minor", "pixel-critical", "responsive-critical", "token-management"],
     );
 
     // Each category has valid percentages

@@ -26,6 +26,8 @@ export const RULE_ID_CATEGORY: Record<RuleId, Category> = {
   // Token Management
   "raw-value": "token-management",
   "irregular-spacing": "token-management",
+  // Interaction
+  "missing-interaction-state": "interaction",
   // Minor
   "default-name": "minor",
   "non-semantic-name": "minor",
@@ -117,6 +119,13 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
     options: {
       gridBase: 4,
     },
+  },
+
+  // ── Interaction ──
+  "missing-interaction-state": {
+    severity: "missing-info",
+    score: -3,
+    enabled: true,
   },
 
   // ── Minor ──

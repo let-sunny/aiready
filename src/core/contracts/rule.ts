@@ -106,6 +106,8 @@ export type RuleId =
   // Token Management — raw values without design tokens
   | "raw-value"
   | "irregular-spacing"
+  // Interaction — missing state variants for interactive components
+  | "missing-interaction-state"
   // Minor — naming issues with negligible impact (ΔV < 2%)
   | "default-name"
   | "non-semantic-name"
