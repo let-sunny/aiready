@@ -175,13 +175,22 @@ describe("missing-prototype", () => {
     expect(missingPrototype.check(node, ctx)).toBeNull();
   });
 
-  it("skips input/toggle (browser default behavior)", () => {
-    const inputNode = makeNode({ id: "1:1", name: "Email Input", type: "INSTANCE", componentId: "c:1" });
-    const toggleNode = makeNode({ id: "1:2", name: "Dark Mode Toggle", type: "INSTANCE", componentId: "c:2" });
-    const ctx = makeContext();
+  it("flags input without ON_CLICK", () => {
+    const node = makeNode({ id: "1:1", name: "Email Input", type: "INSTANCE", componentId: "c:1" });
+    const ctx = makeContext({ path: ["Page", "Input"] });
+    const result = missingPrototype.check(node, ctx);
 
-    expect(missingPrototype.check(inputNode, ctx)).toBeNull();
-    expect(missingPrototype.check(toggleNode, ctx)).toBeNull();
+    expect(result).not.toBeNull();
+    expect(result!.subType).toBe("input");
+  });
+
+  it("flags toggle without ON_CLICK", () => {
+    const node = makeNode({ id: "1:1", name: "Dark Mode Toggle", type: "INSTANCE", componentId: "c:1" });
+    const ctx = makeContext({ path: ["Page", "Toggle"] });
+    const result = missingPrototype.check(node, ctx);
+
+    expect(result).not.toBeNull();
+    expect(result!.subType).toBe("toggle");
   });
 
   it("deduplicates per componentId + subType", () => {

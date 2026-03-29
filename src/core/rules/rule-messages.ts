@@ -160,7 +160,7 @@ export const missingInteractionStateMsg = {
 
 // ── missing-prototype ─────────────────────────────────────────────────────────
 
-export type MissingPrototypeSubType = "button" | "navigation" | "tab" | "dropdown";
+export type MissingPrototypeSubType = "button" | "navigation" | "tab" | "dropdown" | "input" | "toggle";
 
 export const missingPrototypeMsg = {
   button: (name: string) =>
@@ -171,6 +171,10 @@ export const missingPrototypeMsg = {
     `"${name}" looks like a tab but has no click prototype — add an ON_CLICK interaction to define tab switching behavior`,
   dropdown: (name: string) =>
     `"${name}" looks like a dropdown but has no click prototype — add an ON_CLICK interaction to define open/close behavior`,
+  input: (name: string) =>
+    `"${name}" looks like an input but has no click prototype — add an ON_CLICK interaction to define focus/interaction behavior`,
+  toggle: (name: string) =>
+    `"${name}" looks like a toggle but has no click prototype — add an ON_CLICK interaction to define on/off behavior`,
 };
 
 // ── inconsistent-naming-convention ───────────────────────────────────────────

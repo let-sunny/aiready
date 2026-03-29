@@ -155,22 +155,26 @@ export const missingInteractionState = defineRule({
 // ============================================
 
 /** Interactive types that need click prototype */
-const PROTOTYPE_TYPES: Record<string, MissingPrototypeSubType> = {
+const PROTOTYPE_TYPES: Record<InteractiveType, MissingPrototypeSubType> = {
   button: "button",
   link: "navigation",
   tab: "tab",
+  input: "input",
+  toggle: "toggle",
 };
 
 /** Name patterns for dropdown-like elements (separate from INTERACTIVE_PATTERNS) */
 const DROPDOWN_PATTERN = /\b(dropdown|select|combo-?box|popover|accordion)\b/i;
 
 function getPrototypeSubType(node: AnalysisNode): MissingPrototypeSubType | null {
+  // Check dropdown pattern first — select/dropdown are classified as "input" in
+  // INTERACTIVE_PATTERNS but need "dropdown" subType for prototype checks
+  if (node.name && DROPDOWN_PATTERN.test(node.name)) return "dropdown";
   const interactiveType = getInteractiveType(node);
   if (interactiveType) {
     const mapped = PROTOTYPE_TYPES[interactiveType];
     if (mapped) return mapped;
   }
-  if (node.name && DROPDOWN_PATTERN.test(node.name)) return "dropdown";
   return null;
 }
 
