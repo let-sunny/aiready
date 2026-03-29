@@ -168,14 +168,19 @@ const DebateDecisionSchema = z.object({
   reason: z.string().optional(),
 }).passthrough();
 
+const CriticReviewSchema = z.object({
+  ruleId: z.string(),
+  decision: z.string(),
+  reason: z.string().optional(),
+  revised: z.number().optional(),
+  confidence: z.enum(["high", "medium", "low"]).optional(),
+  pro: z.array(z.string()).optional(),
+  con: z.array(z.string()).optional(),
+}).passthrough();
+
 const CriticSchema = z.object({
   summary: z.string(),
-  reviews: z.array(z.object({
-    ruleId: z.string(),
-    decision: z.string(),
-    reason: z.string().optional(),
-    revised: z.number().optional(),
-  }).passthrough()),
+  reviews: z.array(CriticReviewSchema),
 }).passthrough();
 
 const ArbitratorSchema = z.object({
@@ -184,10 +189,12 @@ const ArbitratorSchema = z.object({
   newRuleProposals: z.array(z.unknown()).optional(),
 }).passthrough();
 
+/** stoppingReason canonical location: debate.json top level (not inside arbitrator) */
 const DebateResultSchema = z.object({
   critic: CriticSchema.nullable().default(null),
   arbitrator: ArbitratorSchema.nullable().default(null),
   skipped: z.string().optional(),
+  stoppingReason: z.string().optional(),
 }).passthrough();
 
 /** A single decision from the Arbitrator in debate.json. */
@@ -253,6 +260,7 @@ export interface ConvergenceSummary {
   applied: number;
   revised: number;
   rejected: number;
+  hold: number;
   kept: number;
   total: number;
   reason: string;
@@ -266,36 +274,43 @@ export function checkConvergence(runDir: string, options?: ConvergenceOptions): 
   const debate = parseDebateResult(runDir);
 
   if (!debate) {
-    return { converged: false, mode, applied: 0, revised: 0, rejected: 0, kept: 0, total: 0, reason: "no debate.json found" };
+    return { converged: false, mode, applied: 0, revised: 0, rejected: 0, hold: 0, kept: 0, total: 0, reason: "no debate.json found" };
   }
   if (debate.skipped) {
-    return { converged: true, mode, applied: 0, revised: 0, rejected: 0, kept: 0, total: 0, reason: debate.skipped };
+    return { converged: true, mode, applied: 0, revised: 0, rejected: 0, hold: 0, kept: 0, total: 0, reason: debate.skipped };
   }
   if (!debate.arbitrator) {
-    return { converged: false, mode, applied: 0, revised: 0, rejected: 0, kept: 0, total: 0, reason: "no arbitrator result" };
+    // Early-stop: Arbitrator skipped because all proposals rejected with high confidence
+    if (debate.stoppingReason) {
+      return { converged: true, mode, applied: 0, revised: 0, rejected: 0, hold: 0, kept: 0, total: 0, reason: `early-stop: ${debate.stoppingReason}` };
+    }
+    return { converged: false, mode, applied: 0, revised: 0, rejected: 0, hold: 0, kept: 0, total: 0, reason: "no arbitrator result" };
   }
 
   const decisions = debate.arbitrator.decisions;
   const applied = decisions.filter((d) => d.decision.trim().toLowerCase() === "applied").length;
   const revised = decisions.filter((d) => d.decision.trim().toLowerCase() === "revised").length;
   const rejected = decisions.filter((d) => d.decision.trim().toLowerCase() === "rejected").length;
-  const kept = decisions.length - applied - revised - rejected;
+  const hold = decisions.filter((d) => d.decision.trim().toLowerCase() === "hold").length;
+  const kept = decisions.length - applied - revised - rejected - hold;
   const total = decisions.length;
 
+  // hold = "not enough confidence to decide" → not converged (need more evidence)
   const converged = options?.lenient
-    ? (applied + revised) === 0
-    : (applied + revised) === 0 && rejected === 0;
+    ? (applied + revised + hold) === 0
+    : (applied + revised + hold) === 0 && rejected === 0;
 
   const parts: string[] = [];
   if (applied > 0) parts.push(`${applied} applied`);
   if (revised > 0) parts.push(`${revised} revised`);
   if (rejected > 0) parts.push(`${rejected} rejected`);
+  if (hold > 0) parts.push(`${hold} hold`);
   if (kept > 0) parts.push(`${kept} kept`);
   const countsStr = parts.length > 0 ? parts.join(", ") : "no decisions";
   const verdict = converged ? "converged" : "not converged";
   const reason = `${verdict} (${mode}) — ${countsStr} (${total} total)`;
 
-  return { converged, mode, applied, revised, rejected, kept, total, reason };
+  return { converged, mode, applied, revised, rejected, hold, kept, total, reason };
 }
 
 /** Options for convergence checking. */
@@ -309,22 +324,8 @@ export interface ConvergenceOptions {
 
 /**
  * Check if a calibration run has converged.
- * Strict: no applied/revised AND no rejected decisions.
- * Lenient: no applied/revised only (rejected proposals allowed).
+ * Delegates to checkConvergence to avoid duplicating early-stop / hold logic.
  */
 export function isConverged(runDir: string, options?: ConvergenceOptions): boolean {
-  const debate = parseDebateResult(runDir);
-  if (!debate) return false;
-  if (debate.skipped) return true; // zero proposals = converged
-  if (!debate.arbitrator) return false;
-  const decisions = debate.arbitrator.decisions;
-  const applied = decisions.filter((d) => {
-    const dec = d.decision.trim().toLowerCase();
-    return dec === "applied" || dec === "revised";
-  }).length;
-  const rejected = decisions.filter((d) => d.decision.trim().toLowerCase() === "rejected").length;
-  if (options?.lenient) {
-    return applied === 0;
-  }
-  return applied === 0 && rejected === 0;
+  return checkConvergence(runDir, options).converged;
 }

@@ -322,10 +322,22 @@ Process:
 3. Run `canicode visual-compare` — pixel-level comparison against Figma screenshot
 4. Analyze the diff image to categorize pixel gaps (`Gap Analyzer`)
 5. Compare conversion difficulty vs rule scores (`canicode calibrate-evaluate`)
-6. 6-agent debate loop (`/calibrate-loop`): Analysis → Converter → Gap Analyzer → Evaluation → Critic → Arbitrator
+6. Debate loop (`/calibrate-loop`): Analysis → Converter → Gap Analyzer → Evaluation → Critic → Arbitrator
+
+**Critic receives structured evidence** (#144):
+- Proposals from evaluation
+- Converter's `ruleImpactAssessment` (actual implementation difficulty per rule)
+- Gap analysis (actionable pixel gaps)
+- Prior cross-run evidence for proposed rules
+- Outputs structured pro/con arguments + confidence level per proposal
+
+**Early-stop and self-consistency** (#144):
+- All proposals rejected with high confidence → Arbitrator skipped (early-stop)
+- Low-confidence decisions → held (not applied), evidence accumulates for future runs (self-consistency)
+- `stoppingReason` recorded in debate.json for traceability
 
 **Cross-run evidence** accumulates across sessions in `data/`:
-- `calibration-evidence.json` — overscored/underscored rules (fed to Runner for stronger proposals)
+- `calibration-evidence.json` — overscored/underscored rules with confidence, pro/con, decision (fed to Critic for informed review)
 - `discovery-evidence.json` — uncovered gaps not covered by existing rules (fed to `/add-rule` Researcher)
 - Discovery evidence is filtered to exclude environment/tooling noise (font CDN, retina/DPI, network, CI constraints)
 - Evidence is pruned after rules are applied (calibration) or new rules are created (discovery)

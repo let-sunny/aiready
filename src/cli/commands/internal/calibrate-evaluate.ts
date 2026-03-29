@@ -82,6 +82,15 @@ export function registerCalibrateEvaluate(cli: CAC): void {
           mismatchCounts[key]++;
         }
 
+        // Write proposed ruleIds for deterministic evidence gathering
+        if (options.runDir && tuningOutput.adjustments.length > 0) {
+          const proposedIds = tuningOutput.adjustments.map(
+            (a: { ruleId: string }) => a.ruleId
+          );
+          const proposedPath = resolve(options.runDir, "proposed-rules.json");
+          await writeFile(proposedPath, JSON.stringify(proposedIds) + "\n", "utf-8");
+        }
+
         console.log(`\nEvaluation complete.`);
         console.log(`  Validated: ${mismatchCounts.validated}`);
         console.log(`  Overscored: ${mismatchCounts.overscored}`);

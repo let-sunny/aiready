@@ -135,8 +135,19 @@ If zero proposals, write `$RUN_DIR/debate.json` with skip reason and jump to Ste
 
 ### Step 5 — Critic
 
+Gather supporting evidence (deterministic CLI — no LLM):
+
+```bash
+npx canicode calibrate-gather-evidence $RUN_DIR
+```
+
+This reads `conversion.json`, `gaps.json`, `summary.md`, and `data/calibration-evidence.json`, and writes a single `$RUN_DIR/critic-evidence.json` with structured data for the Critic.
+
+Read `$RUN_DIR/critic-evidence.json` and include it in the Critic prompt.
+
 Spawn the `calibration-critic` subagent. In the prompt:
-- Include only the proposal list (NOT the Converter's reasoning)
+- Include the proposal list from summary.md
+- Include the gathered evidence from `critic-evidence.json`
 - **Tell the agent: "Return your reviews as JSON. Do NOT write any files."**
 
 After the Critic returns, **you** write the JSON to `$RUN_DIR/debate.json`:
@@ -145,7 +156,16 @@ After the Critic returns, **you** write the JSON to `$RUN_DIR/debate.json`:
   "critic": {
     "timestamp": "<ISO8601>",
     "summary": "approved=<N> rejected=<N> revised=<N>",
-    "reviews": [ ... ]
+    "reviews": [
+      {
+        "ruleId": "X",
+        "decision": "APPROVE|REJECT|REVISE",
+        "confidence": "high|medium|low",
+        "pro": ["evidence supporting change"],
+        "con": ["evidence against change"],
+        "reason": "..."
+      }
+    ]
   }
 }
 ```
@@ -155,6 +175,22 @@ Append to `$RUN_DIR/activity.jsonl`:
 {"step":"Critic","timestamp":"<ISO8601>","result":"approved=<N> rejected=<N> revised=<N>","durationMs":<ms>}
 ```
 
+#### Early-stop check (deterministic CLI — no LLM)
+
+```bash
+npx canicode calibrate-finalize-debate $RUN_DIR
+```
+
+This outputs JSON: `{"action": "early-stop"|"continue", ...}`.
+
+- If `action` is `"early-stop"`: the CLI has already written `stoppingReason` to debate.json. Append to activity.jsonl:
+  ```json
+  {"step":"Arbitrator","timestamp":"<ISO8601>","result":"SKIPPED — early-stop: all proposals rejected with high confidence","durationMs":0}
+  ```
+  Jump to Step 6.5.
+
+- If `action` is `"continue"`: proceed to Step 6.
+
 ### Step 6 — Arbitrator
 
 Spawn the `calibration-arbitrator` subagent. In the prompt:
@@ -162,25 +198,51 @@ Spawn the `calibration-arbitrator` subagent. In the prompt:
 - **Tell the agent: "Return your decisions as JSON. Only edit rule-config.ts if applying changes. Do NOT write to logs."**
 
 After the Arbitrator returns, **you** update `$RUN_DIR/debate.json` — read the existing content and add the `arbitrator` field:
+
 ```json
 {
   "critic": { ... },
   "arbitrator": {
     "timestamp": "<ISO8601>",
-    "summary": "applied=<N> rejected=<N> revised=<N>",
-    "decisions": [ ... ]
+    "summary": "applied=<N> revised=<N> rejected=<N> hold=<N>",
+    "decisions": [
+      {
+        "ruleId": "X",
+        "decision": "applied|revised|rejected|hold|disabled",
+        "confidence": "high|medium|low",
+        "before": -10,
+        "after": -7,
+        "reason": "..."
+      }
+    ]
   }
 }
 ```
 
-Append to `$RUN_DIR/activity.jsonl`:
-```json
-{"step":"Arbitrator","timestamp":"<ISO8601>","result":"applied=<N> rejected=<N>","durationMs":<ms>}
+Then finalize the debate (deterministic CLI — no LLM):
+
+```bash
+npx canicode calibrate-finalize-debate $RUN_DIR
 ```
 
-### Step 6.5 — Prune evidence
+This determines `stoppingReason` (if any) and writes it to debate.json. Outputs JSON with `action: "finalized"`.
 
-After the Arbitrator applies changes, prune calibration evidence for the applied rules:
+Append to `$RUN_DIR/activity.jsonl`:
+```json
+{"step":"Arbitrator","timestamp":"<ISO8601>","result":"applied=<N> rejected=<N> hold=<N>","durationMs":<ms>}
+```
+
+### Step 6.5 — Enrich and prune evidence
+
+After the debate (or early-stop), enrich `data/calibration-evidence.json` with the Critic's structured pro/con/confidence. This ensures cross-run evidence persists beyond the ephemeral `logs/` directory.
+
+```bash
+npx canicode calibrate-enrich-evidence $RUN_DIR
+```
+
+This reads `debate.json`, extracts the Critic's reviews (pro, con, confidence, decision), and updates matching entries in `data/calibration-evidence.json`. Runs for both normal and early-stop paths.
+
+Then prune calibration evidence for the applied rules:
 
 ```bash
 npx canicode calibrate-prune-evidence $RUN_DIR
@@ -209,7 +271,7 @@ Report the final summary: similarity, proposals, decisions, and path to `logs/ca
 
 - Each agent must be a SEPARATE subagent call (isolated context).
 - Pass only structured data between agents — never raw reasoning.
-- The Critic must NOT see the Runner's or Converter's reasoning, only the proposal list.
+- The Critic receives proposals + converter's ruleImpactAssessment + gaps + prior evidence (structured data, not free-form reasoning).
 - Only the Arbitrator may edit `rule-config.ts`.
 - Steps 1, 4, 7 are CLI commands — run them directly with Bash.
 - **CRITICAL: YOU write all files to $RUN_DIR. Subagents (Gap Analyzer, Critic, Arbitrator) MUST return JSON as text — tell them "Do NOT write any files." You are the only one who writes to $RUN_DIR.**

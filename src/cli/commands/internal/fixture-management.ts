@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { resolve } from "node:path";
+import { basename, resolve } from "node:path";
 import type { CAC } from "cac";
 
 import {
@@ -7,6 +7,7 @@ import {
   listDoneFixtures,
   moveFixtureToDone,
   parseDebateResult,
+  parseRunDirName,
   extractAppliedRuleIds,
   extractFixtureName,
   resolveLatestRunDir,
@@ -15,6 +16,7 @@ import {
 import {
   pruneCalibrationEvidence,
   pruneDiscoveryEvidence,
+  enrichCalibrationEvidence,
 } from "../../../agents/evidence-collector.js";
 
 export function registerFixtureManagement(cli: CAC): void {
@@ -109,6 +111,46 @@ export function registerFixtureManagement(cli: CAC): void {
         console.error(`Error: fixture not found: ${fixturePath}`);
         process.exitCode = 1;
       }
+    });
+}
+
+export function registerEvidenceEnrich(cli: CAC): void {
+  cli
+    .command(
+      "calibrate-enrich-evidence <runDir>",
+      "Enrich evidence with Critic's pro/con/confidence from debate.json"
+    )
+    .action((runDir: string) => {
+      const resolvedDir = resolve(runDir);
+      if (!existsSync(resolvedDir)) {
+        console.log(`Run directory not found: ${runDir}`);
+        return;
+      }
+      const debate = parseDebateResult(resolvedDir);
+      if (!debate?.critic) {
+        console.log("No critic reviews in debate.json — nothing to enrich.");
+        return;
+      }
+
+      // Extract fixture name from run directory (e.g. "material3-kit--2026-03-26-0900" → "material3-kit")
+      const { name: fixture, timestamp } = parseRunDirName(basename(resolvedDir));
+      if (!timestamp) {
+        console.log(`Run directory "${basename(resolvedDir)}" does not match expected <name>--<timestamp> format`);
+        return;
+      }
+
+      const reviews = debate.critic.reviews.map((r) => {
+        const entry: Parameters<typeof enrichCalibrationEvidence>[0][number] = { ruleId: r.ruleId };
+        if (r.confidence) entry.confidence = r.confidence;
+        if (r.pro) entry.pro = r.pro;
+        if (r.con) entry.con = r.con;
+        const dec = r.decision.trim().toUpperCase();
+        if (dec === "APPROVE" || dec === "REJECT" || dec === "REVISE" || dec === "HOLD") entry.decision = dec;
+        return entry;
+      });
+
+      enrichCalibrationEvidence(reviews, fixture);
+      console.log(`Enriched calibration evidence for fixture "${fixture}" with ${reviews.length} review(s)`);
     });
 }
 

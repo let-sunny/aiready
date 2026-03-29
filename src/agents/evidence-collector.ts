@@ -63,6 +63,8 @@ export function loadCalibrationEvidence(
         underscoredCount: 0,
         overscoredDifficulties: [],
         underscoredDifficulties: [],
+        allPro: [],
+        allCon: [],
       };
       result[entry.ruleId] = group;
     }
@@ -74,6 +76,23 @@ export function loadCalibrationEvidence(
       group.underscoredCount++;
       group.underscoredDifficulties.push(entry.actualDifficulty);
     }
+
+    // Aggregate pro/con from enriched entries (deduplicated)
+    if (entry.pro) {
+      group.allPro ??= [];
+      for (const p of entry.pro) {
+        if (!group.allPro.includes(p)) group.allPro.push(p);
+      }
+    }
+    if (entry.con) {
+      group.allCon ??= [];
+      for (const c of entry.con) {
+        if (!group.allCon.includes(c)) group.allCon.push(c);
+      }
+    }
+    // Keep last confidence/decision (most recent entry wins)
+    if (entry.confidence) group.lastConfidence = entry.confidence;
+    if (entry.decision) group.lastDecision = entry.decision;
   }
 
   return result;
@@ -117,6 +136,51 @@ export function pruneCalibrationEvidence(
   const existing = readValidatedArray(evidencePath, CalibrationEvidenceEntrySchema);
   const pruned = existing.filter((e) => !ruleSet.has(e.ruleId.trim()));
   writeJsonArray(evidencePath, pruned);
+}
+
+/**
+ * Enrich existing calibration evidence entries with Critic's structured review data.
+ * Matches by (ruleId, fixture) to avoid overwriting entries from other fixtures.
+ * Entries without a matching review are left unchanged.
+ */
+export function enrichCalibrationEvidence(
+  reviews: Array<{
+    ruleId: string;
+    confidence?: "high" | "medium" | "low";
+    pro?: string[];
+    con?: string[];
+    decision?: "APPROVE" | "REJECT" | "REVISE" | "HOLD";
+  }>,
+  fixture: string,
+  evidencePath: string = DEFAULT_CALIBRATION_PATH
+): void {
+  if (reviews.length === 0) return;
+  const existing = readValidatedArray(evidencePath, CalibrationEvidenceEntrySchema);
+  if (existing.length === 0) return;
+
+  const reviewByRule = new Map(reviews.map((r) => [r.ruleId.trim(), r]));
+  const fixtureTrimmed = fixture.trim();
+
+  let matchCount = 0;
+  const enriched = existing.map((entry) => {
+    if (entry.fixture.trim() !== fixtureTrimmed) return entry;
+    const review = reviewByRule.get(entry.ruleId.trim());
+    if (!review) return entry;
+    matchCount++;
+    return {
+      ...entry,
+      ...(review.confidence && { confidence: review.confidence }),
+      ...(review.pro && { pro: review.pro }),
+      ...(review.con && { con: review.con }),
+      ...(review.decision && { decision: review.decision }),
+    };
+  });
+
+  if (matchCount === 0) {
+    console.warn(`[enrich] No entries matched fixture="${fixture}" — evidence unchanged`);
+    return;
+  }
+  writeJsonArray(evidencePath, enriched);
 }
 
 // --- Discovery evidence ---

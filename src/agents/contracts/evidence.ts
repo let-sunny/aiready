@@ -8,6 +8,11 @@ export const CalibrationEvidenceEntrySchema = z.object({
   actualDifficulty: z.string(),
   fixture: z.string(),
   timestamp: z.string(),
+  // Phase 1 fields (#144) — optional for backward compatibility with existing evidence
+  confidence: z.enum(["high", "medium", "low"]).optional(),
+  pro: z.array(z.string()).optional(),
+  con: z.array(z.string()).optional(),
+  decision: z.enum(["APPROVE", "REJECT", "REVISE", "HOLD"]).optional(),
 });
 
 export type CalibrationEvidenceEntry = z.infer<typeof CalibrationEvidenceEntrySchema>;
@@ -17,6 +22,11 @@ export const CrossRunEvidenceGroupSchema = z.object({
   underscoredCount: z.number(),
   overscoredDifficulties: z.array(z.string()),
   underscoredDifficulties: z.array(z.string()),
+  // Aggregated pro/con from all entries for this rule
+  allPro: z.array(z.string()).optional(),
+  allCon: z.array(z.string()).optional(),
+  lastConfidence: z.enum(["high", "medium", "low"]).optional(),
+  lastDecision: z.enum(["APPROVE", "REJECT", "REVISE", "HOLD"]).optional(),
 });
 
 export type CrossRunEvidenceGroup = z.infer<typeof CrossRunEvidenceGroupSchema>;

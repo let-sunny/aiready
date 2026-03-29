@@ -1,9 +1,10 @@
-import { mkdirSync, rmSync, writeFileSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, rmSync, writeFileSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import {
   loadCalibrationEvidence,
   appendCalibrationEvidence,
+  enrichCalibrationEvidence,
   pruneCalibrationEvidence,
   loadDiscoveryEvidence,
   appendDiscoveryEvidence,
@@ -62,13 +63,31 @@ describe("evidence-collector", () => {
         underscoredCount: 1,
         overscoredDifficulties: ["easy", "moderate"],
         underscoredDifficulties: ["hard"],
+        allPro: [],
+        allCon: [],
       });
       expect(result["rule-b"]).toEqual({
         overscoredCount: 0,
         underscoredCount: 1,
         overscoredDifficulties: [],
         underscoredDifficulties: ["hard"],
+        allPro: [],
+        allCon: [],
       });
+    });
+
+    it("deduplicates pro/con across entries", () => {
+      const entries: CalibrationEvidenceEntry[] = [
+        { ruleId: "rule-a", type: "overscored", actualDifficulty: "easy", fixture: "fx1", timestamp: "t1",
+          pro: ["easy in practice", "common pattern"], con: ["small fixture"] },
+        { ruleId: "rule-a", type: "overscored", actualDifficulty: "easy", fixture: "fx2", timestamp: "t2",
+          pro: ["easy in practice", "new evidence"], con: ["small fixture", "single run"] },
+      ];
+      writeFileSync(calPath, JSON.stringify(entries), "utf-8");
+
+      const result = loadCalibrationEvidence(calPath);
+      expect(result["rule-a"]!.allPro).toEqual(["easy in practice", "common pattern", "new evidence"]);
+      expect(result["rule-a"]!.allCon).toEqual(["small fixture", "single run"]);
     });
 
     it("handles malformed JSON gracefully", () => {
@@ -133,6 +152,46 @@ describe("evidence-collector", () => {
       appendCalibrationEvidence([], calPath);
       const raw = JSON.parse(readFileSync(calPath, "utf-8")) as CalibrationEvidenceEntry[];
       expect(raw).toHaveLength(0);
+    });
+  });
+
+  describe("enrichCalibrationEvidence", () => {
+    it("enriches entries matching (ruleId, fixture)", () => {
+      const entries: CalibrationEvidenceEntry[] = [
+        { ruleId: "rule-a", type: "overscored", actualDifficulty: "easy", fixture: "fx1", timestamp: "t1" },
+        { ruleId: "rule-a", type: "overscored", actualDifficulty: "moderate", fixture: "fx2", timestamp: "t2" },
+        { ruleId: "rule-b", type: "underscored", actualDifficulty: "hard", fixture: "fx1", timestamp: "t3" },
+      ];
+      writeFileSync(calPath, JSON.stringify(entries), "utf-8");
+
+      enrichCalibrationEvidence(
+        [{ ruleId: "rule-a", confidence: "high", pro: ["easy in practice"], con: ["only 1 case"], decision: "APPROVE" }],
+        "fx1",
+        calPath,
+      );
+
+      const result = JSON.parse(readFileSync(calPath, "utf-8")) as CalibrationEvidenceEntry[];
+      // Only fx1 entry for rule-a is enriched
+      expect(result[0]!.confidence).toBe("high");
+      expect(result[0]!.pro).toEqual(["easy in practice"]);
+      // fx2 entry for rule-a is NOT enriched (different fixture)
+      expect(result[1]!.confidence).toBeUndefined();
+      // rule-b is NOT enriched (different ruleId)
+      expect(result[2]!.confidence).toBeUndefined();
+    });
+
+    it("does nothing when evidence file is empty", () => {
+      enrichCalibrationEvidence([{ ruleId: "rule-a" }], "fx1", calPath);
+      expect(existsSync(calPath)).toBe(false);
+    });
+
+    it("does nothing when reviews array is empty", () => {
+      writeFileSync(calPath, JSON.stringify([
+        { ruleId: "rule-a", type: "overscored", actualDifficulty: "easy", fixture: "fx1", timestamp: "t1" },
+      ]), "utf-8");
+      enrichCalibrationEvidence([], "fx1", calPath);
+      const result = JSON.parse(readFileSync(calPath, "utf-8")) as CalibrationEvidenceEntry[];
+      expect(result[0]!.confidence).toBeUndefined();
     });
   });
 
