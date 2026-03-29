@@ -37,7 +37,7 @@ const nonSemanticNameCheck: RuleCheckFn = (node, context) => {
       subType: getDefaultNameSubType(node.type),
       nodeId: node.id,
       nodePath: context.path.join(" > "),
-      message: nonSemanticNameMsg(node.type, node.name),
+      ...nonSemanticNameMsg(node.type, node.name),
     };
   }
 
@@ -54,7 +54,7 @@ const nonSemanticNameCheck: RuleCheckFn = (node, context) => {
       subType: "shape-name" as const,
       nodeId: node.id,
       nodePath: context.path.join(" > "),
-      message: nonSemanticNameMsg(node.type, node.name),
+      ...nonSemanticNameMsg(node.type, node.name),
     };
   }
 
@@ -113,7 +113,7 @@ const inconsistentNamingConventionCheck: RuleCheckFn = (node, context) => {
       ruleId: inconsistentNamingConventionDef.id,
       nodeId: node.id,
       nodePath: context.path.join(" > "),
-      message: inconsistentNamingMsg(node.name, nodeConvention, dominantConvention),
+      ...inconsistentNamingMsg(node.name, nodeConvention, dominantConvention),
     };
   }
 
@@ -165,7 +165,7 @@ const nonStandardNamingCheck: RuleCheckFn = (node, context) => {
             subType: "state-name" as const,
             nodeId: node.id,
             nodePath: context.path.join(" > "),
-            message: nonStandardNamingMsg.stateName(node.name, opt, suggestion),
+            ...nonStandardNamingMsg.stateName(node.name, opt, suggestion),
           };
         }
       }

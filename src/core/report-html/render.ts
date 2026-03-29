@@ -7,26 +7,22 @@
  * - Web app: CanICode.renderReportBody() → innerHTML
  * - Figma plugin: CanICode.renderReportBody() → innerHTML
  *
+ * Layout: category tabs → rule sections (static info) → node accordion (dynamic info)
  * Styled via self-contained CSS (app/shared/styles.css) — no Tailwind dependency.
  */
 
 import type { Category } from "../contracts/category.js";
-import type { Severity } from "../contracts/severity.js";
 import type { AnalysisIssue } from "../engine/rule-engine.js";
 import type { ScoreReport } from "../engine/scoring.js";
 import { buildFigmaDeepLink } from "../adapters/figma-url-parser.js";
 import {
   CATEGORIES,
   CATEGORY_LABELS,
-  SEVERITY_LABELS,
-  CATEGORY_DESCRIPTIONS,
-  SEVERITY_ORDER,
 } from "../ui-constants.js";
 import {
   escapeHtml,
   severityDot,
   severityBadge,
-  scoreBadgeStyle,
   renderGaugeSvg,
 } from "../ui-helpers.js";
 
@@ -42,6 +38,19 @@ export interface ReportData {
   figmaToken?: string;
 }
 
+/** Issues grouped by rule within a category */
+interface RuleGroup {
+  ruleId: string;
+  ruleName: string;
+  severity: string;
+  severityClass: string;
+  why: string;
+  impact: string;
+  fix: string;
+  issues: AnalysisIssue[];
+  totalScore: number;
+}
+
 // ---- Main render ----
 
 /**
@@ -50,8 +59,8 @@ export interface ReportData {
  */
 export function renderReportBody(data: ReportData): string {
   const { scores, issues, fileKey, figmaToken } = data;
-  const quickWins = getQuickWins(issues, 5);
   const issuesByCategory = groupIssuesByCategory(issues);
+  const ruleOpportunities = getTopRules(issues, 5);
 
   return `
     <!-- Overall Score -->
@@ -67,13 +76,13 @@ export function renderReportBody(data: ReportData): string {
     <!-- Category Gauges -->
     <section class="card rpt-gauges">
       <div class="rpt-gauges-grid">
-${CATEGORIES.map(cat => {
+${CATEGORIES.map((cat, i) => {
     const cs = scores.byCategory[cat];
-    return `        <a href="#cat-${cat}" class="rpt-gauge-item">
+    return `        <button type="button" class="rpt-gauge-item${i === 0 ? " active" : ""}" data-tab="${cat}">
           ${renderGaugeSvg(cs.percentage, 100, 7)}
           <span class="rpt-gauge-label">${CATEGORY_LABELS[cat]}</span>
           <span class="rpt-gauge-count">${cs.issueCount} issues</span>
-        </a>`;
+        </button>`;
   }).join("\n")}
       </div>
     </section>
@@ -92,11 +101,27 @@ ${CATEGORIES.map(cat => {
       </div>
     </section>
 
-${quickWins.length > 0 ? renderOpportunities(quickWins, fileKey) : ""}
+${ruleOpportunities.length > 0 ? renderOpportunities(ruleOpportunities) : ""}
 
-    <!-- Categories -->
-    <div class="rpt-cats">
-${CATEGORIES.map(cat => renderCategory(cat, scores, issuesByCategory.get(cat) ?? [], fileKey, figmaToken)).join("\n")}
+    <!-- Category Tabs -->
+    <div class="rpt-tabs">
+      <div class="rpt-tab-list" role="tablist">
+${CATEGORIES.map((cat, i) => {
+    const cs = scores.byCategory[cat];
+    return `        <button type="button" role="tab" class="rpt-tab${i === 0 ? " active" : ""}" data-tab="${cat}" aria-selected="${i === 0}">${CATEGORY_LABELS[cat]} <span class="rpt-tab-count">${cs.issueCount}</span></button>`;
+  }).join("\n")}
+      </div>
+
+${CATEGORIES.map((cat, i) => {
+    const catIssues = issuesByCategory.get(cat) ?? [];
+    const ruleGroups = groupIssuesByRule(catIssues);
+    return `      <div class="rpt-tab-panel${i === 0 ? " active" : ""}" data-panel="${cat}" role="tabpanel">
+${ruleGroups.length === 0
+    ? '        <div class="rpt-cat-empty">No issues found</div>'
+    : ruleGroups.map(rg => renderRuleSection(rg, fileKey, figmaToken)).join("\n")
+}
+      </div>`;
+  }).join("\n")}
     </div>
 
     <!-- Footer -->
@@ -116,8 +141,8 @@ export function renderSummaryDot(sevClass: string, count: number, label: string)
         </div>`;
 }
 
-export function renderOpportunities(issues: AnalysisIssue[], fileKey: string): string {
-  const maxAbs = issues.reduce((m, i) => Math.max(m, Math.abs(i.calculatedScore)), 1);
+export function renderOpportunities(ruleGroups: RuleGroup[]): string {
+  const maxAbs = ruleGroups.reduce((m, rg) => Math.max(m, Math.abs(rg.totalScore)), 1);
   return `
     <!-- Opportunities -->
     <section class="card rpt-opps">
@@ -126,84 +151,56 @@ export function renderOpportunities(issues: AnalysisIssue[], fileKey: string): s
           <span class="rpt-dot sev-blocking"></span>
           Opportunities
         </h2>
-        <p class="rpt-opps-desc">Top blocking issues — fix these first for the biggest improvement.</p>
+        <p class="rpt-opps-desc">Top impact rules — fix these first for the biggest improvement.</p>
       </div>
       <div class="rpt-opps-list">
-${issues.map(issue => {
-    const def = issue.rule.definition;
-    const link = buildFigmaDeepLink(fileKey, issue.violation.nodeId);
-    const barW = Math.round((Math.abs(issue.calculatedScore) / maxAbs) * 100);
-    return `        <div class="rpt-opps-item">
+${ruleGroups.map(rg => {
+    const barW = Math.round((Math.abs(rg.totalScore) / maxAbs) * 100);
+    const cat = rg.issues[0]?.rule.definition.category ?? "";
+    return `        <div class="rpt-opps-item" data-opp-rule="${esc(rg.ruleId)}" data-opp-cat="${cat}" style="cursor:pointer">
           <div class="rpt-opps-info">
-            <div class="rpt-opps-name">${esc(def.name)}</div>
-            <div class="rpt-opps-msg">${esc(issue.violation.message)}</div>
+            <div class="rpt-opps-name">${esc(rg.ruleName)}</div>
+            <div class="rpt-opps-msg">${rg.issues.length} issues</div>
           </div>
           <div class="rpt-opps-bar-wrap">
             <div class="rpt-opps-bar">
               <div class="rpt-opps-bar-fill" style="width:${barW}%"></div>
             </div>
-            <span class="rpt-opps-score">${issue.calculatedScore}</span>
+            <span class="rpt-opps-score">${rg.totalScore}</span>
           </div>
-          <a href="${link}" target="_blank" rel="noopener" data-node-id="${esc(issue.violation.nodeId)}" class="rpt-opps-link no-print">Go to node →</a>
         </div>`;
   }).join("\n")}
       </div>
     </section>`;
 }
 
-export function renderCategory(
-  cat: Category,
-  scores: ScoreReport,
-  issues: AnalysisIssue[],
+export function renderRuleSection(
+  rg: RuleGroup,
   fileKey: string,
   figmaToken?: string
 ): string {
-  const cs = scores.byCategory[cat];
-  const hasProblems = issues.some(i => i.config.severity === "blocking" || i.config.severity === "risk");
-
-  const bySeverity = new Map<Severity, AnalysisIssue[]>();
-  for (const sev of SEVERITY_ORDER) bySeverity.set(sev, []);
-  for (const issue of issues) bySeverity.get(issue.config.severity)?.push(issue);
-
-  return `
-      <details id="cat-${cat}" class="card rpt-cat"${hasProblems ? " open" : ""}>
-        <summary class="rpt-cat-header">
-          <span class="rpt-badge ${scoreBadgeStyle(cs.percentage)}">${cs.percentage}</span>
-          <div class="rpt-cat-info">
-            <div class="rpt-cat-name">${CATEGORY_LABELS[cat]}</div>
-            <div class="rpt-cat-desc">${esc(CATEGORY_DESCRIPTIONS[cat])}</div>
+  const isOpen = rg.severity === "blocking" || rg.severity === "risk";
+  return `        <details class="card rpt-rule" data-rule="${esc(rg.ruleId)}"${isOpen ? " open" : ""}>
+          <summary class="rpt-rule-header">
+            <span class="rpt-badge score-red">${rg.totalScore}</span>
+            <span class="rpt-rule-title">
+              <span class="rpt-rule-name">${esc(rg.ruleName)}</span>
+              <span class="rpt-rule-meta">
+                <span class="rpt-dot-sm ${rg.severityClass}"></span>
+                ${esc(rg.severity)} · ${rg.issues.length} issues
+              </span>
+              <span class="rpt-rule-info">
+                <span class="rpt-rule-info-line"><strong>Why:</strong> ${esc(rg.why)}</span>
+                <span class="rpt-rule-info-line"><strong>Impact:</strong> ${esc(rg.impact)}</span>
+                <span class="rpt-rule-info-line"><strong>Fix:</strong> ${esc(rg.fix)}</span>
+              </span>
+            </span>
+            <svg class="rpt-rule-chevron no-print" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7"/></svg>
+          </summary>
+          <div class="rpt-rule-issues">
+${rg.issues.map(issue => renderIssueRow(issue, fileKey, figmaToken)).join("\n")}
           </div>
-          <span class="rpt-cat-count">${cs.issueCount} issues</span>
-          <svg class="rpt-cat-chevron no-print" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M19 9l-7 7-7-7"/></svg>
-        </summary>
-        <div class="rpt-cat-body">
-${issues.length === 0
-    ? '          <div class="rpt-cat-empty">No issues found</div>'
-    : SEVERITY_ORDER
-        .filter(sev => (bySeverity.get(sev)?.length ?? 0) > 0)
-        .map(sev => renderSeverityGroup(sev, bySeverity.get(sev) ?? [], fileKey, figmaToken))
-        .join("\n")
-}
-        </div>
-      </details>`;
-}
-
-export function renderSeverityGroup(
-  sev: Severity,
-  issues: AnalysisIssue[],
-  fileKey: string,
-  figmaToken?: string
-): string {
-  return `          <div class="rpt-sev-group">
-            <div class="rpt-sev-header">
-              <span class="rpt-dot-sm ${severityDot(sev)}"></span>
-              <span class="rpt-sev-label">${SEVERITY_LABELS[sev]}</span>
-              <span class="rpt-sev-count">${issues.length}</span>
-            </div>
-            <div class="rpt-sev-issues">
-${issues.map(issue => renderIssueRow(issue, fileKey, figmaToken)).join("\n")}
-            </div>
-          </div>`;
+        </details>`;
 }
 
 export function renderIssueRow(
@@ -212,37 +209,113 @@ export function renderIssueRow(
   figmaToken?: string
 ): string {
   const sev = issue.config.severity;
-  const def = issue.rule.definition;
-  const link = buildFigmaDeepLink(fileKey, issue.violation.nodeId);
+  const v = issue.violation;
+  const link = buildFigmaDeepLink(fileKey, v.nodeId);
 
-  return `              <details class="rpt-issue">
-                <summary class="rpt-issue-header">
-                  <span class="rpt-dot-sm ${severityDot(sev)}"></span>
-                  <span class="rpt-issue-name">${esc(def.name)}</span>
-                  <span class="rpt-issue-msg">${esc(issue.violation.message)}</span>
-                  <span class="rpt-issue-score ${severityBadge(sev)}">${issue.calculatedScore}</span>
-                </summary>
-                <div class="rpt-issue-body">
-                  <div class="rpt-issue-path">${esc(issue.violation.nodePath)}</div>
-                  <div class="rpt-issue-info">
-                    <p><strong>Why:</strong> ${esc(def.why)}</p>
-                    <p><strong>Impact:</strong> ${esc(def.impact)}</p>
-                    <p><strong>Fix:</strong> ${esc(def.fix)}</p>
-                  </div>
-                  <div class="rpt-issue-actions no-print">
-                    <a href="${link}" target="_blank" rel="noopener" data-node-id="${esc(issue.violation.nodeId)}" class="rpt-btn">Go to node <span>→</span></a>${figmaToken ? `
-                    <button onclick="postComment(this)" data-file-key="${esc(fileKey)}" data-node-id="${esc(issue.violation.nodeId)}" data-message="${esc(issue.violation.message)}" class="rpt-btn">Comment on Figma</button>` : ""}
-                  </div>
+  return `            <details class="rpt-issue">
+              <summary class="rpt-issue-header">
+                <span class="rpt-issue-msg">${esc(v.message)}</span>
+                <span class="rpt-issue-score ${severityBadge(sev)}">${issue.calculatedScore}</span>
+              </summary>
+              <div class="rpt-issue-body">
+                <div class="rpt-issue-suggestion">${esc(v.suggestion)}</div>${v.guide ? `
+                <div class="rpt-issue-guide">${esc(v.guide)}</div>` : ""}
+                <div class="rpt-issue-path">${esc(v.nodePath)}</div>
+                <div class="rpt-issue-actions no-print">
+                  <a href="${link}" target="_blank" rel="noopener" data-node-id="${esc(v.nodeId)}" class="rpt-btn">Go to node <span>→</span></a>${figmaToken ? `
+                  <button onclick="postComment(this)" data-file-key="${esc(fileKey)}" data-node-id="${esc(v.nodeId)}" data-message="${esc(v.message)} — ${esc(v.suggestion)}" class="rpt-btn">Comment on Figma</button>` : ""}
                 </div>
-              </details>`;
+              </div>
+            </details>`;
 }
+
+// ---- Interactions ----
+
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
+
+/**
+ * Initialize tab switching + navigation for a rendered report.
+ * Call after inserting renderReportBody() HTML into a container.
+ * Uses 'any' to avoid DOM type dependency (this file targets Node.js).
+ */
+export function initReportInteractions(container: any): void {
+  // Remove previous handler if re-initialized (e.g., re-analysis)
+  if (container._rptHandler) {
+    container.removeEventListener("click", container._rptHandler);
+  }
+  function activate(cat: string, scrollTo: boolean) {
+    container.querySelectorAll(".rpt-tab").forEach((t: any) => {
+      const active = t.dataset.tab === cat;
+      t.classList.toggle("active", active);
+      t.setAttribute("aria-selected", String(active));
+    });
+    container.querySelectorAll(".rpt-tab-panel").forEach((p: any) => {
+      p.classList.toggle("active", p.dataset.panel === cat);
+    });
+    container.querySelectorAll(".rpt-gauge-item").forEach((g: any) => {
+      g.classList.toggle("active", g.dataset.tab === cat);
+    });
+    if (scrollTo) {
+      const tabList = container.querySelector(".rpt-tab-list");
+      if (tabList) tabList.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }
+  function focusRule(ruleId: string) {
+    const el = container.querySelector('[data-rule="' + ruleId + '"]');
+    if (el) {
+      el.open = true;
+      setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+    }
+  }
+  const handler = (e: any) => {
+    const tab = e.target.closest("[data-tab]");
+    if (tab) {
+      const isGauge = tab.classList.contains("rpt-gauge-item");
+      activate(tab.dataset.tab ?? "", isGauge);
+      return;
+    }
+    const opp = e.target.closest("[data-opp-rule]");
+    if (opp) {
+      const cat = opp.dataset.oppCat ?? "";
+      const rule = opp.dataset.oppRule ?? "";
+      if (cat) activate(cat, false);
+      setTimeout(() => focusRule(rule), 50);
+    }
+  };
+  container._rptHandler = handler;
+  container.addEventListener("click", handler);
+}
+
+/* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 
 // ---- Utils ----
 
-function getQuickWins(issues: AnalysisIssue[], limit: number): AnalysisIssue[] {
-  return issues
-    .filter(issue => issue.config.severity === "blocking")
-    .sort((a, b) => a.calculatedScore - b.calculatedScore)
+/** Get top N rules by total score impact */
+function getTopRules(issues: AnalysisIssue[], limit: number): RuleGroup[] {
+  const byRule = new Map<string, RuleGroup>();
+  for (const issue of issues) {
+    const id = issue.rule.definition.id;
+    let group = byRule.get(id);
+    if (!group) {
+      const def = issue.rule.definition;
+      group = {
+        ruleId: id,
+        ruleName: def.name,
+        severity: issue.config.severity,
+        severityClass: severityDot(issue.config.severity),
+        why: def.why,
+        impact: def.impact,
+        fix: def.fix,
+        issues: [],
+        totalScore: 0,
+      };
+      byRule.set(id, group);
+    }
+    group.issues.push(issue);
+    group.totalScore += issue.calculatedScore;
+  }
+  return [...byRule.values()]
+    .sort((a, b) => a.totalScore - b.totalScore)
     .slice(0, limit);
 }
 
@@ -251,6 +324,38 @@ function groupIssuesByCategory(issues: AnalysisIssue[]): Map<Category, AnalysisI
   for (const category of CATEGORIES) grouped.set(category, []);
   for (const issue of issues) grouped.get(issue.rule.definition.category)!.push(issue);
   return grouped;
+}
+
+/** Group issues by rule within a category, sorted by severity then score */
+function groupIssuesByRule(issues: AnalysisIssue[]): RuleGroup[] {
+  const byRule = new Map<string, RuleGroup>();
+  for (const issue of issues) {
+    const id = issue.rule.definition.id;
+    let group = byRule.get(id);
+    if (!group) {
+      const def = issue.rule.definition;
+      group = {
+        ruleId: id,
+        ruleName: def.name,
+        severity: issue.config.severity,
+        severityClass: severityDot(issue.config.severity),
+        why: def.why,
+        impact: def.impact,
+        fix: def.fix,
+        issues: [],
+        totalScore: 0,
+      };
+      byRule.set(id, group);
+    }
+    group.issues.push(issue);
+    group.totalScore += issue.calculatedScore;
+  }
+
+  const SEVERITY_RANK: Record<string, number> = { blocking: 0, risk: 1, "missing-info": 2, suggestion: 3 };
+  return [...byRule.values()].sort((a, b) => {
+    const sevDiff = (SEVERITY_RANK[a.severity] ?? 4) - (SEVERITY_RANK[b.severity] ?? 4);
+    return sevDiff !== 0 ? sevDiff : a.totalScore - b.totalScore;
+  });
 }
 
 const esc = escapeHtml;

@@ -37,7 +37,7 @@ const rawValueCheck: RuleCheckFn = (node, context) => {
             subType: "color" as const,
             nodeId: node.id,
             nodePath,
-            message: rawValueMsg.color(node.name, hex),
+            ...rawValueMsg.color(node.name, hex),
           };
         }
       }
@@ -63,7 +63,7 @@ const rawValueCheck: RuleCheckFn = (node, context) => {
         subType: "font" as const,
         nodeId: node.id,
         nodePath,
-        message: rawValueMsg.font(node.name, fontDesc),
+        ...rawValueMsg.font(node.name, fontDesc),
       };
     }
   }
@@ -86,7 +86,7 @@ const rawValueCheck: RuleCheckFn = (node, context) => {
             subType: "shadow" as const,
             nodeId: node.id,
             nodePath,
-            message: rawValueMsg.shadow(node.name, shadowType, details),
+            ...rawValueMsg.shadow(node.name, shadowType, details),
           };
         }
       }
@@ -100,7 +100,7 @@ const rawValueCheck: RuleCheckFn = (node, context) => {
       subType: "opacity" as const,
       nodeId: node.id,
       nodePath,
-      message: rawValueMsg.opacity(node.name, Math.round(node.opacity * 100)),
+      ...rawValueMsg.opacity(node.name, Math.round(node.opacity * 100)),
     };
   }
 
@@ -115,7 +115,7 @@ const rawValueCheck: RuleCheckFn = (node, context) => {
         subType: "spacing" as const,
         nodeId: node.id,
         nodePath,
-        message: rawValueMsg.spacing(node.name, label, value),
+        ...rawValueMsg.spacing(node.name, label, value),
       };
     }
   }
@@ -165,7 +165,7 @@ const irregularSpacingCheck: RuleCheckFn = (node, context, options) => {
         subType: entry.subType,
         nodeId: node.id,
         nodePath: context.path.join(" > "),
-        message: irregularSpacingMsg(node.name, entry.value, gridBase, Math.round(entry.value / gridBase) * gridBase),
+        ...irregularSpacingMsg(node.name, entry.value, gridBase, Math.round(entry.value / gridBase) * gridBase),
       };
     }
   }

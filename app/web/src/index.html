@@ -364,6 +364,7 @@
         figmaToken: getToken() || undefined,
       });
       el.classList.add('visible');
+      CanICode.initReportInteractions(el);
       el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 

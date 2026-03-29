@@ -5,14 +5,14 @@ import type { AnalysisFile } from "../contracts/figma-node.js";
 import type { AnalysisResult } from "../engine/rule-engine.js";
 import type { ScoreReport } from "../engine/scoring.js";
 import { escapeHtml } from "../ui-helpers.js";
-import { renderReportBody } from "./render.js";
+import { renderReportBody, initReportInteractions } from "./render.js";
 import type { ReportData } from "./render.js";
 
 declare const __REPORT_CSS__: string;
 const reportCss: string = __REPORT_CSS__;
 
 export type { ReportData } from "./render.js";
-export { renderReportBody } from "./render.js";
+export { renderReportBody, initReportInteractions } from "./render.js";
 
 export interface NodeScreenshot {
   nodeId: string;
@@ -63,7 +63,6 @@ export function generateHtmlReport(
   <style>
 ${reportCss}
     .cli-topbar {
-      position: sticky; top: 0; z-index: 50;
       background: #09090b; color: white;
       border-bottom: 1px solid #27272a;
     }
@@ -97,6 +96,7 @@ ${reportCss}
 ${renderReportBody(data)}
   </main>
 
+  <script>(${String(initReportInteractions)})(document.querySelector('.cli-main'));</script>
 ${figmaToken ? renderFigmaCommentScript(figmaToken) : ""}
 </body>
 </html>`;

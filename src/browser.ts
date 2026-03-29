@@ -34,7 +34,7 @@ export {
 } from "./core/ui-helpers.js";
 
 // Report rendering (shared with web/plugin)
-export { renderReportBody } from "./core/report-html/render.js";
+export { renderReportBody, initReportInteractions } from "./core/report-html/render.js";
 export type { ReportData } from "./core/report-html/render.js";
 
 // Import rules to register them with the global registry

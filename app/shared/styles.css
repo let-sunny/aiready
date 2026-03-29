@@ -68,11 +68,11 @@ body {
    ================================================================ */
 
 /* ---- Details/summary reset ---- */
-.rpt-cat > summary::-webkit-details-marker,
+.rpt-rule > summary::-webkit-details-marker,
 .rpt-issue > summary::-webkit-details-marker { display: none; }
-.rpt-cat > summary::marker,
+.rpt-rule > summary::marker,
 .rpt-issue > summary::marker { content: ""; }
-.rpt-cat > summary,
+.rpt-rule > summary,
 .rpt-issue > summary { list-style: none; }
 
 /* ---- Overall Score ---- */
@@ -115,10 +115,12 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  position: relative;
   cursor: pointer;
   text-decoration: none;
   color: var(--fg);
+  background: none;
+  border: none;
+  padding: 4px;
   transition: opacity 0.15s;
 }
 .rpt-gauge-item:hover { opacity: 0.8; }
@@ -270,25 +272,80 @@ body {
 }
 .rpt-opps-link:hover { color: var(--fg); }
 
-/* ---- Categories ---- */
-.rpt-cats > * + * {
-  margin-top: 12px;
+/* ---- Category Tabs (shadcn pill style) ---- */
+.rpt-tabs {
+  margin-bottom: 24px;
+  position: relative;
 }
-.rpt-cat {
-  overflow: hidden;
+@media (max-width: 600px) {
+  .rpt-tab-list::after {
+    content: "";
+    position: sticky;
+    right: 0;
+    width: 40px;
+    min-height: 100%;
+    background: linear-gradient(to right, transparent, var(--bg));
+    pointer-events: none;
+    flex-shrink: 0;
+    margin-left: -40px;
+  }
 }
-.rpt-cat-header {
-  padding: 14px 20px;
+.rpt-tab-list {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  cursor: pointer;
-  transition: background 0.15s;
-  user-select: none;
+  gap: 4px;
+  padding: 4px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow-x: auto;
+  white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
 }
-.rpt-cat-header:hover { background: rgba(0,0,0,0.02); }
+.rpt-tab-list::-webkit-scrollbar { display: none; }
+.rpt-tab-list { scrollbar-width: none; }
+.rpt-tab {
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--fg-muted);
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.rpt-tab:hover { color: var(--fg); background: rgba(0,0,0,0.04); }
+.rpt-tab.active {
+  color: var(--fg);
+  background: var(--card);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+}
+.rpt-tab-count {
+  font-size: 11px;
+  color: var(--fg-muted);
+  margin-left: 2px;
+}
+.rpt-tab.active .rpt-tab-count { color: var(--fg-muted); }
+.rpt-tab-panel { display: none; padding-top: 16px; }
+.rpt-tab-panel.active { display: block; }
+.rpt-cat-empty {
+  padding: 24px 20px;
+  font-size: 14px;
+  color: var(--green);
+  font-weight: 500;
+  text-align: center;
+}
 
-/* Score badge */
+/* ---- Gauge item active highlight ---- */
+.rpt-gauge-item.active {
+  opacity: 1;
+  background: rgba(0,0,0,0.04);
+  border-radius: var(--radius);
+}
+
+/* ---- Score badge ---- */
 .rpt-badge {
   display: inline-flex;
   align-items: center;
@@ -306,65 +363,76 @@ body {
 .rpt-badge.score-amber { background: var(--amber-bg); color: #b45309; border-color: rgba(245,158,11,0.2); }
 .rpt-badge.score-red   { background: var(--red-bg);   color: #b91c1c; border-color: rgba(239,68,68,0.2); }
 
-.rpt-cat-info {
-  flex: 1;
-  min-width: 0;
+/* ---- Rule Section ---- */
+.rpt-tab-panel > .rpt-rule + .rpt-rule {
+  margin-top: 12px;
 }
-.rpt-cat-name {
-  font-size: 14px;
-  font-weight: 600;
+.rpt-rule {
+  overflow: hidden;
 }
-.rpt-cat-desc {
-  font-size: 12px;
-  color: var(--fg-muted);
+.rpt-rule-header {
+  padding: 14px 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
 }
-.rpt-cat-count {
-  font-size: 12px;
-  color: var(--fg-muted);
-  white-space: nowrap;
-}
-.rpt-cat-chevron {
+.rpt-rule-header:hover { background: rgba(0,0,0,0.02); }
+.rpt-rule-chevron {
   width: 16px;
   height: 16px;
   color: var(--fg-muted);
   transition: transform 0.2s;
   flex-shrink: 0;
-}
-.rpt-cat[open] > .rpt-cat-header .rpt-cat-chevron {
-  transform: rotate(180deg);
-}
-.rpt-cat-body {
-  border-top: 1px solid var(--border);
-}
-.rpt-cat-empty {
-  padding: 16px 20px;
-  font-size: 14px;
-  color: var(--green);
-  font-weight: 500;
-}
-
-/* ---- Severity Group ---- */
-.rpt-sev-group {
-  padding: 12px 20px;
-}
-.rpt-sev-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-.rpt-sev-label {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-.rpt-sev-count {
-  font-size: 12px;
-  color: var(--fg-muted);
+  margin-top: 2px;
   margin-left: auto;
 }
-.rpt-sev-issues > * + * {
+.rpt-rule[open] > .rpt-rule-header .rpt-rule-chevron {
+  transform: rotate(180deg);
+}
+.rpt-rule-name {
+  font-size: 14px;
+  font-weight: 600;
+  display: block;
+}
+.rpt-rule-meta {
+  font-size: 12px;
+  color: var(--fg-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+.rpt-rule-title {
+  display: block;
+  flex: 1;
+  min-width: 0;
+}
+.rpt-rule-info {
+  display: block;
+  padding: 8px 0 4px;
+  font-size: 12px;
+  color: var(--fg-muted);
+  line-height: 1.6;
+  margin-top: 8px;
+}
+.rpt-rule-info-line {
+  display: block;
+}
+.rpt-rule-info-line + .rpt-rule-info-line {
+  margin-top: 4px;
+}
+.rpt-rule-info strong {
+  color: var(--fg);
+  font-weight: 500;
+}
+.rpt-rule-issues {
+  padding: 8px 12px;
+  border-top: 1px solid var(--border);
+}
+.rpt-rule-issues > * + * {
   margin-top: 4px;
 }
 
@@ -379,16 +447,11 @@ body {
   align-items: center;
   gap: 10px;
   padding: 8px 12px;
-  font-size: 14px;
+  font-size: 13px;
   cursor: pointer;
   transition: background 0.15s;
 }
 .rpt-issue-header:hover { background: rgba(0,0,0,0.02); }
-.rpt-issue-name {
-  font-weight: 500;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
 .rpt-issue-msg {
   color: var(--fg-muted);
   font-size: 12px;
@@ -415,27 +478,31 @@ body {
   padding: 12px;
   background: #fafafa;
   border-top: 1px solid var(--border);
-  font-size: 14px;
+  font-size: 13px;
 }
 .rpt-issue-body > * + * {
-  margin-top: 8px;
+  margin-top: 6px;
+}
+.rpt-issue-suggestion {
+  font-weight: 500;
+  color: var(--fg);
+}
+.rpt-issue-guide {
+  font-size: 12px;
+  color: var(--fg-muted);
+  padding: 4px 8px;
+  background: var(--blue-bg);
+  border-radius: 4px;
+  display: inline-block;
+}
+.rpt-issue-guide::before {
+  content: "ℹ️ ";
 }
 .rpt-issue-path {
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--fg-muted);
   word-break: break-all;
-}
-.rpt-issue-info {
-  color: var(--fg-muted);
-  line-height: 1.6;
-}
-.rpt-issue-info > * + * {
-  margin-top: 4px;
-}
-.rpt-issue-info strong {
-  color: var(--fg);
-  font-weight: 500;
 }
 .rpt-issue-actions {
   display: flex;
@@ -494,11 +561,12 @@ body {
   .rpt-gauges { padding: 16px; }
   .rpt-summary-inner { gap: 12px; }
   .rpt-summary-total { border-left: none; padding-left: 0; }
+  .rpt-tab-list { gap: 8px; padding: 4px 12px; }
+  .rpt-tab { padding: 6px 14px; }
   .rpt-opps-item { padding: 10px 16px; gap: 10px; }
   .rpt-opps-bar-wrap { width: 80px; }
   .rpt-opps-link { font-size: 11px; }
-  .rpt-cat-header { padding: 10px 14px; gap: 8px; }
-  .rpt-sev-group { padding: 10px 14px; }
+  .rpt-rule-header { padding: 10px 14px; gap: 8px; }
   .rpt-issue-header { padding: 6px 10px; gap: 6px; font-size: 12px; }
   .rpt-issue-body { padding: 10px; font-size: 12px; }
 }

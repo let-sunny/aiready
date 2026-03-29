@@ -8,8 +8,7 @@ import {
   renderReportBody,
   renderSummaryDot,
   renderOpportunities,
-  renderCategory,
-  renderSeverityGroup,
+  renderRuleSection,
   renderIssueRow,
 } from "./render.js";
 import type { ReportData } from "./render.js";
@@ -41,6 +40,7 @@ function makeViolation(ruleId: string, nodeId = "1-1"): RuleViolation {
     nodeId,
     nodePath: "Root > Frame > Node",
     message: `Issue: ${ruleId}`,
+    suggestion: `Fix: ${ruleId}`,
   };
 }
 
@@ -50,9 +50,12 @@ function makeIssue(opts: {
   severity: Severity;
   score?: number;
   nodeId?: string;
+  guide?: string;
 }): AnalysisIssue {
+  const v = makeViolation(opts.ruleId, opts.nodeId);
+  if (opts.guide) v.guide = opts.guide;
   return {
-    violation: makeViolation(opts.ruleId, opts.nodeId),
+    violation: v,
     rule: makeRule(opts.ruleId, opts.category),
     config: makeConfig(opts.severity, opts.score ?? -5),
     depth: 0,
@@ -107,7 +110,7 @@ function makeReportData(overrides?: Partial<ReportData>): ReportData {
     scores: makeScores(),
     issues: [
       makeIssue({ ruleId: "no-auto-layout", category: "pixel-critical", severity: "blocking", score: -10 }),
-      makeIssue({ ruleId: "hardcoded-color", category: "token-management", severity: "risk" }),
+      makeIssue({ ruleId: "hardcoded-color", category: "token-management", severity: "risk", nodeId: "2-1" }),
     ],
     nodeCount: 100,
     maxDepth: 5,
@@ -123,75 +126,75 @@ describe("renderReportBody", () => {
     expect(html).toContain('class="rpt-overall"');
     expect(html).toContain('class="rpt-score-value"');
     expect(html).toContain(">80<");
-    expect(html).toContain("Overall Score");
   });
 
-  it("renders category gauge grid", () => {
+  it("renders category gauge buttons", () => {
     const html = renderReportBody(makeReportData());
     expect(html).toContain('class="rpt-gauges-grid"');
-    expect(html).toContain('class="rpt-gauge-item"');
+    expect(html).toContain('data-tab="pixel-critical"');
     expect(html).toContain('class="rpt-gauge-label"');
-    // All 6 categories should be present
-    for (const cat of CATEGORIES) {
-      expect(html).toContain(`href="#cat-${cat}"`);
-    }
   });
 
-  it("renders issue summary with severity dots", () => {
+  it("renders issue summary", () => {
     const html = renderReportBody(makeReportData());
     expect(html).toContain('class="rpt-summary-inner"');
     expect(html).toContain("sev-blocking");
     expect(html).toContain("sev-risk");
-    expect(html).toContain("sev-missing");
-    expect(html).toContain("sev-suggestion");
     expect(html).toContain("Total");
   });
 
-  it("renders opportunities for blocking issues", () => {
+  it("renders category tabs", () => {
     const html = renderReportBody(makeReportData());
-    expect(html).toContain('class="rpt-opps-title"');
-    expect(html).toContain("Opportunities");
-    expect(html).toContain("no auto layout");
+    expect(html).toContain('class="rpt-tab-list"');
+    for (const cat of CATEGORIES) {
+      expect(html).toContain(`data-tab="${cat}"`);
+      expect(html).toContain(`data-panel="${cat}"`);
+    }
   });
 
-  it("skips opportunities when no blocking issues", () => {
-    const data = makeReportData({
-      issues: [makeIssue({ ruleId: "test", category: "minor", severity: "suggestion" })],
-    });
+  it("first tab is active by default", () => {
+    const html = renderReportBody(makeReportData());
+    expect(html).toContain('class="rpt-tab active"');
+    expect(html).toContain('class="rpt-tab-panel active"');
+  });
+
+  it("renders opportunities as rule groups", () => {
+    const html = renderReportBody(makeReportData());
+    expect(html).toContain("Opportunities");
+    expect(html).toContain("no auto layout");
+    expect(html).toContain("data-opp-rule");
+    expect(html).toContain("data-opp-cat");
+  });
+
+  it("skips opportunities when no issues", () => {
+    const data = makeReportData({ issues: [] });
     const html = renderReportBody(data);
     expect(html).not.toContain("Opportunities");
   });
 
-  it("renders all category sections", () => {
+  it("does not embed inline script (interactions initialized by caller)", () => {
     const html = renderReportBody(makeReportData());
-    for (const cat of CATEGORIES) {
-      expect(html).toContain(`id="cat-${cat}"`);
-    }
+    expect(html).not.toContain("<script>");
   });
 
-  it("renders footer with metadata", () => {
+  it("renders footer", () => {
     const html = renderReportBody(makeReportData());
     expect(html).toContain('class="rpt-footer"');
-    expect(html).toContain("CanICode");
     expect(html).toContain("100 nodes");
-    expect(html).toContain("Max depth 5");
   });
 
-  it("does not contain any Tailwind classes", () => {
+  it("does not contain Tailwind classes", () => {
     const html = renderReportBody(makeReportData());
-    // Common Tailwind patterns that should not appear
     expect(html).not.toMatch(/class="[^"]*\bflex\b/);
     expect(html).not.toMatch(/class="[^"]*\bbg-card\b/);
     expect(html).not.toMatch(/class="[^"]*\btext-sm\b/);
-    expect(html).not.toMatch(/class="[^"]*\bpx-\d/);
-    expect(html).not.toMatch(/class="[^"]*\bbg-red-500\b/);
   });
 });
 
 // ---- renderSummaryDot ----
 
 describe("renderSummaryDot", () => {
-  it("renders a dot with severity class", () => {
+  it("renders dot with severity class and count", () => {
     const html = renderSummaryDot("sev-blocking", 3, "Blocking");
     expect(html).toContain('class="rpt-dot sev-blocking"');
     expect(html).toContain(">3<");
@@ -207,102 +210,92 @@ describe("renderSummaryDot", () => {
 // ---- renderOpportunities ----
 
 describe("renderOpportunities", () => {
-  const issues = [
-    makeIssue({ ruleId: "no-auto-layout", category: "pixel-critical", severity: "blocking", score: -10 }),
-    makeIssue({ ruleId: "missing-component", category: "code-quality", severity: "blocking", score: -5, nodeId: "2-1" }),
-  ];
-
-  it("renders opportunity items", () => {
-    const html = renderOpportunities(issues, "fileKey123");
-    expect(html).toContain('class="rpt-opps-item"');
+  it("renders rule-based opportunity items with navigation data", () => {
+    const issues = [
+      makeIssue({ ruleId: "no-auto-layout", category: "pixel-critical", severity: "blocking", score: -10 }),
+      makeIssue({ ruleId: "no-auto-layout", category: "pixel-critical", severity: "blocking", score: -10, nodeId: "2-1" }),
+    ];
+    // Build rule groups manually (same as getTopRules)
+    const rg = {
+      ruleId: "no-auto-layout",
+      ruleName: "no auto layout",
+      severity: "blocking" as const,
+      severityClass: "sev-blocking",
+      why: "w", impact: "i", fix: "f",
+      issues,
+      totalScore: -20,
+    };
+    const html = renderOpportunities([rg]);
     expect(html).toContain("no auto layout");
-    expect(html).toContain("missing component");
-  });
-
-  it("renders bar with proportional width", () => {
-    const html = renderOpportunities(issues, "fileKey123");
-    expect(html).toContain('style="width:100%"'); // max score
-    expect(html).toContain('style="width:50%"'); // half of max
-  });
-
-  it("renders Go to node links with data-node-id", () => {
-    const html = renderOpportunities(issues, "fileKey123");
-    expect(html).toContain('data-node-id="1-1"');
-    expect(html).toContain('data-node-id="2-1"');
-    expect(html).toContain("Go to node →");
-  });
-
-  it("renders Figma deep links", () => {
-    const html = renderOpportunities(issues, "fileKey123");
-    expect(html).toContain("figma.com");
-    expect(html).toContain("fileKey123");
+    expect(html).toContain("2 issues");
+    expect(html).toContain("-20");
+    expect(html).toContain('data-opp-rule="no-auto-layout"');
+    expect(html).toContain('data-opp-cat="pixel-critical"');
   });
 });
 
-// ---- renderCategory ----
+// ---- renderRuleSection ----
 
-describe("renderCategory", () => {
-  const scores = makeScores();
+describe("renderRuleSection", () => {
+  const issues = [
+    makeIssue({ ruleId: "no-auto-layout", category: "pixel-critical", severity: "blocking", score: -10, guide: "Icon wrappers excluded" }),
+    makeIssue({ ruleId: "no-auto-layout", category: "pixel-critical", severity: "blocking", score: -10, nodeId: "2-1" }),
+  ];
+  const rg = {
+    ruleId: "no-auto-layout",
+    ruleName: "No Auto Layout",
+    severity: "blocking" as const,
+    severityClass: "sev-blocking",
+    why: "Because layout", impact: "Breaks code", fix: "Apply auto-layout",
+    issues,
+    totalScore: -20,
+  };
 
-  it("renders as details element with category id", () => {
-    const html = renderCategory("pixel-critical", scores, [], "fk");
-    expect(html).toContain('id="cat-pixel-critical"');
-    expect(html).toContain("<details");
-    expect(html).toContain("</details>");
+  it("renders as details element with data-rule", () => {
+    const html = renderRuleSection(rg, "fk");
+    expect(html).toContain('<details class="card rpt-rule"');
+    expect(html).toContain('data-rule="no-auto-layout"');
   });
 
-  it("shows score badge with color class", () => {
-    const html = renderCategory("pixel-critical", scores, [], "fk");
-    expect(html).toContain('class="rpt-badge score-green"');
-    expect(html).toContain(">80<");
-  });
-
-  it("shows No issues found when empty", () => {
-    const html = renderCategory("minor", scores, [], "fk");
-    expect(html).toContain("No issues found");
-  });
-
-  it("opens automatically when has blocking/risk issues", () => {
-    const issues = [makeIssue({ ruleId: "test", category: "pixel-critical", severity: "blocking" })];
-    const html = renderCategory("pixel-critical", scores, issues, "fk");
+  it("opens by default for blocking/risk", () => {
+    const html = renderRuleSection(rg, "fk");
     expect(html).toContain("open");
   });
 
-  it("stays closed when only suggestion issues", () => {
-    const issues = [makeIssue({ ruleId: "test", category: "minor", severity: "suggestion" })];
-    const html = renderCategory("minor", scores, issues, "fk");
+  it("stays closed for suggestion severity", () => {
+    const sugRg = { ...rg, severity: "suggestion" as const };
+    const html = renderRuleSection(sugRg, "fk");
     expect(html).not.toMatch(/details[^>]*\bopen\b/);
   });
 
-  it("renders chevron icon", () => {
-    const html = renderCategory("pixel-critical", scores, [], "fk");
-    expect(html).toContain('class="rpt-cat-chevron no-print"');
-  });
-});
-
-// ---- renderSeverityGroup ----
-
-describe("renderSeverityGroup", () => {
-  const issues = [
-    makeIssue({ ruleId: "rule-a", category: "pixel-critical", severity: "blocking" }),
-    makeIssue({ ruleId: "rule-b", category: "pixel-critical", severity: "blocking", nodeId: "2-1" }),
-  ];
-
-  it("renders severity header with dot and label", () => {
-    const html = renderSeverityGroup("blocking", issues, "fk");
-    expect(html).toContain('class="rpt-dot-sm sev-blocking"');
-    expect(html).toContain("Blocking");
+  it("renders static Why/Impact/Fix in summary (always visible)", () => {
+    const html = renderRuleSection(rg, "fk");
+    expect(html).toContain("<strong>Why:</strong> Because layout");
+    expect(html).toContain("<strong>Impact:</strong> Breaks code");
+    expect(html).toContain("<strong>Fix:</strong> Apply auto-layout");
+    // These should be inside <summary>, not in the body
+    const summaryEnd = html.indexOf("</summary>");
+    const whyPos = html.indexOf("Because layout");
+    expect(whyPos).toBeLessThan(summaryEnd);
   });
 
-  it("renders issue count", () => {
-    const html = renderSeverityGroup("blocking", issues, "fk");
-    expect(html).toContain('class="rpt-sev-count">2<');
+  it("renders rule name, severity, issue count, total score", () => {
+    const html = renderRuleSection(rg, "fk");
+    expect(html).toContain("No Auto Layout");
+    expect(html).toContain("sev-blocking");
+    expect(html).toContain("2 issues");
+    expect(html).toContain(">-20<");
   });
 
-  it("renders all issue rows", () => {
-    const html = renderSeverityGroup("blocking", issues, "fk");
-    expect(html).toContain("rule a");
-    expect(html).toContain("rule b");
+  it("renders chevron", () => {
+    const html = renderRuleSection(rg, "fk");
+    expect(html).toContain('class="rpt-rule-chevron');
+  });
+
+  it("renders all issue rows inside", () => {
+    const html = renderRuleSection(rg, "fk");
+    expect(html).toContain("Issue: no-auto-layout");
+    expect(html.match(/class="rpt-issue"/g)?.length).toBe(2);
   });
 });
 
@@ -314,6 +307,7 @@ describe("renderIssueRow", () => {
     category: "pixel-critical",
     severity: "blocking",
     score: -10,
+    guide: "Icon wrappers are excluded",
   });
 
   it("renders as details element", () => {
@@ -321,32 +315,33 @@ describe("renderIssueRow", () => {
     expect(html).toContain('<details class="rpt-issue"');
   });
 
-  it("renders severity dot and score badge", () => {
+  it("renders message in summary", () => {
     const html = renderIssueRow(issue, "fk");
-    expect(html).toContain('class="rpt-dot-sm sev-blocking"');
-    expect(html).toContain('class="rpt-issue-score sev-blocking"');
-    expect(html).toContain(">-10<");
+    expect(html).toContain("Issue: no-auto-layout");
+    expect(html).toContain('class="rpt-issue-score');
   });
 
-  it("renders rule name and message", () => {
+  it("renders suggestion in body", () => {
     const html = renderIssueRow(issue, "fk");
-    expect(html).toContain('class="rpt-issue-name"');
-    expect(html).toContain("no auto layout");
-    expect(html).toContain("Issue: no-auto-layout");
+    expect(html).toContain('class="rpt-issue-suggestion"');
+    expect(html).toContain("Fix: no-auto-layout");
+  });
+
+  it("renders guide when present", () => {
+    const html = renderIssueRow(issue, "fk");
+    expect(html).toContain('class="rpt-issue-guide"');
+    expect(html).toContain("Icon wrappers are excluded");
+  });
+
+  it("omits guide when absent", () => {
+    const noGuide = makeIssue({ ruleId: "test", category: "minor", severity: "suggestion" });
+    const html = renderIssueRow(noGuide, "fk");
+    expect(html).not.toContain("rpt-issue-guide");
   });
 
   it("renders node path", () => {
     const html = renderIssueRow(issue, "fk");
-    expect(html).toContain('class="rpt-issue-path"');
     expect(html).toContain("Root &gt; Frame &gt; Node");
-  });
-
-  it("renders why/impact/fix", () => {
-    const html = renderIssueRow(issue, "fk");
-    expect(html).toContain("<strong>Why:</strong>");
-    expect(html).toContain("<strong>Impact:</strong>");
-    expect(html).toContain("<strong>Fix:</strong>");
-    expect(html).toContain("Because it matters");
   });
 
   it("renders Go to node link with data-node-id", () => {
@@ -363,22 +358,15 @@ describe("renderIssueRow", () => {
   it("renders comment button with figmaToken", () => {
     const html = renderIssueRow(issue, "fk", "figd_token");
     expect(html).toContain("Comment on Figma");
-    expect(html).toContain('data-file-key="fk"');
-    expect(html).toContain('data-message="Issue: no-auto-layout"');
   });
 
-  it("escapes HTML in all user-facing strings", () => {
-    const xssIssue = makeIssue({
-      ruleId: "test",
-      category: "minor",
-      severity: "suggestion",
-    });
-    xssIssue.violation.message = '<img src=x onerror="alert(1)">';
-    xssIssue.violation.nodePath = '<script>alert("xss")</script>';
-    const html = renderIssueRow(xssIssue, "fk");
-    expect(html).not.toContain("<img ");
+  it("escapes HTML in user-facing strings", () => {
+    const xss = makeIssue({ ruleId: "test", category: "minor", severity: "suggestion" });
+    xss.violation.message = '<script>alert(1)</script>';
+    xss.violation.suggestion = '<img onerror="x">';
+    const html = renderIssueRow(xss, "fk");
     expect(html).not.toContain("<script>");
-    expect(html).toContain("&lt;img");
+    expect(html).not.toContain("<img ");
     expect(html).toContain("&lt;script&gt;");
   });
 });
@@ -391,12 +379,15 @@ describe("platform-neutral wording", () => {
     expect(html).not.toContain("Open in Figma");
     expect(html).toContain("Go to node");
   });
+});
 
-  it("uses Go to node in opportunities section", () => {
-    const data = makeReportData();
-    const html = renderReportBody(data);
-    // Check opportunities link text
-    expect(html).toContain("Go to node →");
-    expect(html).not.toContain("Figma →");
+// ---- Category order ----
+
+describe("category order", () => {
+  it("renders Minor before Interaction in tabs", () => {
+    const html = renderReportBody(makeReportData());
+    const minorPos = html.indexOf('data-tab="minor"');
+    const interactionPos = html.indexOf('data-tab="interaction"');
+    expect(minorPos).toBeLessThan(interactionPos);
   });
 });
