@@ -3,7 +3,7 @@ import { basename, resolve } from "node:path";
 import type { CAC } from "cac";
 import { z } from "zod";
 
-const RunDirArgSchema = z.string().trim().min(1, "runDir is required");
+const RUN_DIR_ARG_SCHEMA = z.string().trim().min(1, "runDir is required");
 
 import {
   listActiveFixtures,
@@ -124,7 +124,7 @@ export function registerEvidenceEnrich(cli: CAC): void {
       "Enrich evidence with Critic's pro/con/confidence from debate.json"
     )
     .action((runDir: string) => {
-      const parsed = RunDirArgSchema.safeParse(runDir);
+      const parsed = RUN_DIR_ARG_SCHEMA.safeParse(runDir);
       if (!parsed.success) { console.log(`Invalid runDir: ${parsed.error.issues[0]?.message}`); return; }
       const resolvedDir = resolve(parsed.data);
       if (!existsSync(resolvedDir)) {
@@ -166,7 +166,7 @@ export function registerEvidencePrune(cli: CAC): void {
       "Prune evidence for rules applied by the Arbitrator in the given run"
     )
     .action((runDir: string) => {
-      const parsed = RunDirArgSchema.safeParse(runDir);
+      const parsed = RUN_DIR_ARG_SCHEMA.safeParse(runDir);
       if (!parsed.success) { console.log(`Invalid runDir: ${parsed.error.issues[0]?.message}`); return; }
       const resolvedDir = resolve(parsed.data);
       if (!existsSync(resolvedDir)) {
