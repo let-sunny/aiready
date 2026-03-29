@@ -64,6 +64,7 @@ export function getAnalysisState<T>(context: RuleContext, key: string, init: () 
  */
 export interface RuleViolation {
   ruleId: string;
+  subType?: string;
   nodeId: string;
   nodePath: string;
   message: string;
@@ -90,45 +91,30 @@ export interface Rule {
  * Rule ID type for type safety
  */
 export type RuleId =
-  // Structure
+  // Pixel Critical — layout issues that directly affect pixel accuracy (ΔV ≥ 5%)
   | "no-auto-layout"
   | "absolute-position-in-auto-layout"
+  | "non-layout-container"
+  // Responsive Critical — size issues that break at different viewports (ΔV ≥ 15%)
   | "fixed-size-in-auto-layout"
   | "missing-size-constraint"
-  | "missing-responsive-behavior"
-  | "group-usage"
-  | "deep-nesting"
-  | "z-index-dependent-layout"
-  | "unnecessary-node"
-  // Token
-  | "raw-color"
-  | "raw-font"
-  | "inconsistent-spacing"
-  | "magic-number-spacing"
-  | "raw-shadow"
-  | "raw-opacity"
-  | "multiple-fill-colors"
-  // Component
+  // Code Quality — structural issues affecting code reuse (ΔV ≈ 0%, CSS classes -8~15)
   | "missing-component"
   | "detached-instance"
-  | "missing-component-description"
   | "variant-structure-mismatch"
-  // Naming
+  | "deep-nesting"
+  // Token Management — raw values without design tokens
+  | "raw-value"
+  | "irregular-spacing"
+  // Minor — naming issues with negligible impact (ΔV < 2%)
   | "default-name"
   | "non-semantic-name"
-  | "inconsistent-naming-convention"
-  | "numeric-suffix-name"
-  | "too-long-name"
-  // Behavior
-  | "text-truncation-unhandled"
-  | "prototype-link-in-design"
-  | "overflow-behavior-unknown"
-  | "wrap-behavior-unknown";
+  | "inconsistent-naming-convention";
 
 /**
  * Categories that support depthWeight
  */
-export const DEPTH_WEIGHT_CATEGORIES: Category[] = ["structure", "behavior"];
+export const DEPTH_WEIGHT_CATEGORIES: Category[] = ["pixel-critical", "responsive-critical"];
 
 /**
  * Check if a category supports depth weighting

@@ -163,7 +163,7 @@ describe("RuleEngine.analyze — node exclusion", () => {
   });
 
   it("skips nodes matching excludeNodeNames pattern", () => {
-    // Use GROUP type to trigger group-usage rule (enabled)
+    // Use GROUP type to trigger non-layout-container rule (enabled)
     const ignoredNode = makeNode({ id: "i:1", name: "IgnoreMe", type: "GROUP", children: [makeNode({ id: "i:2", name: "Child", type: "FRAME" })] });
     const normalNode = makeNode({ id: "n:1", name: "Normal", type: "GROUP", children: [makeNode({ id: "n:2", name: "Child", type: "FRAME" })] });
     const doc = makeNode({
@@ -291,7 +291,7 @@ describe("RuleEngine.analyze — depth weight calculation", () => {
     });
 
     const file = makeFile({ document: root });
-    // Use only no-auto-layout which has depthWeight: 1.5 and is in "structure" (supports depth weight)
+    // Use only no-auto-layout which has depthWeight: 1.5 and is in "pixel-critical" (supports depth weight)
     const result = analyzeFile(file, { enabledRules: ["no-auto-layout"] });
 
     // Find issues at different depths — assert they exist to avoid vacuous pass

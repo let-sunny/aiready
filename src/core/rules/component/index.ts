@@ -3,6 +3,7 @@ import { getAnalysisState } from "../../contracts/rule.js";
 import type { AnalysisNode } from "../../contracts/figma-node.js";
 import { defineRule } from "../rule-registry.js";
 import { getRuleOption } from "../rule-config.js";
+import { missingComponentMsg, detachedInstanceMsg, variantStructureMismatchMsg } from "../rule-messages.js";
 
 // ============================================
 // Helper functions
@@ -107,7 +108,7 @@ function getSeenStage4(context: RuleContext): Set<string> {
 const missingComponentDef: RuleDefinition = {
   id: "missing-component",
   name: "Missing Component",
-  category: "component",
+  category: "code-quality",
   why: "Repeated structures, unused components, and divergent instance overrides indicate missing or underutilized components. This inflates AI token consumption and forces manual maintenance.",
   impact: "AI code generators reproduce each repeated frame independently instead of emitting a reusable component. Divergent instance overrides produce inconsistent implementations.",
   fix: "Create components from repeated structures, use instances instead of duplicated frames, and create variants for instances with significantly different overrides.",
@@ -141,9 +142,10 @@ const missingComponentCheck: RuleCheckFn = (node, context, options) => {
         if (firstFrame === node.id) {
           return {
             ruleId: missingComponentDef.id,
+            subType: "unused-component" as const,
             nodeId: node.id,
             nodePath: context.path.join(" > "),
-            message: `Component "${matchingComponent.name}" exists — use instances instead of repeated frames (${sameNameFrames.length} found) — replace frames with component instances`,
+            message: missingComponentMsg.unusedComponent(matchingComponent.name, sameNameFrames.length),
           };
         }
       }
@@ -158,9 +160,10 @@ const missingComponentCheck: RuleCheckFn = (node, context, options) => {
       if (firstFrame === node.id) {
         return {
           ruleId: missingComponentDef.id,
+          subType: "name-repetition" as const,
           nodeId: node.id,
           nodePath: context.path.join(" > "),
-          message: `"${node.name}" appears ${sameNameFrames.length} times — extract as a reusable component`,
+          message: missingComponentMsg.nameRepetition(node.name, sameNameFrames.length),
         };
       }
     }
@@ -219,9 +222,10 @@ const missingComponentCheck: RuleCheckFn = (node, context, options) => {
       if (firstMatchId === node.id) {
         return {
           ruleId: missingComponentDef.id,
+          subType: "structure-repetition" as const,
           nodeId: node.id,
           nodePath: context.path.join(" > "),
-          message: `"${node.name}" and ${count - 1} sibling frame(s) share the same internal structure — extract a shared component from the repeated structure`,
+          message: missingComponentMsg.structureRepetition(node.name, count - 1),
         };
       }
     }
@@ -255,9 +259,10 @@ const missingComponentCheck: RuleCheckFn = (node, context, options) => {
 
       return {
         ruleId: missingComponentDef.id,
+        subType: "style-override" as const,
         nodeId: node.id,
         nodePath: context.path.join(" > "),
-        message: `"${componentName}" instance has style overrides (${overrides.join(", ")}) — create a new variant for this style combination`,
+        message: missingComponentMsg.styleOverride(componentName, overrides),
       };
     }
     return null;
@@ -278,7 +283,7 @@ export const missingComponent = defineRule({
 const detachedInstanceDef: RuleDefinition = {
   id: "detached-instance",
   name: "Detached Instance",
-  category: "component",
+  category: "code-quality",
   why: "Detached instances lose component relationship — AI sees a one-off frame instead of a reusable component reference",
   impact: "AI generates duplicate code instead of reusing the component, inflating output and causing inconsistencies",
   fix: "Reset the instance or create a new variant if customization is needed",
@@ -301,7 +306,7 @@ const detachedInstanceCheck: RuleCheckFn = (node, context) => {
         ruleId: detachedInstanceDef.id,
         nodeId: node.id,
         nodePath: context.path.join(" > "),
-        message: `"${node.name}" may be a detached instance of component "${component.name}" — restore as an instance of "${component.name}" or create a new variant`,
+        message: detachedInstanceMsg(node.name, component.name),
       };
     }
   }
@@ -315,62 +320,13 @@ export const detachedInstance = defineRule({
 });
 
 // ============================================
-// missing-component-description
-// ============================================
-
-/** State key for per-analysis deduplication via RuleContext.analysisState */
-const SEEN_MISSING_DESC_KEY = "missing-component-description:seenComponentIds";
-
-function getSeenMissingDescription(context: RuleContext): Set<string> {
-  return getAnalysisState(context, SEEN_MISSING_DESC_KEY, () => new Set<string>());
-}
-
-const missingComponentDescriptionDef: RuleDefinition = {
-  id: "missing-component-description",
-  name: "Missing Component Description",
-  category: "component",
-  why: "Component descriptions in Figma are the primary channel for communicating intent, usage guidelines, and prop expectations to developers. Without them, developers must reverse-engineer purpose from visual appearance alone.",
-  impact: "Increases implementation ambiguity, especially for icon-only components, compound components with multiple variants, and components whose names are variant key strings that give no prose context.",
-  fix: "Open the component in Figma, select it, and add a description in the right-hand panel under the component's properties. Include: what the component is, when to use it, any accessibility or interaction notes, and the owning team or design token set if applicable.",
-};
-
-const missingComponentDescriptionCheck: RuleCheckFn = (node, context) => {
-  if (node.type !== "INSTANCE") return null;
-
-  const componentId = node.componentId;
-  if (!componentId) return null;
-
-  const componentMeta = context.file.components[componentId];
-  if (!componentMeta) return null;
-
-  if (componentMeta.description.trim() !== "") return null;
-
-  // Deduplicate: emit at most one issue per unique componentId
-  const seenDesc = getSeenMissingDescription(context);
-  if (seenDesc.has(componentId)) return null;
-  seenDesc.add(componentId);
-
-  return {
-    ruleId: missingComponentDescriptionDef.id,
-    nodeId: node.id,
-    nodePath: context.path.join(" > "),
-    message: `Component "${componentMeta.name}" has no description — add usage guidelines in the component's description field`,
-  };
-};
-
-export const missingComponentDescription = defineRule({
-  definition: missingComponentDescriptionDef,
-  check: missingComponentDescriptionCheck,
-});
-
-// ============================================
 // variant-structure-mismatch
 // ============================================
 
 const variantStructureMismatchDef: RuleDefinition = {
   id: "variant-structure-mismatch",
   name: "Variant Structure Mismatch",
-  category: "component",
+  category: "code-quality",
   why: "Variants with different child structures prevent AI from creating a unified component template",
   impact: "AI must generate separate implementations for each variant instead of a single parameterized component",
   fix: "Ensure all variants share the same child structure, using visibility toggles for optional elements",
@@ -401,7 +357,7 @@ const variantStructureMismatchCheck: RuleCheckFn = (node, context) => {
     ruleId: variantStructureMismatchDef.id,
     nodeId: node.id,
     nodePath: context.path.join(" > "),
-    message: `"${node.name}" has ${mismatchCount}/${totalVariants} variants with different child structures — unify variant structures using visibility toggles for optional elements`,
+    message: variantStructureMismatchMsg(node.name, mismatchCount, totalVariants),
   };
 };
 

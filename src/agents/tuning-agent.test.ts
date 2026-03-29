@@ -59,7 +59,7 @@ describe("runTuningAgent", () => {
       mismatches: [
         makeMismatch({
           type: "underscored",
-          ruleId: "magic-number-spacing",
+          ruleId: "irregular-spacing",
           currentScore: -2,
           currentSeverity: "missing-info",
           actualDifficulty: "hard",
@@ -67,7 +67,7 @@ describe("runTuningAgent", () => {
         }),
         makeMismatch({
           type: "underscored",
-          ruleId: "magic-number-spacing",
+          ruleId: "irregular-spacing",
           nodeId: "node-2",
           currentScore: -2,
           currentSeverity: "missing-info",
@@ -76,7 +76,7 @@ describe("runTuningAgent", () => {
         }),
         makeMismatch({
           type: "underscored",
-          ruleId: "magic-number-spacing",
+          ruleId: "irregular-spacing",
           nodeId: "node-3",
           currentScore: -2,
           currentSeverity: "missing-info",
@@ -85,7 +85,7 @@ describe("runTuningAgent", () => {
         }),
       ],
       ruleScores: {
-        "magic-number-spacing": { score: -2, severity: "missing-info" },
+        "irregular-spacing": { score: -2, severity: "missing-info" },
       },
     };
 
@@ -93,7 +93,7 @@ describe("runTuningAgent", () => {
 
     expect(result.adjustments).toHaveLength(1);
     const adj = result.adjustments[0]!;
-    expect(adj.ruleId).toBe("magic-number-spacing");
+    expect(adj.ruleId).toBe("irregular-spacing");
     expect(adj.proposedScore).toBe(-10);
     expect(adj.confidence).toBe("high");
     expect(adj.supportingCases).toBe(3);
@@ -284,10 +284,10 @@ describe("runTuningAgent", () => {
     const input: TuningAgentInput = {
       mismatches: [],
       ruleScores: {
-        "raw-color": { score: -6, severity: "risk" },
+        "raw-value": { score: -6, severity: "risk" },
       },
       priorEvidence: {
-        "raw-color": {
+        "raw-value": {
           overscoredCount: 3,
           underscoredCount: 0,
           overscoredDifficulties: ["easy", "easy", "easy"],
@@ -300,7 +300,7 @@ describe("runTuningAgent", () => {
 
     expect(result.adjustments).toHaveLength(1);
     const adj = result.adjustments[0]!;
-    expect(adj.ruleId).toBe("raw-color");
+    expect(adj.ruleId).toBe("raw-value");
     expect(adj.supportingCases).toBe(3);
     expect(adj.confidence).toBe("high");
     expect(adj.reasoning).toContain("+ 3 case(s) from prior runs");
@@ -312,7 +312,7 @@ describe("runTuningAgent", () => {
       mismatches: [
         makeMismatch({
           type: "overscored",
-          ruleId: "raw-color",
+          ruleId: "raw-value",
           currentScore: -2,
           currentSeverity: "suggestion",
           actualDifficulty: "easy",
@@ -320,10 +320,10 @@ describe("runTuningAgent", () => {
         }),
       ],
       ruleScores: {
-        "raw-color": { score: -2, severity: "suggestion" },
+        "raw-value": { score: -2, severity: "suggestion" },
       },
       priorEvidence: {
-        "raw-color": {
+        "raw-value": {
           overscoredCount: 2,
           underscoredCount: 0,
           overscoredDifficulties: ["easy", "easy"],
@@ -336,7 +336,7 @@ describe("runTuningAgent", () => {
 
     expect(result.adjustments).toHaveLength(1);
     const adj = result.adjustments[0]!;
-    expect(adj.ruleId).toBe("raw-color");
+    expect(adj.ruleId).toBe("raw-value");
     expect(adj.proposedDisable).toBe(true);
     expect(adj.confidence).toBe("high");
     expect(adj.supportingCases).toBe(3);
@@ -348,7 +348,7 @@ describe("runTuningAgent", () => {
       mismatches: [
         makeMismatch({
           type: "overscored",
-          ruleId: "raw-color",
+          ruleId: "raw-value",
           currentScore: -4,
           currentSeverity: "risk",
           actualDifficulty: "easy",
@@ -356,7 +356,7 @@ describe("runTuningAgent", () => {
         }),
         makeMismatch({
           type: "overscored",
-          ruleId: "raw-color",
+          ruleId: "raw-value",
           nodeId: "node-2",
           currentScore: -4,
           currentSeverity: "risk",
@@ -365,7 +365,7 @@ describe("runTuningAgent", () => {
         }),
         makeMismatch({
           type: "overscored",
-          ruleId: "raw-color",
+          ruleId: "raw-value",
           nodeId: "node-3",
           currentScore: -4,
           currentSeverity: "risk",
@@ -374,7 +374,7 @@ describe("runTuningAgent", () => {
         }),
       ],
       ruleScores: {
-        "raw-color": { score: -4, severity: "risk" },
+        "raw-value": { score: -4, severity: "risk" },
       },
     };
 
@@ -390,7 +390,7 @@ describe("runTuningAgent", () => {
       mismatches: [
         makeMismatch({
           type: "overscored",
-          ruleId: "raw-color",
+          ruleId: "raw-value",
           currentScore: -2,
           currentSeverity: "suggestion",
           actualDifficulty: "easy",
@@ -398,7 +398,7 @@ describe("runTuningAgent", () => {
         }),
         makeMismatch({
           type: "overscored",
-          ruleId: "raw-color",
+          ruleId: "raw-value",
           nodeId: "node-2",
           currentScore: -2,
           currentSeverity: "suggestion",
@@ -407,7 +407,7 @@ describe("runTuningAgent", () => {
         }),
       ],
       ruleScores: {
-        "raw-color": { score: -2, severity: "suggestion" },
+        "raw-value": { score: -2, severity: "suggestion" },
       },
     };
 
@@ -429,7 +429,7 @@ describe("runTuningAgent", () => {
         }),
         makeMismatch({
           type: "validated",
-          ruleId: "magic-number-spacing",
+          ruleId: "irregular-spacing",
           nodeId: "node-2",
           actualDifficulty: "moderate",
           reasoning: "Matched expected difficulty",
@@ -444,7 +444,7 @@ describe("runTuningAgent", () => {
       ],
       ruleScores: {
         "no-auto-layout": { score: -8, severity: "blocking" },
-        "magic-number-spacing": { score: -5, severity: "risk" },
+        "irregular-spacing": { score: -5, severity: "risk" },
       },
     };
 

@@ -7,7 +7,7 @@ body:
     attributes:
       label: Symptom
       description: What's happening? Include error messages, wrong output, or unexpected behavior.
-      placeholder: "unnecessary-node scores -10 (blocking) but hidden layers don't block implementation"
+      placeholder: "raw-value scores -3 (missing-info) but tokenized fills are still flagged"
     validations:
       required: true
   - type: textarea

@@ -2,47 +2,47 @@ import type { Category } from "../contracts/category.js";
 import type { RuleConfig, RuleId } from "../contracts/rule.js";
 
 /**
- * Maps each rule ID to its category. Kept alongside RULE_CONFIGS so both
- * are updated together when rules are added or removed.
+ * Maps each rule ID to its category.
+ * Categories are based on ablation experiment data (PR #149, #150):
+ * - pixel-critical: ΔV ≥ 5% — layout info removal directly degrades pixel accuracy
+ * - responsive-critical: ΔV ≥ 15% at expanded viewport — size info critical for responsive
+ * - code-quality: ΔV ≈ 0% but CSS classes -8~15 — affects code structure, not pixels
+ * - token-management: raw values without design tokens — wrong input = wrong output
+ * - minor: ΔV < 2%, negligible code difference — naming and minor issues
  */
 export const RULE_ID_CATEGORY: Record<RuleId, Category> = {
-  "no-auto-layout": "structure",
-  "absolute-position-in-auto-layout": "structure",
-  "fixed-size-in-auto-layout": "structure",
-  "missing-size-constraint": "structure",
-  "missing-responsive-behavior": "structure",
-  "group-usage": "structure",
-  "deep-nesting": "structure",
-  "z-index-dependent-layout": "structure",
-  "unnecessary-node": "structure",
-  "raw-color": "token",
-  "raw-font": "token",
-  "inconsistent-spacing": "token",
-  "magic-number-spacing": "token",
-  "raw-shadow": "token",
-  "raw-opacity": "token",
-  "multiple-fill-colors": "token",
-  "missing-component": "component",
-  "detached-instance": "component",
-  "missing-component-description": "component",
-  "variant-structure-mismatch": "component",
-  "default-name": "naming",
-  "non-semantic-name": "naming",
-  "inconsistent-naming-convention": "naming",
-  "numeric-suffix-name": "naming",
-  "too-long-name": "naming",
-  "text-truncation-unhandled": "behavior",
-  "prototype-link-in-design": "behavior",
-  "overflow-behavior-unknown": "behavior",
-  "wrap-behavior-unknown": "behavior",
+  // Pixel Critical
+  "no-auto-layout": "pixel-critical",
+  "absolute-position-in-auto-layout": "pixel-critical",
+  "non-layout-container": "pixel-critical",
+  // Responsive Critical
+  "fixed-size-in-auto-layout": "responsive-critical",
+  "missing-size-constraint": "responsive-critical",
+  // Code Quality
+  "missing-component": "code-quality",
+  "detached-instance": "code-quality",
+  "variant-structure-mismatch": "code-quality",
+  "deep-nesting": "code-quality",
+  // Token Management
+  "raw-value": "token-management",
+  "irregular-spacing": "token-management",
+  // Minor
+  "default-name": "minor",
+  "non-semantic-name": "minor",
+  "inconsistent-naming-convention": "minor",
 };
 
 /**
- * Central configuration for all rules
- * Edit scores/severity here without touching rule logic
+ * Central configuration for all rules.
+ * Scores based on ablation experiment impact data:
+ * - pixel-critical: -10 ~ -7 (layout strip caused ΔV +5.4%)
+ * - responsive-critical: -7 ~ -5 (size-constraints ΔV +15.9% at responsive viewports)
+ * - code-quality: -5 ~ -3 (CSS classes -8~15, no pixel impact)
+ * - token-management: -3 ~ -2 (wrong input = wrong output, but values still present)
+ * - minor: -2 ~ -1 (ΔV < 2%, negligible)
  */
 export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
-  // ── Structure ──
+  // ── Pixel Critical ──
   "no-auto-layout": {
     severity: "blocking",
     score: -10,
@@ -55,98 +55,26 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
     depthWeight: 1.3,
     enabled: true,
   },
+  "non-layout-container": {
+    severity: "blocking",
+    score: -8,
+    depthWeight: 1.2,
+    enabled: true,
+  },
+
+  // ── Responsive Critical ──
   "fixed-size-in-auto-layout": {
     severity: "risk",
-    score: -3,
+    score: -6,
     enabled: true,
   },
   "missing-size-constraint": {
     severity: "risk",
-    score: -3,
-    enabled: true,
-  },
-  "missing-responsive-behavior": {
-    severity: "risk",
-    score: -3,
-    depthWeight: 1.5,
-    enabled: true,
-  },
-  "group-usage": {
-    severity: "risk",
     score: -5,
-    depthWeight: 1.2,
     enabled: true,
-  },
-  "deep-nesting": {
-    severity: "risk",
-    score: -4,
-    enabled: true,
-    options: {
-      maxDepth: 5,
-    },
-  },
-  "z-index-dependent-layout": {
-    severity: "risk",
-    score: -5,
-    depthWeight: 1.3,
-    enabled: true,
-  },
-  "unnecessary-node": {
-    severity: "suggestion",
-    score: -2,
-    enabled: false,
-    options: {
-      slotRecommendationThreshold: 3,
-    },
   },
 
-  // ── Token ──
-  "raw-color": {
-    severity: "missing-info",
-    score: -2,
-    enabled: true,
-  },
-  "raw-font": {
-    severity: "risk",
-    score: -4,
-    enabled: true,
-  },
-  "inconsistent-spacing": {
-    severity: "missing-info",
-    score: -2,
-    enabled: true,
-    options: {
-      gridBase: 4,
-    },
-  },
-  "magic-number-spacing": {
-    severity: "risk",
-    score: -3,
-    enabled: true,
-    options: {
-      gridBase: 4,
-    },
-  },
-  "raw-shadow": {
-    severity: "missing-info",
-    score: -3,
-    enabled: true,
-  },
-  "raw-opacity": {
-    severity: "missing-info",
-    score: -2,
-    enabled: true,
-  },
-  "multiple-fill-colors": {
-    severity: "missing-info",
-    score: -3,
-    enabled: true,
-    options: {
-      tolerance: 10,
-    },
-  },
-
-  // ── Component ──
+  // ── Code Quality ──
   "missing-component": {
     severity: "risk",
     score: -7,
@@ -159,12 +87,7 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
   },
   "detached-instance": {
     severity: "risk",
-    score: -5,
-    enabled: true,
-  },
-  "missing-component-description": {
-    severity: "missing-info",
-    score: -2,
+    score: -4,
     enabled: true,
   },
   "variant-structure-mismatch": {
@@ -172,56 +95,44 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
     score: -4,
     enabled: true,
   },
-
-  // ── Naming ──
-  "default-name": {
-    severity: "missing-info",
-    score: -2,
-    enabled: true,
-  },
-  "non-semantic-name": {
-    severity: "missing-info",
-    score: -2,
-    enabled: true,
-  },
-  "inconsistent-naming-convention": {
-    severity: "missing-info",
-    score: -2,
-    enabled: true,
-  },
-  "numeric-suffix-name": {
-    severity: "suggestion",
-    score: -1,
-    enabled: true,
-  },
-  "too-long-name": {
-    severity: "suggestion",
-    score: -1,
+  "deep-nesting": {
+    severity: "risk",
+    score: -3,
     enabled: true,
     options: {
-      maxLength: 50,
+      maxDepth: 5,
     },
   },
 
-  // ── Behavior ──
-  "text-truncation-unhandled": {
-    severity: "risk",
-    score: -5,
+  // ── Token Management ──
+  "raw-value": {
+    severity: "missing-info",
+    score: -3,
     enabled: true,
   },
-  "prototype-link-in-design": {
+  "irregular-spacing": {
     severity: "missing-info",
     score: -2,
-    enabled: false,
+    enabled: true,
+    options: {
+      gridBase: 4,
+    },
   },
-  "overflow-behavior-unknown": {
-    severity: "missing-info",
-    score: -3,
+
+  // ── Minor ──
+  "default-name": {
+    severity: "suggestion",
+    score: -1,
     enabled: true,
   },
-  "wrap-behavior-unknown": {
-    severity: "missing-info",
-    score: -3,
+  "non-semantic-name": {
+    severity: "suggestion",
+    score: -1,
+    enabled: true,
+  },
+  "inconsistent-naming-convention": {
+    severity: "suggestion",
+    score: -1,
     enabled: true,
   },
 };
@@ -254,32 +165,22 @@ export function getConfigsWithPreset(
       break;
 
     case "dev-friendly":
-      // Focus on structure and behavior issues
+      // Focus on pixel-critical and responsive-critical issues
       for (const [id, config] of Object.entries(configs)) {
         const ruleId = id as RuleId;
-        if (
-          !ruleId.includes("auto-layout") &&
-          !ruleId.includes("responsive") &&
-          !ruleId.includes("truncation") &&
-          !ruleId.includes("overflow") &&
-          !ruleId.includes("wrap") &&
-          !ruleId.includes("size")
-        ) {
+        const category = RULE_ID_CATEGORY[ruleId];
+        if (category !== "pixel-critical" && category !== "responsive-critical") {
           configs[ruleId] = { ...config, enabled: false };
         }
       }
       break;
 
     case "ai-ready":
-      // Boost structure and naming rules
+      // Boost pixel-critical and token-management rules
       for (const [id, config] of Object.entries(configs)) {
         const ruleId = id as RuleId;
-        if (
-          ruleId.includes("auto-layout") ||
-          ruleId.includes("structure") ||
-          ruleId.includes("name") ||
-          ruleId.includes("unnecessary")
-        ) {
+        const category = RULE_ID_CATEGORY[ruleId];
+        if (category === "pixel-critical" || category === "token-management") {
           configs[ruleId] = {
             ...config,
             score: Math.round(config.score * 1.5),

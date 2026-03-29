@@ -4,7 +4,7 @@ import { defaultName } from "./index.js";
 describe("default-name", () => {
   it("has correct rule definition metadata", () => {
     expect(defaultName.definition.id).toBe("default-name");
-    expect(defaultName.definition.category).toBe("naming");
+    expect(defaultName.definition.category).toBe("minor");
   });
 
   it.each([

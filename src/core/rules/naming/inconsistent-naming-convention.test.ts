@@ -4,7 +4,7 @@ import { inconsistentNamingConvention } from "./index.js";
 describe("inconsistent-naming-convention", () => {
   it("has correct rule definition metadata", () => {
     expect(inconsistentNamingConvention.definition.id).toBe("inconsistent-naming-convention");
-    expect(inconsistentNamingConvention.definition.category).toBe("naming");
+    expect(inconsistentNamingConvention.definition.category).toBe("minor");
   });
 
   it("flags node with different convention from dominant siblings", () => {

@@ -715,7 +715,7 @@ describe("missing-component — General", () => {
   it("has correct rule definition metadata", () => {
     const def = missingComponent.definition;
     expect(def.id).toBe("missing-component");
-    expect(def.category).toBe("component");
+    expect(def.category).toBe("code-quality");
     expect(def.why).toBeTruthy();
     expect(def.impact).toBeTruthy();
     expect(def.fix).toBeTruthy();

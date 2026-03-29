@@ -78,15 +78,15 @@ describe("runCalibrationEvaluate", () => {
           nodePath: "Page > Frame > Node2",
           totalScore: -5,
           issueCount: 1,
-          flaggedRuleIds: ["raw-color"],
+          flaggedRuleIds: ["raw-value"],
           severities: ["risk"],
         },
       ],
       scoreReport: {
         overall: { score: 75, maxScore: 100, percentage: 75, grade: "B" as const },
         byCategory: {
-          structure: {
-            category: "structure" as const,
+          "pixel-critical": {
+            category: "pixel-critical" as const,
             score: 70,
             maxScore: 100,
             percentage: 70,
@@ -97,8 +97,8 @@ describe("runCalibrationEvaluate", () => {
             diversityScore: 80,
             bySeverity: { blocking: 1, risk: 1, "missing-info": 0, suggestion: 0 },
           },
-          token: {
-            category: "token" as const,
+          "token-management": {
+            category: "token-management" as const,
             score: 80,
             maxScore: 100,
             percentage: 80,
@@ -109,8 +109,8 @@ describe("runCalibrationEvaluate", () => {
             diversityScore: 85,
             bySeverity: { blocking: 0, risk: 1, "missing-info": 0, suggestion: 0 },
           },
-          component: {
-            category: "component" as const,
+          "code-quality": {
+            category: "code-quality" as const,
             score: 100,
             maxScore: 100,
             percentage: 100,
@@ -121,8 +121,8 @@ describe("runCalibrationEvaluate", () => {
             diversityScore: 100,
             bySeverity: { blocking: 0, risk: 0, "missing-info": 0, suggestion: 0 },
           },
-          naming: {
-            category: "naming" as const,
+          minor: {
+            category: "minor" as const,
             score: 100,
             maxScore: 100,
             percentage: 100,
@@ -133,8 +133,8 @@ describe("runCalibrationEvaluate", () => {
             diversityScore: 100,
             bySeverity: { blocking: 0, risk: 0, "missing-info": 0, suggestion: 0 },
           },
-          behavior: {
-            category: "behavior" as const,
+          "responsive-critical": {
+            category: "responsive-critical" as const,
             score: 100,
             maxScore: 100,
             percentage: 100,
@@ -178,7 +178,7 @@ describe("runCalibrationEvaluate", () => {
           uncoveredStruggles: [
             {
               description: "Complex gradient pattern not covered by rules",
-              suggestedCategory: "token",
+              suggestedCategory: "token-management",
               estimatedImpact: "moderate",
             },
           ],
@@ -189,8 +189,8 @@ describe("runCalibrationEvaluate", () => {
           difficulty: "easy",
           ruleRelatedStruggles: [
             {
-              ruleId: "raw-color",
-              description: "Raw color was trivial to handle",
+              ruleId: "raw-value",
+              description: "Raw value was trivial to handle",
               actualImpact: "easy",
             },
           ],
@@ -203,7 +203,7 @@ describe("runCalibrationEvaluate", () => {
     const ruleScores: Record<string, { score: number; severity: string }> = {
       "no-auto-layout": { score: -12, severity: "blocking" },
       "deep-nesting": { score: -4, severity: "risk" },
-      "raw-color": { score: -5, severity: "risk" },
+      "raw-value": { score: -5, severity: "risk" },
     };
 
     const result = runCalibrationEvaluate(analysisJson, conversionJson, ruleScores);

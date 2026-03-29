@@ -5,7 +5,7 @@ describe("no-auto-layout", () => {
   it("has correct rule definition metadata", () => {
     const def = noAutoLayout.definition;
     expect(def.id).toBe("no-auto-layout");
-    expect(def.category).toBe("structure");
+    expect(def.category).toBe("pixel-critical");
     expect(def.why).toContain("Auto Layout");
     expect(def.fix).toContain("Auto Layout");
   });
