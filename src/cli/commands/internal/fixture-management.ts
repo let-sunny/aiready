@@ -133,9 +133,9 @@ export function registerEvidenceEnrich(cli: CAC): void {
       }
 
       // Extract fixture name from run directory (e.g. "material3-kit--2026-03-26-0900" → "material3-kit")
-      const { name: fixture } = parseRunDirName(basename(resolvedDir));
-      if (!fixture) {
-        console.log("Cannot extract fixture name from run directory");
+      const { name: fixture, timestamp } = parseRunDirName(basename(resolvedDir));
+      if (!timestamp) {
+        console.log(`Run directory "${basename(resolvedDir)}" does not match expected <name>--<timestamp> format`);
         return;
       }
 
@@ -144,7 +144,7 @@ export function registerEvidenceEnrich(cli: CAC): void {
         if (r.confidence) entry.confidence = r.confidence;
         if (r.pro) entry.pro = r.pro;
         if (r.con) entry.con = r.con;
-        const dec = r.decision;
+        const dec = r.decision.trim().toUpperCase();
         if (dec === "APPROVE" || dec === "REJECT" || dec === "REVISE" || dec === "HOLD") entry.decision = dec;
         return entry;
       });
