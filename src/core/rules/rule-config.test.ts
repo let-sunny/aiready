@@ -23,7 +23,7 @@ describe("rule-config sync", () => {
     }
     const tableContent = content.slice(tableStart, tableEnd);
 
-    const tableRows = [...tableContent.matchAll(/\| `([^`]+)` \| (-?\d+) \| ([a-z-]+) \|/g)];
+    const tableRows = [...tableContent.matchAll(/\| `([^`]+)`[^|]* \| (-?\d+) \| ([a-z-]+) \|/g)];
     const docRules = new Map(
       tableRows
         .filter((m) => m[1] !== undefined && m[2] !== undefined && m[3] !== undefined)

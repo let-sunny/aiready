@@ -83,7 +83,8 @@ function generateCustomizationTables(rulesByCategory: Map<Category, RuleEntry[]>
     lines.push("|---------|--------------|-----------------|");
 
     for (const rule of rules) {
-      lines.push(`| \`${rule.id}\` | ${rule.score} | ${rule.severity} |`);
+      const disabledTag = rule.enabled ? "" : " *(disabled)*";
+      lines.push(`| \`${rule.id}\`${disabledTag} | ${rule.score} | ${rule.severity} |`);
     }
 
     lines.push("");

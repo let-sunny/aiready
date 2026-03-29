@@ -97,7 +97,7 @@ EXAMPLE
   {
     "excludeNodeTypes": [],
     "excludeNodeNames": [],
-    "gridBase": 4,
+    "gridBase": 2,
     "rules": {
       "no-auto-layout": { "score": -15, "severity": "blocking" },
       "raw-value": { "score": -5 },

@@ -21,11 +21,11 @@ canicode analyze <url> --config ./my-config.json
 {
   "excludeNodeTypes": ["VECTOR", "BOOLEAN_OPERATION", "SLICE"],
   "excludeNodeNames": ["chatbot", "ad-banner", "custom-widget"],
-  "gridBase": 4,
+  "gridBase": 2,
   "rules": {
     "no-auto-layout": { "score": -15, "severity": "blocking", "enabled": true },
     "raw-value": { "score": -5 },
-    "default-name": { "enabled": false }
+    "non-semantic-name": { "enabled": false }
   }
 }
 ```
@@ -36,7 +36,7 @@ canicode analyze <url> --config ./my-config.json
 |-------|------|---------|-------------|
 | `excludeNodeTypes` | `string[]` | `[]` | Figma node types to skip entirely (node + children) |
 | `excludeNodeNames` | `string[]` | `[]` | Name patterns to skip (case-insensitive word match) |
-| `gridBase` | `number` | `4` | Spacing grid unit for `irregular-spacing` |
+| `gridBase` | `number` | `2` | Spacing grid unit for `irregular-spacing` |
 | `rules` | `object` | — | Per-rule overrides (see below) |
 
 ### Node Exclusions
@@ -52,7 +52,7 @@ canicode analyze <url> --config ./my-config.json
 This matches word boundaries, so `"nav"` matches `"Nav Bar"` and `"bottom-nav"` but not `"unavailable"`.
 
 **Built-in exclusions** (always active for conversion candidates):
-`icon`, `ico`, `badge`, `indicator`, `image`, `asset`, `chatbot`, `cta`, `gnb`, `navigation`, `nav`, `fab`, `modal`, `dialog`, `popup`, `overlay`, `toast`, `snackbar`, `tooltip`, `dropdown`, `menu`, `sticky`, `bg`, `background`, `divider`, `separator`, `logo`, `avatar`, `thumbnail`, `thumb`, `header`, `footer`, `sidebar`, `toolbar`, `tabbar`, `tab-bar`, `statusbar`, `status-bar`, `spinner`, `loader`, `cursor`, `dot`, `dim`, `dimmed`, `filter`
+`badge`, `close`, `dismiss`, `overlay`, `float`, `fab`, `dot`, `indicator`, `corner`, `decoration`, `tag`, `status`, `notification`, `icon`, `ico`, `image`, `asset`, `filter`, `dim`, `dimmed`, `bg`, `background`, `logo`, `avatar`, `divider`, `separator`, `nav`, `navigation`, `gnb`, `header`, `footer`, `sidebar`, `toolbar`, `modal`, `dialog`, `popup`, `toast`, `tooltip`, `dropdown`, `menu`, `sticky`, `spinner`, `loader`, `cursor`, `cta`, `chatbot`, `thumb`, `thumbnail`, `tabbar`, `tab-bar`, `statusbar`, `status-bar`
 
 **`excludeNodeTypes`** — Figma node types to skip.
 
@@ -75,7 +75,7 @@ Override score, severity, or enable/disable individual rules:
       "score": -15,
       "severity": "blocking"
     },
-    "default-name": {
+    "non-semantic-name": {
       "enabled": false
     }
   }
@@ -135,7 +135,7 @@ Override score, severity, or enable/disable individual rules:
 | Rule ID | Default Score | Default Severity |
 |---------|--------------|-----------------|
 | `missing-interaction-state` | -3 | missing-info |
-| `missing-prototype` | -3 | missing-info |
+| `missing-prototype` *(disabled)* | -3 | missing-info |
 <!-- RULE_TABLE_END -->
 
 ### Example Configs
@@ -146,7 +146,7 @@ Override score, severity, or enable/disable individual rules:
   "rules": {
     "no-auto-layout": { "score": -15 },
     "raw-value": { "score": -5, "severity": "risk" },
-    "default-name": { "score": -3, "severity": "risk" }
+    "non-semantic-name": { "score": -3, "severity": "risk" }
   }
 }
 ```
@@ -156,7 +156,6 @@ Override score, severity, or enable/disable individual rules:
 {
   "excludeNodeNames": ["prototype", "wip", "draft", "temp"],
   "rules": {
-    "default-name": { "enabled": false },
     "non-semantic-name": { "enabled": false },
     "missing-component": { "severity": "suggestion" }
   }
@@ -184,7 +183,7 @@ CanICode collects anonymous usage analytics via [PostHog](https://posthog.com) a
 
 ### What is tracked
 
-- Event names only (e.g. `analysis_completed`, `cli_command`)
+- Event names with `cic_` prefix (e.g. `cic_analysis_completed`, `cic_cli_command`)
 - Aggregate metadata: node count, issue count, grade, duration
 - Error messages (stack traces for debugging)
 
@@ -203,7 +202,7 @@ canicode config --telemetry       # re-enable telemetry
 
 Telemetry is enabled by default. When disabled, all monitoring functions become silent no-ops.
 
-### Dependencies
+### Implementation
 
-PostHog (`posthog-node`) and Sentry (`@sentry/node`) are optional peer dependencies. If they are not installed, monitoring degrades gracefully with no impact on functionality.
+Telemetry uses native `fetch` (Node 18+ / browser) — no external dependencies. API keys are injected at build time. When telemetry is disabled, all capture functions become silent no-ops.
 
