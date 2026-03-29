@@ -62,21 +62,14 @@ node -e "
   const fs = require('fs');
   let output = fs.readFileSync('$TEMPLATE', 'utf-8');
 
-  // Inline shared code
-  const sharedFiles = {
-    '/* __SHARED_STYLES_INJECT__ */': fs.readFileSync('$SHARED_DIR/styles.css', 'utf-8'),
-    '/* __SHARED_CONSTANTS_INJECT__ */': fs.readFileSync('$SHARED_DIR/constants.js', 'utf-8'),
-    '/* __SHARED_UTILS_INJECT__ */': fs.readFileSync('$SHARED_DIR/utils.js', 'utf-8'),
-    '/* __SHARED_GAUGE_INJECT__ */': fs.readFileSync('$SHARED_DIR/gauge.js', 'utf-8'),
-  };
+  // Inline shared styles
+  const stylesPlaceholder = '/* __SHARED_STYLES_INJECT__ */';
+  const stylesContent = fs.readFileSync('$SHARED_DIR/styles.css', 'utf-8');
+  const stylesIdx = output.indexOf(stylesPlaceholder);
+  if (stylesIdx === -1) { console.error('ERROR: styles placeholder not found'); process.exit(1); }
+  output = output.slice(0, stylesIdx) + stylesContent + output.slice(stylesIdx + stylesPlaceholder.length);
 
-  for (const [placeholder, content] of Object.entries(sharedFiles)) {
-    const idx = output.indexOf(placeholder);
-    if (idx === -1) { console.error('ERROR: placeholder not found: ' + placeholder); process.exit(1); }
-    output = output.slice(0, idx) + content + output.slice(idx + placeholder.length);
-  }
-
-  // Inline browser bundle
+  // Inline browser bundle (includes renderReportBody + analysis engine)
   const browserJs = fs.readFileSync('$BROWSER_JS', 'utf-8');
   const bundlePlaceholder = '/* __CANICODE_BROWSER_BUNDLE_INJECT__ */';
   const bundleIdx = output.indexOf(bundlePlaceholder);

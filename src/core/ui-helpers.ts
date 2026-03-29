@@ -50,33 +50,33 @@ export function severityScoreClass(sev: string): string {
   return map[sev] ?? "score-missing";
 }
 
-/** Severity to Tailwind dot class (for report-html / web app) */
+/** Severity to CSS modifier class (used with .rpt-dot, .rpt-issue-score) */
 export function severityDot(sev: Severity): string {
   const map: Record<Severity, string> = {
-    blocking: "bg-red-500",
-    risk: "bg-amber-500",
-    "missing-info": "bg-zinc-400",
-    suggestion: "bg-green-500",
+    blocking: "sev-blocking",
+    risk: "sev-risk",
+    "missing-info": "sev-missing",
+    suggestion: "sev-suggestion",
   };
   return map[sev];
 }
 
-/** Severity to Tailwind badge class (for report-html / web app) */
+/** Severity to CSS modifier class (used with .rpt-issue-score) */
 export function severityBadge(sev: Severity): string {
   const map: Record<Severity, string> = {
-    blocking: "bg-red-500/10 text-red-600 border-red-500/20",
-    risk: "bg-amber-500/10 text-amber-600 border-amber-500/20",
-    "missing-info": "bg-zinc-500/10 text-zinc-600 border-zinc-500/20",
-    suggestion: "bg-green-500/10 text-green-600 border-green-500/20",
+    blocking: "sev-blocking",
+    risk: "sev-risk",
+    "missing-info": "sev-missing",
+    suggestion: "sev-suggestion",
   };
   return map[sev];
 }
 
-/** Score percentage to Tailwind badge style (for report-html / web app) */
+/** Score percentage to CSS modifier class (used with .rpt-badge) */
 export function scoreBadgeStyle(pct: number): string {
-  if (pct >= 75) return "bg-green-500/10 text-green-700 border-green-500/20";
-  if (pct >= 50) return "bg-amber-500/10 text-amber-700 border-amber-500/20";
-  return "bg-red-500/10 text-red-700 border-red-500/20";
+  if (pct >= 75) return "score-green";
+  if (pct >= 50) return "score-amber";
+  return "score-red";
 }
 
 /** Render a circular gauge SVG string — works in both Node.js and browser */
@@ -89,15 +89,15 @@ export function renderGaugeSvg(
   const offset = GAUGE_C * (1 - pct / 100);
   const color = gaugeColor(pct);
   if (grade) {
-    return `<svg width="${size}" height="${size}" viewBox="0 0 120 120" class="gauge-svg block">
-            <circle cx="60" cy="60" r="${GAUGE_R}" fill="none" stroke-width="${strokeW}" stroke="#e4e4e7" class="stroke-border" />
+    return `<svg width="${size}" height="${size}" viewBox="0 0 120 120" class="gauge-svg">
+            <circle cx="60" cy="60" r="${GAUGE_R}" fill="none" stroke-width="${strokeW}" stroke="#e4e4e7" />
             <circle cx="60" cy="60" r="${GAUGE_R}" fill="none" stroke="${color}" stroke-width="${strokeW}" stroke-linecap="round" stroke-dasharray="${GAUGE_C}" stroke-dashoffset="${offset}" transform="rotate(-90 60 60)" class="gauge-fill" />
-            <text x="60" y="60" text-anchor="middle" dominant-baseline="central" fill="currentColor" font-size="48" font-weight="700" font-family="Inter,-apple-system,sans-serif" class="font-sans">${escapeHtml(grade)}</text>
+            <text x="60" y="60" text-anchor="middle" dominant-baseline="central" fill="currentColor" font-size="48" font-weight="700" font-family="Inter,-apple-system,sans-serif">${escapeHtml(grade)}</text>
           </svg>`;
   }
-  return `<svg width="${size}" height="${size}" viewBox="0 0 120 120" class="gauge-svg block">
-            <circle cx="60" cy="60" r="${GAUGE_R}" fill="none" stroke-width="${strokeW}" stroke="#e4e4e7" class="stroke-border" />
+  return `<svg width="${size}" height="${size}" viewBox="0 0 120 120" class="gauge-svg">
+            <circle cx="60" cy="60" r="${GAUGE_R}" fill="none" stroke-width="${strokeW}" stroke="#e4e4e7" />
             <circle cx="60" cy="60" r="${GAUGE_R}" fill="none" stroke="${color}" stroke-width="${strokeW}" stroke-linecap="round" stroke-dasharray="${GAUGE_C}" stroke-dashoffset="${offset}" transform="rotate(-90 60 60)" class="gauge-fill" />
-            <text x="60" y="62" text-anchor="middle" dominant-baseline="central" fill="currentColor" font-size="28" font-weight="700" font-family="Inter,-apple-system,sans-serif" class="font-sans">${pct}</text>
+            <text x="60" y="62" text-anchor="middle" dominant-baseline="central" fill="currentColor" font-size="28" font-weight="700" font-family="Inter,-apple-system,sans-serif">${pct}</text>
           </svg>`;
 }

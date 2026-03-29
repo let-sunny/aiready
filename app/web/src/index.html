@@ -1,161 +1,227 @@
 <!DOCTYPE html>
-<html lang="en" class="antialiased">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CanICode - Figma Design Analysis</title>
   <link rel="icon" type="image/png" href="favicon.png">
-  <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'sans-serif'] },
-          colors: {
-            border: 'hsl(240 5.9% 90%)',
-            ring: 'hsl(240 5.9% 10%)',
-            background: 'hsl(0 0% 100%)',
-            foreground: 'hsl(240 10% 3.9%)',
-            muted: { DEFAULT: 'hsl(240 4.8% 95.9%)', foreground: 'hsl(240 3.8% 46.1%)' },
-            card: { DEFAULT: 'hsl(0 0% 100%)', foreground: 'hsl(240 10% 3.9%)' },
-          },
-          borderRadius: { lg: '0.5rem', md: 'calc(0.5rem - 2px)', sm: 'calc(0.5rem - 4px)' },
-        }
-      }
-    }
-  </script>
+  <link rel="stylesheet" href="styles.css">
   <style>
-    details summary::-webkit-details-marker { display: none; }
-    details summary::marker { content: ""; }
-    details summary { list-style: none; }
-    .gauge-fill { transition: stroke-dashoffset 0.8s cubic-bezier(0.4,0,0.2,1); }
-    .fade-in { animation: fadeIn 0.3s ease-in; }
+    /* Web-specific shell styles */
+    .web-topbar {
+      position: sticky; top: 0; z-index: 50;
+      background: #09090b; color: white;
+      border-bottom: 1px solid #27272a;
+    }
+    .web-topbar-inner {
+      max-width: 960px; margin: 0 auto;
+      padding: 12px 24px;
+      display: flex; align-items: center; gap: 16px;
+    }
+    .web-topbar-logo { font-weight: 600; font-size: 14px; letter-spacing: -0.01em; }
+    .web-topbar-sub { color: #a1a1aa; font-size: 14px; }
+    .web-topbar a { color: #a1a1aa; text-decoration: none; transition: color 0.15s; }
+    .web-topbar a:hover { color: white; }
+    .web-auth { display: flex; align-items: center; gap: 8px; }
+    .web-auth-dot { width: 6px; height: 6px; border-radius: 50%; }
+    .web-auth-dot.ok { background: #22c55e; }
+    .web-auth-dot.no { background: #ef4444; }
+    .web-auth-label { font-size: 12px; color: #a1a1aa; }
+    .web-auth-label.ok { color: #4ade80; }
+    .web-auth-btn {
+      padding: 4px 10px; font-size: 12px; font-weight: 500;
+      border: 1px solid #3f3f46; border-radius: 6px;
+      background: transparent; color: white; cursor: pointer;
+      transition: background 0.15s;
+    }
+    .web-auth-btn:hover { background: #27272a; }
+    .web-modal-overlay {
+      display: none; position: fixed; inset: 0; z-index: 100;
+      align-items: center; justify-content: center;
+      background: rgba(0,0,0,0.5);
+    }
+    .web-modal-overlay.visible { display: flex; }
+    .web-modal {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+      width: 100%; max-width: 420px; margin: 0 16px; padding: 24px;
+    }
+    .web-modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .web-modal-header h2 { font-size: 18px; font-weight: 600; }
+    .web-modal-close {
+      color: var(--fg-muted); font-size: 20px; line-height: 1;
+      background: none; border: none; cursor: pointer;
+    }
+    .web-modal-close:hover { color: var(--fg); }
+    .web-input-label { font-size: 14px; font-weight: 500; display: block; margin-bottom: 6px; }
+    .web-input {
+      width: 100%; padding: 8px 12px; font-size: 14px;
+      border: 1px solid var(--border); border-radius: 6px;
+      background: var(--card); color: var(--fg);
+      outline: none; transition: border-color 0.15s;
+    }
+    .web-input:focus { border-color: #a1a1aa; box-shadow: 0 0 0 2px rgba(113,113,122,0.1); }
+    .web-input::placeholder { color: rgba(113,113,122,0.5); }
+    .web-hint { font-size: 12px; color: var(--fg-muted); margin-top: 6px; display: flex; align-items: center; gap: 4px; }
+    .web-hint a { color: var(--fg-muted); }
+    .web-hint a:hover { color: var(--fg); }
+    .web-modal-actions { display: flex; gap: 8px; margin-top: 20px; }
+    .web-modal-actions .btn-primary {
+      padding: 8px 16px; font-size: 14px; font-weight: 600;
+      background: var(--fg); color: white; border: none; border-radius: 6px; cursor: pointer;
+    }
+    .web-modal-actions .btn-primary:hover { background: #27272a; }
+    .web-modal-actions .btn-secondary {
+      padding: 8px 16px; font-size: 14px; font-weight: 500;
+      background: transparent; color: var(--fg); border: 1px solid var(--border);
+      border-radius: 6px; cursor: pointer;
+    }
+    .web-modal-actions .btn-secondary:hover { background: rgba(0,0,0,0.04); }
+    .web-main { max-width: 960px; margin: 0 auto; padding: 0 24px 64px; }
+    .web-hero { padding: 48px 0 32px; text-align: center; }
+    .web-hero h1 { font-size: 30px; font-weight: 700; letter-spacing: -0.02em; }
+    .web-hero p { color: var(--fg-muted); margin-top: 8px; max-width: 500px; margin-left: auto; margin-right: auto; font-size: 15px; }
+    .web-hero .web-hero-link { margin-top: 12px; font-size: 14px; color: var(--fg-muted); text-decoration: underline; text-underline-offset: 4px; }
+    .web-hero .web-hero-link:hover { color: var(--fg); }
+    .web-input-section { margin-bottom: 24px; }
+    .web-url-wrap { position: relative; }
+    .web-url-clear {
+      position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+      color: rgba(113,113,122,0.5); font-size: 14px; line-height: 1;
+      background: none; border: none; cursor: pointer;
+    }
+    .web-url-clear:hover { color: var(--fg); }
+    .web-analyze-row { margin-top: 20px; display: flex; align-items: center; gap: 12px; }
+    .web-analyze-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 20px; font-size: 14px; font-weight: 600;
+      background: var(--fg); color: white; border: none; border-radius: 6px; cursor: pointer;
+      transition: background 0.15s;
+    }
+    .web-analyze-btn:hover { background: #27272a; }
+    .web-analyze-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .web-loading { display: none; align-items: center; gap: 8px; font-size: 14px; color: var(--fg-muted); }
+    .web-loading.visible { display: flex; }
+    .web-error {
+      display: none; margin-top: 16px; padding: 12px;
+      background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.15); border-radius: 6px;
+    }
+    .web-error.visible { display: block; }
+    .web-error-title { font-size: 14px; font-weight: 500; color: #dc2626; }
+    .web-error-detail { font-size: 12px; color: rgba(220,38,38,0.8); margin-top: 2px; }
+    .web-results { display: none; }
+    .web-results.visible { display: block; }
+    .web-fade-in { animation: fadeIn 0.3s ease-in; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-    .spinner { border: 3px solid hsl(240 5.9% 90%); border-top: 3px solid hsl(240 5.9% 10%); border-radius: 50%; width: 24px; height: 24px; animation: spin 0.8s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
-<body class="bg-muted font-sans text-foreground min-h-screen">
+<body>
 
   <!-- Top Bar -->
-  <header class="sticky top-0 z-50 bg-zinc-950 text-white border-b border-zinc-800">
-    <div class="max-w-[960px] mx-auto px-6 py-3 flex items-center gap-4">
-      <span class="font-semibold text-sm tracking-tight">CanICode</span>
-      <span class="text-zinc-400 text-sm">Figma Design Analysis</span>
+  <header class="web-topbar">
+    <div class="web-topbar-inner">
+      <span class="web-topbar-logo">CanICode</span>
+      <span class="web-topbar-sub">Figma Design Analysis</span>
 
       <!-- GitHub link -->
-      <a href="https://github.com/let-sunny/canicode" target="_blank" rel="noopener" class="ml-auto text-zinc-400 hover:text-white transition-colors" title="GitHub">
+      <a href="https://github.com/let-sunny/canicode" target="_blank" rel="noopener" title="GitHub" style="margin-left:auto">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
       </a>
 
-      <!-- Token Authorize (Swagger-style) -->
-      <div class="flex items-center gap-2">
-        <div id="auth-status" class="flex items-center gap-1.5 text-xs">
-          <span id="auth-dot" class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
-          <span id="auth-label" class="text-zinc-400">Not authorized</span>
+      <!-- Token Authorize -->
+      <div class="web-auth">
+        <div style="display:flex;align-items:center;gap:6px;font-size:12px">
+          <span id="auth-dot" class="web-auth-dot no"></span>
+          <span id="auth-label" class="web-auth-label">Not authorized</span>
         </div>
-        <button onclick="openAuthModal()" class="px-2.5 py-1 text-xs font-medium border border-zinc-700 rounded-md hover:bg-zinc-800 transition-colors">
-          Authorize
-        </button>
+        <button onclick="openAuthModal()" class="web-auth-btn">Authorize</button>
       </div>
     </div>
   </header>
 
   <!-- Auth Modal -->
-  <div id="auth-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-black/50">
-    <div class="bg-card border border-border rounded-lg shadow-xl w-full max-w-md mx-4 p-6">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-semibold">Authorize</h2>
-        <button onclick="closeAuthModal()" class="text-muted-foreground hover:text-foreground text-xl leading-none">&times;</button>
+  <div id="auth-modal" class="web-modal-overlay">
+    <div class="web-modal">
+      <div class="web-modal-header">
+        <h2>Authorize</h2>
+        <button onclick="closeAuthModal()" class="web-modal-close">&times;</button>
       </div>
       <div>
-        <label for="auth-token-input" class="text-sm font-medium block mb-1.5">Figma Personal Access Token</label>
-        <input id="auth-token-input" type="password" placeholder="figd_..."
-          class="w-full px-3 py-2 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring/20 focus:border-foreground/30 placeholder:text-muted-foreground/50">
-        <p class="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">
-          <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+        <label for="auth-token-input" class="web-input-label">Figma Personal Access Token</label>
+        <input id="auth-token-input" type="password" placeholder="figd_..." class="web-input">
+        <p class="web-hint">
+          <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
           Stored in your browser session only. Never sent to any server.
         </p>
-        <p class="text-xs text-muted-foreground mt-2">
+        <p class="web-hint" style="margin-top:8px">
           Figma &rarr; Settings &rarr; Security &rarr; Personal access tokens &rarr; Generate new token
         </p>
       </div>
-      <div class="flex gap-2 mt-5">
-        <button onclick="saveAuth()" class="px-4 py-2 text-sm font-semibold bg-zinc-950 text-white rounded-md hover:bg-zinc-800 transition-colors">Authorize</button>
-        <button onclick="clearAuth()" class="px-4 py-2 text-sm font-medium border border-border rounded-md hover:bg-muted transition-colors">Logout</button>
+      <div class="web-modal-actions">
+        <button onclick="saveAuth()" class="btn-primary">Authorize</button>
+        <button onclick="clearAuth()" class="btn-secondary">Logout</button>
       </div>
     </div>
   </div>
 
-  <main class="max-w-[960px] mx-auto px-6 pb-16">
+  <main class="web-main">
 
     <!-- Hero -->
-    <section class="pt-12 pb-8 text-center">
-      <h1 class="text-3xl font-bold tracking-tight">Analyze your Figma designs</h1>
-      <p class="text-muted-foreground mt-2 max-w-lg mx-auto">
-        Check development-friendliness and AI-readiness scores. Runs entirely in your browser — no data leaves your machine.
-      </p>
-      <p class="mt-3">
-        <a href="https://github.com/let-sunny/canicode/discussions/categories/share-your-figma" target="_blank" rel="noopener"
-          class="text-sm text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4">
+    <section class="web-hero">
+      <h1>Analyze your Figma designs</h1>
+      <p>Check development-friendliness and AI-readiness scores. Runs entirely in your browser — no data leaves your machine.</p>
+      <p>
+        <a href="https://github.com/let-sunny/canicode/discussions/categories/share-your-figma" target="_blank" rel="noopener" class="web-hero-link">
           Share your Figma design to help improve scoring accuracy
         </a>
       </p>
     </section>
 
     <!-- Input Section -->
-    <section id="input-section" class="bg-card border border-border rounded-lg shadow-sm p-6 mb-6 fade-in">
-      <div class="space-y-3">
-        <div>
-          <label for="figma-url" class="text-sm font-medium block mb-1.5">Figma URL</label>
-          <div class="relative">
-            <input id="figma-url" type="url"
-              placeholder="https://www.figma.com/design/ABC123/MyDesign?node-id=1-234"
-              class="w-full px-3 py-2 pr-8 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring/20 focus:border-foreground/30 placeholder:text-muted-foreground/50">
-            <button onclick="document.getElementById('figma-url').value=''; document.getElementById('figma-url').focus();"
-              class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-foreground text-sm leading-none" title="Clear">&times;</button>
-          </div>
-          <p class="text-xs text-muted-foreground mt-1.5">Figma &rarr; select a section/page &rarr; right-click &rarr; <strong>Copy link</strong> (URL includes <code class="bg-muted px-1 rounded text-[11px]">node-id</code>)</p>
+    <section id="input-section" class="card web-input-section web-fade-in" style="padding:24px">
+      <div>
+        <label for="figma-url" class="web-input-label">Figma URL</label>
+        <div class="web-url-wrap">
+          <input id="figma-url" type="url"
+            placeholder="https://www.figma.com/design/ABC123/MyDesign?node-id=1-234"
+            class="web-input" style="padding-right:32px">
+          <button onclick="document.getElementById('figma-url').value=''; document.getElementById('figma-url').focus();"
+            class="web-url-clear" title="Clear">&times;</button>
         </div>
+        <p class="web-hint" style="margin-top:6px">Figma &rarr; select a section/page &rarr; right-click &rarr; <strong>Copy link</strong> (URL includes <code style="background:var(--bg);padding:0 4px;border-radius:3px;font-size:11px">node-id</code>)</p>
       </div>
 
       <!-- Analyze Button -->
-      <div class="mt-5 flex items-center gap-3">
-        <button id="analyze-btn" onclick="runAnalysis()"
-          class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold bg-zinc-950 text-white rounded-md hover:bg-zinc-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-          Analyze
-        </button>
-        <div id="loading" class="hidden flex items-center gap-2 text-sm text-muted-foreground">
+      <div class="web-analyze-row">
+        <button id="analyze-btn" onclick="runAnalysis()" class="web-analyze-btn">Analyze</button>
+        <div id="loading" class="web-loading">
           <div class="spinner"></div>
           <span id="loading-text">Fetching Figma data...</span>
         </div>
       </div>
 
       <!-- Error Display -->
-      <div id="error-box" class="hidden mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-md">
-        <p class="text-sm text-red-600 font-medium" id="error-title">Error</p>
-        <p class="text-xs text-red-600/80 mt-0.5" id="error-detail"></p>
+      <div id="error-box" class="web-error">
+        <p class="web-error-title" id="error-title">Error</p>
+        <p class="web-error-detail" id="error-detail"></p>
       </div>
     </section>
 
     <!-- Results Section — rendered by CanICode.renderReportBody() -->
-    <div id="results" class="hidden fade-in"></div>
+    <div id="results" class="web-results web-fade-in"></div>
 
   </main>
 
   <script src="browser.global.js"></script>
 
   <!-- Monitoring: PostHog analytics + Sentry error tracking -->
-  <!-- These are public project keys, safe to include in client-side code -->
   <script>
     (function() {
-      // PostHog — set your project API key here to enable analytics
-      var POSTHOG_KEY = ''; // e.g. 'phc_XXXX'
-      // Sentry — set your project DSN here to enable error tracking
-      var SENTRY_DSN = ''; // e.g. 'https://xxx@o123.ingest.sentry.io/456'
+      var POSTHOG_KEY = '';
+      var SENTRY_DSN = '';
 
       if (POSTHOG_KEY) {
         !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.async=!0,p.src=s.api_host+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="capture identify alias people.set people.set_once set_config register register_once unregister opt_out_capturing has_opted_out_capturing opt_in_capturing reset isFeatureEnabled onFeatureFlags getFeatureFlag getFeatureFlagPayload reloadFeatureFlags group updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures getActiveMatchingSurveys getSurveys onSessionId".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
@@ -172,10 +238,8 @@
         document.head.appendChild(s);
       }
 
-      // Common properties injected into every event for filtering
       var _common = { _sdk: 'canicode', _sdk_version: CanICode.VERSION, _env: 'web' };
 
-      // Helper used by app code below
       window._trackEvent = function(event, props) {
         try { window.posthog && window.posthog.capture(event, Object.assign({}, _common, props)); } catch(e) {}
       };
@@ -186,7 +250,6 @@
     })();
   </script>
 
-  <!-- Shared UI code (inlined at build time) -->
   <script>
     // ---- Auth ----
     function getToken() { return sessionStorage.getItem('canicode-figma-token'); }
@@ -196,24 +259,24 @@
       var dot = document.getElementById('auth-dot');
       var label = document.getElementById('auth-label');
       if (token) {
-        dot.className = 'w-1.5 h-1.5 rounded-full bg-green-500';
+        dot.className = 'web-auth-dot ok';
         label.textContent = 'Authorized';
-        label.className = 'text-green-400';
+        label.className = 'web-auth-label ok';
       } else {
-        dot.className = 'w-1.5 h-1.5 rounded-full bg-red-500';
+        dot.className = 'web-auth-dot no';
         label.textContent = 'Not authorized';
-        label.className = 'text-zinc-400';
+        label.className = 'web-auth-label';
       }
     }
 
     function openAuthModal() {
-      document.getElementById('auth-modal').classList.remove('hidden');
+      document.getElementById('auth-modal').classList.add('visible');
       var input = document.getElementById('auth-token-input');
       input.value = getToken() || '';
       input.focus();
     }
 
-    function closeAuthModal() { document.getElementById('auth-modal').classList.add('hidden'); }
+    function closeAuthModal() { document.getElementById('auth-modal').classList.remove('visible'); }
 
     function saveAuth() {
       var token = document.getElementById('auth-token-input').value.trim();
@@ -231,13 +294,12 @@
       closeAuthModal();
     }
 
-    // Init auth UI
     updateAuthUI();
 
     // ---- Web-specific helpers ----
-    function showError(title, detail) { document.getElementById('error-title').textContent = title; document.getElementById('error-detail').textContent = detail || ''; document.getElementById('error-box').classList.remove('hidden'); }
-    function hideError() { document.getElementById('error-box').classList.add('hidden'); }
-    function setLoading(on, text) { document.getElementById('analyze-btn').disabled = on; document.getElementById('loading').classList.toggle('hidden', !on); if (text) document.getElementById('loading-text').textContent = text; }
+    function showError(title, detail) { document.getElementById('error-title').textContent = title; document.getElementById('error-detail').textContent = detail || ''; document.getElementById('error-box').classList.add('visible'); }
+    function hideError() { document.getElementById('error-box').classList.remove('visible'); }
+    function setLoading(on, text) { document.getElementById('analyze-btn').disabled = on; document.getElementById('loading').classList.toggle('visible', on); if (text) document.getElementById('loading-text').textContent = text; }
 
     // ---- Main analysis ----
     async function runAnalysis() {
@@ -266,7 +328,7 @@
           setLoading(false);
           if (res.status === 403) { showError('Access denied', 'Your token does not have access to this file.'); return; }
           if (res.status === 404) { showError('File not found', 'Check the Figma URL.'); return; }
-          if (res.status === 429) { showError('Rate limited', 'Figma API rate limit reached. Rate limits depend on your plan and where the file lives.'); document.getElementById('error-detail').insertAdjacentHTML('beforeend', ' <a href="https://developers.figma.com/docs/rest-api/rate-limits/" target="_blank" class="underline text-blue-400 hover:text-blue-300">Check your plan limits</a>'); return; }
+          if (res.status === 429) { showError('Rate limited', 'Figma API rate limit reached. Rate limits depend on your plan and where the file lives.'); document.getElementById('error-detail').insertAdjacentHTML('beforeend', ' <a href="https://developers.figma.com/docs/rest-api/rate-limits/" target="_blank" style="text-decoration:underline;color:#60a5fa">Check your plan limits</a>'); return; }
           showError('Figma API error (' + res.status + ')', await res.text().catch(function() { return ''; }));
           return;
         }
@@ -289,7 +351,7 @@
       renderResults(analysisFile, result, scores, fileKey);
     }
 
-    // ---- Render Results (delegates to shared CanICode.renderReportBody) ----
+    // ---- Render Results ----
     function renderResults(file, result, scores, fileKey) {
       var el = document.getElementById('results');
       el.innerHTML = CanICode.renderReportBody({
@@ -301,7 +363,7 @@
         maxDepth: result.maxDepth,
         figmaToken: getToken() || undefined,
       });
-      el.classList.remove('hidden');
+      el.classList.add('visible');
       el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
@@ -326,14 +388,12 @@
           throw new Error(errMsg + (errBody ? ': ' + errBody.slice(0, 100) : ''));
         }
         btn.textContent = 'Sent \u2713';
-        btn.classList.remove('hover:bg-muted');
-        btn.classList.add('text-green-600', 'border-green-500/30');
+        btn.classList.add('rpt-btn-ok');
         window._trackEvent && window._trackEvent('cic_comment_posted', {});
       } catch (e) {
         btn.textContent = 'Failed';
         btn.title = e.message || String(e);
-        btn.classList.remove('hover:bg-muted');
-        btn.classList.add('text-red-600', 'border-red-500/30');
+        btn.classList.add('rpt-btn-fail');
         btn.disabled = false;
         window._trackEvent && window._trackEvent('cic_comment_failed', { error: e.message || String(e) });
       }

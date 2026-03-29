@@ -19,14 +19,16 @@ mkdir -p "$WEB_DIST"
 echo "[1/2] Building browser.global.js..."
 npx tsup src/browser.ts --config tsup.browser.config.ts
 
-# Step 2: Copy index.html (no more shared code injection needed — rendering via CanICode.renderReportBody)
-echo "[2/2] Copying index.html..."
+# Step 2: Copy static assets
+echo "[2/3] Copying index.html..."
 cp "$WEB_SRC/index.html" "$WEB_DIST/index.html"
 
-# Copy favicon
+echo "[3/3] Copying shared styles + favicon..."
+cp "$ROOT/app/shared/styles.css" "$WEB_DIST/styles.css"
 cp "$ROOT/docs/images/favicon.png" "$WEB_DIST/favicon.png"
 
 echo ""
 echo "=== Web app built successfully ==="
 echo "  $WEB_DIST/browser.global.js"
+echo "  $WEB_DIST/styles.css"
 echo "  $WEB_DIST/index.html"

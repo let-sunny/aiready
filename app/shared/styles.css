@@ -1,8 +1,13 @@
-/* Shared base styles for CanICode UIs (web app + Figma plugin)
-   Uses CSS custom properties — no external CSS framework required. */
+/* Shared styles for CanICode UIs (CLI report, Web app, Figma plugin)
+   Self-contained — no external CSS framework required.
+   CSS classes prefixed with rpt-* are for report body (renderReportBody).
+   Shell-specific classes (btn, loading, error, etc.) are for plugin/web chrome. */
 
-/* ---- Reset & Base ---- */
+/* ================================================================
+   1. Reset & Variables
+   ================================================================ */
 * { margin: 0; padding: 0; box-sizing: border-box; }
+
 :root {
   --bg: #fafafa;
   --card: #ffffff;
@@ -19,311 +24,520 @@
   --blue-bg: rgba(59,130,246,0.08);
   --radius: 8px;
   --radius-sm: 6px;
+  --font-sans: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'SF Mono', Menlo, Monaco, monospace;
 }
 
 body {
-  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-sans);
   font-size: 13px;
   line-height: 1.5;
   color: var(--fg);
   background: var(--bg);
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ================================================================
+   2. Common Components
+   ================================================================ */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
 
 /* ---- Gauge ---- */
 .gauge-svg { display: block; margin: 0 auto; }
 .gauge-fill { transition: stroke-dashoffset 0.6s ease; }
 
-/* ---- Grade ---- */
-.grade-section {
-  text-align: center;
-  padding: 20px 0 16px;
-}
-.grade-score {
-  font-size: 18px;
-  font-weight: 700;
-  margin-top: 8px;
-}
-.grade-score span {
-  font-size: 13px;
-  font-weight: 400;
-  color: var(--fg-muted);
-}
-.grade-label {
-  font-size: 11px;
-  color: var(--fg-muted);
-  margin-top: 2px;
+/* ---- Severity dot colors ---- */
+.sev-blocking { background: var(--red); }
+.sev-risk { background: var(--amber); }
+.sev-missing { background: #a1a1aa; }
+.sev-suggestion { background: var(--green); }
+
+/* ---- Print ---- */
+@media print {
+  .no-print { display: none !important; }
 }
 
-/* ---- Category list ---- */
-.cat-grid {
+/* ================================================================
+   3. Report Body (rpt-*) — rendered by renderReportBody()
+   ================================================================ */
+
+/* ---- Details/summary reset ---- */
+.rpt-cat > summary::-webkit-details-marker,
+.rpt-issue > summary::-webkit-details-marker { display: none; }
+.rpt-cat > summary::marker,
+.rpt-issue > summary::marker { content: ""; }
+.rpt-cat > summary,
+.rpt-issue > summary { list-style: none; }
+
+/* ---- Overall Score ---- */
+.rpt-overall {
   display: flex;
   flex-direction: column;
-  gap: 0;
-  background: var(--card);
+  align-items: center;
+  padding: 48px 0 24px;
+}
+.rpt-score {
+  margin-top: 12px;
+  text-align: center;
+}
+.rpt-score-value {
+  font-size: 18px;
+  font-weight: 600;
+}
+.rpt-score-max {
+  color: var(--fg-muted);
+  font-size: 14px;
+  margin-left: 4px;
+}
+.rpt-score-label {
+  color: var(--fg-muted);
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+/* ---- Category Gauges ---- */
+.rpt-gauges {
+  padding: 24px;
+  margin-bottom: 24px;
+}
+.rpt-gauges-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 16px;
+}
+.rpt-gauge-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  cursor: pointer;
+  text-decoration: none;
+  color: var(--fg);
+  transition: opacity 0.15s;
+}
+.rpt-gauge-item:hover { opacity: 0.8; }
+.rpt-gauge-label {
+  font-size: 12px;
+  font-weight: 500;
+  margin-top: 10px;
+  text-align: center;
+  line-height: 1.3;
+}
+.rpt-gauge-count {
+  font-size: 11px;
+  color: var(--fg-muted);
+}
+
+/* ---- Tooltip ---- */
+.rpt-tooltip {
+  display: none;
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 8px;
+  background: #18181b;
+  color: white;
+  font-size: 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  max-width: 220px;
+  width: max-content;
+  z-index: 10;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  pointer-events: none;
+}
+.rpt-tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 4px solid transparent;
+  border-top-color: #18181b;
+}
+.rpt-gauge-item:hover > .rpt-tooltip,
+.rpt-summary-item:hover > .rpt-tooltip { display: block; }
+
+/* ---- Issue Summary ---- */
+.rpt-summary {
+  padding: 16px;
+  margin-bottom: 24px;
+}
+.rpt-summary-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+}
+.rpt-summary-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  cursor: help;
+}
+.rpt-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.rpt-dot-sm {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.rpt-summary-count {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.rpt-summary-label {
+  font-size: 14px;
+  color: var(--fg-muted);
+}
+.rpt-summary-total {
+  border-left: 1px solid var(--border);
+  padding-left: 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.rpt-summary-total .rpt-summary-count {
+  font-size: 20px;
+}
+
+/* ---- Opportunities ---- */
+.rpt-opps {
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+.rpt-opps-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+}
+.rpt-opps-title {
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.rpt-opps-desc {
+  font-size: 12px;
+  color: var(--fg-muted);
+  margin-top: 4px;
+}
+.rpt-opps-list > * + * {
+  border-top: 1px solid var(--border);
+}
+.rpt-opps-item {
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: background 0.15s;
+}
+.rpt-opps-item:hover { background: rgba(0,0,0,0.02); }
+.rpt-opps-info {
+  flex: 1;
+  min-width: 0;
+}
+.rpt-opps-name {
+  font-size: 14px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rpt-opps-msg {
+  font-size: 12px;
+  color: var(--fg-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 2px;
+}
+.rpt-opps-bar-wrap {
+  width: 128px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.rpt-opps-bar {
+  flex: 1;
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.rpt-opps-bar-fill {
+  height: 100%;
+  background: var(--red);
+  border-radius: 3px;
+}
+.rpt-opps-score {
+  font-size: 12px;
+  font-weight: 500;
+  color: #dc2626;
+  width: 48px;
+  text-align: right;
+}
+.rpt-opps-link {
+  font-size: 12px;
+  color: var(--fg-muted);
+  text-decoration: none;
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+.rpt-opps-link:hover { color: var(--fg); }
+
+/* ---- Categories ---- */
+.rpt-cats > * + * {
+  margin-top: 12px;
+}
+.rpt-cat {
+  overflow: hidden;
+}
+.rpt-cat-header {
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+  user-select: none;
+}
+.rpt-cat-header:hover { background: rgba(0,0,0,0.02); }
+
+/* Score badge */
+.rpt-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid;
+  flex-shrink: 0;
+}
+.rpt-badge.score-green { background: var(--green-bg); color: #15803d; border-color: rgba(34,197,94,0.2); }
+.rpt-badge.score-amber { background: var(--amber-bg); color: #b45309; border-color: rgba(245,158,11,0.2); }
+.rpt-badge.score-red   { background: var(--red-bg);   color: #b91c1c; border-color: rgba(239,68,68,0.2); }
+
+.rpt-cat-info {
+  flex: 1;
+  min-width: 0;
+}
+.rpt-cat-name {
+  font-size: 14px;
+  font-weight: 600;
+}
+.rpt-cat-desc {
+  font-size: 12px;
+  color: var(--fg-muted);
+}
+.rpt-cat-count {
+  font-size: 12px;
+  color: var(--fg-muted);
+  white-space: nowrap;
+}
+.rpt-cat-chevron {
+  width: 16px;
+  height: 16px;
+  color: var(--fg-muted);
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+.rpt-cat[open] > .rpt-cat-header .rpt-cat-chevron {
+  transform: rotate(180deg);
+}
+.rpt-cat-body {
+  border-top: 1px solid var(--border);
+}
+.rpt-cat-empty {
+  padding: 16px 20px;
+  font-size: 14px;
+  color: var(--green);
+  font-weight: 500;
+}
+
+/* ---- Severity Group ---- */
+.rpt-sev-group {
+  padding: 12px 20px;
+}
+.rpt-sev-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.rpt-sev-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.rpt-sev-count {
+  font-size: 12px;
+  color: var(--fg-muted);
+  margin-left: auto;
+}
+.rpt-sev-issues > * + * {
+  margin-top: 4px;
+}
+
+/* ---- Issue Row ---- */
+.rpt-issue {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  margin-bottom: 16px;
+  overflow: hidden;
 }
-.cat-row {
+.rpt-issue-header {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 8px 12px;
+  font-size: 14px;
+  cursor: pointer;
   transition: background 0.15s;
 }
-.cat-row:not(:last-child) { border-bottom: 1px solid var(--border); }
-.cat-row:hover { background: rgba(0,0,0,0.03); }
-.cat-score {
-  font-size: 16px;
-  font-weight: 700;
-  min-width: 32px;
-  text-align: right;
-}
-.cat-score.green { color: var(--green); }
-.cat-score.amber { color: var(--amber); }
-.cat-score.red { color: var(--red); }
-.cat-label {
-  font-size: 12px;
-  color: var(--fg);
-  flex: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.cat-bar {
-  flex: 1;
-  height: 4px;
-  background: var(--border);
-  border-radius: 2px;
-  overflow: hidden;
-}
-.cat-bar-fill {
-  height: 100%;
-  border-radius: 2px;
-  transition: width 0.3s;
-}
-.cat-issues {
-  font-size: 10px;
-  color: var(--fg-muted);
-  white-space: nowrap;
-}
-
-/* ---- Tooltips ---- */
-.cic-tooltip {
-  position: fixed;
-  padding: 5px 10px;
-  background: #18181b;
-  color: #fafafa;
-  font-size: 11px;
-  font-weight: 400;
-  line-height: 1.4;
-  border-radius: 6px;
-  white-space: normal;
-  max-width: 220px;
-  width: max-content;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.15s;
-  z-index: 1000;
-}
-.cic-tooltip.visible { opacity: 1; }
-.cic-tooltip-arrow {
-  position: fixed;
-  width: 8px;
-  height: 8px;
-  background: #18181b;
-  transform: rotate(45deg);
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.15s;
-  z-index: 999;
-}
-.cic-tooltip-arrow.visible { opacity: 1; }
-
-/* ---- Summary bar ---- */
-.summary-bar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 10px 14px;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
-}
-.summary-item {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 12px;
-}
-.dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.dot-blocking { background: var(--red); }
-.dot-risk { background: var(--amber); }
-.dot-missing { background: #a1a1aa; }
-.dot-suggestion { background: var(--green); }
-.summary-count { font-weight: 700; }
-.summary-total {
-  margin-left: auto;
-  font-weight: 700;
-  font-size: 14px;
-}
-
-/* ---- Issue list ---- */
-.issue-section {
-  margin-bottom: 12px;
-}
-.issue-section-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 0;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--fg-muted);
-  cursor: pointer;
-  user-select: none;
-}
-.issue-section-header .count {
-  margin-left: auto;
+.rpt-issue-header:hover { background: rgba(0,0,0,0.02); }
+.rpt-issue-name {
   font-weight: 500;
-}
-.chevron {
-  width: 12px;
-  height: 12px;
-  transition: transform 0.15s;
-  flex-shrink: 0;
-}
-.issue-section.collapsed .chevron { transform: rotate(-90deg); }
-.issue-section.collapsed .issue-list { display: none; }
-
-.issue-row {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  margin-bottom: 4px;
-  overflow: hidden;
-}
-.issue-summary {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 10px;
-  cursor: pointer;
-  font-size: 12px;
-  user-select: none;
-  transition: background 0.1s;
-}
-.issue-summary:hover { background: #f9f9fa; }
-.issue-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.issue-rule {
-  font-weight: 600;
   white-space: nowrap;
   flex-shrink: 0;
 }
-.issue-msg {
+.rpt-issue-msg {
   color: var(--fg-muted);
-  font-size: 11px;
+  font-size: 12px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   flex: 1;
   min-width: 0;
 }
-.issue-score {
+.rpt-issue-score {
   font-size: 10px;
   font-weight: 600;
-  padding: 1px 5px;
+  padding: 2px 6px;
   border-radius: 4px;
+  border: 1px solid;
   flex-shrink: 0;
 }
-.score-blocking { background: var(--red-bg); color: #dc2626; }
-.score-risk { background: var(--amber-bg); color: #d97706; }
-.score-missing { background: #f4f4f5; color: #71717a; }
-.score-suggestion { background: var(--green-bg); color: #16a34a; }
+.rpt-issue-score.sev-blocking { background: var(--red-bg); color: #dc2626; border-color: rgba(239,68,68,0.2); }
+.rpt-issue-score.sev-risk     { background: var(--amber-bg); color: #d97706; border-color: rgba(245,158,11,0.2); }
+.rpt-issue-score.sev-missing  { background: #f4f4f5; color: #71717a; border-color: rgba(113,113,122,0.2); }
+.rpt-issue-score.sev-suggestion { background: var(--green-bg); color: #16a34a; border-color: rgba(34,197,94,0.2); }
 
-.issue-detail {
-  display: none;
-  padding: 8px 10px;
-  border-top: 1px solid var(--border);
+.rpt-issue-body {
+  padding: 12px;
   background: #fafafa;
-  font-size: 11px;
+  border-top: 1px solid var(--border);
+  font-size: 14px;
 }
-.issue-row.open .issue-detail { display: block; }
-.issue-path {
-  font-family: 'SF Mono', Menlo, Monaco, monospace;
-  font-size: 10px;
+.rpt-issue-body > * + * {
+  margin-top: 8px;
+}
+.rpt-issue-path {
+  font-family: var(--font-mono);
+  font-size: 12px;
   color: var(--fg-muted);
   word-break: break-all;
-  margin-bottom: 6px;
 }
-.issue-info p {
-  margin-bottom: 4px;
+.rpt-issue-info {
   color: var(--fg-muted);
-  line-height: 1.5;
+  line-height: 1.6;
 }
-.issue-info strong {
+.rpt-issue-info > * + * {
+  margin-top: 4px;
+}
+.rpt-issue-info strong {
   color: var(--fg);
-  font-weight: 600;
+  font-weight: 500;
 }
-.btn-focus {
+.rpt-issue-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+.rpt-btn {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  margin-top: 8px;
   padding: 4px 10px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--fg);
   background: transparent;
-  border: 1px solid var(--border, #e5e7eb);
+  border: 1px solid var(--border);
   border-radius: 6px;
   cursor: pointer;
+  text-decoration: none;
   transition: background 0.15s;
 }
-.btn-focus:hover {
-  background: var(--muted, #f3f4f6);
+.rpt-btn:hover { background: rgba(0,0,0,0.04); }
+.rpt-btn-ok { color: var(--green) !important; border-color: rgba(34,197,94,0.3) !important; }
+.rpt-btn-fail { color: var(--red) !important; border-color: rgba(239,68,68,0.3) !important; }
+
+/* ---- Footer ---- */
+.rpt-footer {
+  margin-top: 48px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+.rpt-footer-main {
+  font-size: 14px;
+  color: var(--fg-muted);
+}
+.rpt-footer-main strong {
+  color: var(--fg);
+  font-weight: 600;
+}
+.rpt-footer-meta {
+  font-size: 12px;
+  color: rgba(113,113,122,0.6);
+  margin-top: 4px;
 }
 
-/* ---- Category filter tabs ---- */
-.filter-tabs {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 12px;
-  flex-wrap: wrap;
+/* ================================================================
+   4. Responsive — narrow viewport (Figma plugin ~420px)
+   ================================================================ */
+@media (max-width: 600px) {
+  .rpt-gauges-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .rpt-overall { padding: 24px 0 16px; }
+  .rpt-gauges { padding: 16px; }
+  .rpt-summary-inner { gap: 12px; }
+  .rpt-summary-total { border-left: none; padding-left: 0; }
+  .rpt-opps-item { padding: 10px 16px; gap: 10px; }
+  .rpt-opps-bar-wrap { width: 80px; }
+  .rpt-opps-link { display: none; }
+  .rpt-cat-header { padding: 10px 14px; gap: 8px; }
+  .rpt-sev-group { padding: 10px 14px; }
+  .rpt-issue-header { padding: 6px 10px; gap: 6px; font-size: 12px; }
+  .rpt-issue-body { padding: 10px; font-size: 12px; }
 }
-.filter-tab {
-  padding: 4px 10px;
-  font-size: 11px;
-  font-weight: 500;
-  border: 1px solid var(--border);
-  border-radius: 100px;
-  background: var(--card);
-  color: var(--fg-muted);
-  cursor: pointer;
-  transition: all 0.15s;
-  white-space: nowrap;
-}
-.filter-tab:hover { border-color: #a1a1aa; color: var(--fg); }
-.filter-tab.active {
-  background: var(--fg);
-  color: white;
-  border-color: var(--fg);
-}
+
+/* ================================================================
+   5. Shell Components — plugin & web chrome (non-report UI)
+   ================================================================ */
 
 /* ---- Buttons ---- */
 .btn-group {
@@ -401,7 +615,7 @@ body {
   border: 1px solid rgba(239,68,68,0.15);
 }
 
-/* ---- Layout ---- */
+/* ---- Layout (plugin) ---- */
 .container { padding: 16px; }
 .header {
   display: flex;
@@ -421,7 +635,7 @@ body {
   color: var(--fg-muted);
 }
 
-/* ---- Footer ---- */
+/* ---- Footer (plugin) ---- */
 .footer {
   text-align: center;
   padding: 16px 0 8px;
@@ -442,6 +656,38 @@ body {
   text-decoration: underline;
 }
 
-/* ---- Scrollable results area ---- */
+/* ---- Results visibility ---- */
 #results { display: none; }
 #results.visible { display: block; }
+
+/* ---- Tooltips (JS-based, for plugin) ---- */
+.cic-tooltip {
+  position: fixed;
+  padding: 5px 10px;
+  background: #18181b;
+  color: #fafafa;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.4;
+  border-radius: 6px;
+  white-space: normal;
+  max-width: 220px;
+  width: max-content;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 1000;
+}
+.cic-tooltip.visible { opacity: 1; }
+.cic-tooltip-arrow {
+  position: fixed;
+  width: 8px;
+  height: 8px;
+  background: #18181b;
+  transform: rotate(45deg);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 999;
+}
+.cic-tooltip-arrow.visible { opacity: 1; }

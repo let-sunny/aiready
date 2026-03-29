@@ -8,6 +8,9 @@ import { escapeHtml } from "../ui-helpers.js";
 import { renderReportBody } from "./render.js";
 import type { ReportData } from "./render.js";
 
+declare const __REPORT_CSS__: string;
+const reportCss: string = __REPORT_CSS__;
+
 export type { ReportData } from "./render.js";
 export { renderReportBody } from "./render.js";
 
@@ -49,56 +52,48 @@ export function generateHtmlReport(
   };
 
   return `<!DOCTYPE html>
-<html lang="en" class="antialiased">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CanICode Report — ${esc(file.name)}</title>
-  <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'sans-serif'] },
-          colors: {
-            border: 'hsl(240 5.9% 90%)',
-            ring: 'hsl(240 5.9% 10%)',
-            background: 'hsl(0 0% 100%)',
-            foreground: 'hsl(240 10% 3.9%)',
-            muted: { DEFAULT: 'hsl(240 4.8% 95.9%)', foreground: 'hsl(240 3.8% 46.1%)' },
-            card: { DEFAULT: 'hsl(0 0% 100%)', foreground: 'hsl(240 10% 3.9%)' },
-          },
-          borderRadius: { lg: '0.5rem', md: 'calc(0.5rem - 2px)', sm: 'calc(0.5rem - 4px)' },
-        }
-      }
-    }
-  </script>
   <style>
-    details summary::-webkit-details-marker { display: none; }
-    details summary::marker { content: ""; }
-    details summary { list-style: none; }
-    .gauge-fill { transition: stroke-dashoffset 0.8s cubic-bezier(0.4,0,0.2,1); }
+${reportCss}
+    .cli-topbar {
+      position: sticky; top: 0; z-index: 50;
+      background: #09090b; color: white;
+      border-bottom: 1px solid #27272a;
+    }
+    .cli-topbar-inner {
+      max-width: 960px; margin: 0 auto;
+      padding: 12px 24px;
+      display: flex; align-items: center; gap: 16px;
+    }
+    .cli-topbar-logo { font-weight: 600; font-size: 14px; letter-spacing: -0.01em; }
+    .cli-topbar-file { color: #a1a1aa; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cli-topbar-date { margin-left: auto; color: #71717a; font-size: 12px; }
+    .cli-main { max-width: 960px; margin: 0 auto; padding: 0 24px 64px; }
     @media print {
-      .no-print { display: none !important; }
-      .topbar-print { position: static !important; background: white !important; color: hsl(240 10% 3.9%) !important; }
+      .cli-topbar { position: static !important; background: white !important; color: var(--fg) !important; }
+      .cli-topbar-file { color: var(--fg-muted) !important; }
     }
   </style>
 </head>
-<body class="bg-muted font-sans text-foreground min-h-screen">
+<body>
 
   <!-- Top Bar -->
-  <header class="topbar-print sticky top-0 z-50 bg-zinc-950 text-white border-b border-zinc-800">
-    <div class="max-w-[960px] mx-auto px-6 py-3 flex items-center gap-4">
-      <span class="font-semibold text-sm tracking-tight">CanICode</span>
-      <span class="text-zinc-400 text-sm truncate">${esc(file.name)}</span>
-      <span class="ml-auto text-zinc-500 text-xs no-print">${new Date().toLocaleDateString()}</span>
+  <header class="cli-topbar">
+    <div class="cli-topbar-inner">
+      <span class="cli-topbar-logo">CanICode</span>
+      <span class="cli-topbar-file">${esc(file.name)}</span>
+      <span class="cli-topbar-date no-print">${new Date().toLocaleDateString()}</span>
     </div>
   </header>
 
-  <main class="max-w-[960px] mx-auto px-6 pb-16">
+  <main class="cli-main">
 ${renderReportBody(data)}
   </main>
 
@@ -130,13 +125,11 @@ function renderFigmaCommentScript(figmaToken: string): string {
           throw new Error(errMsg + (errBody ? ': ' + errBody.slice(0, 100) : ''));
         }
         btn.textContent = 'Sent \\u2713';
-        btn.classList.remove('hover:bg-muted');
-        btn.classList.add('text-green-600', 'border-green-500/30');
+        btn.classList.add('rpt-btn-ok');
       } catch (e) {
         btn.textContent = 'Failed';
         btn.title = e.message || String(e);
-        btn.classList.remove('hover:bg-muted');
-        btn.classList.add('text-red-600', 'border-red-500/30');
+        btn.classList.add('rpt-btn-fail');
         btn.disabled = false;
       }
     }
