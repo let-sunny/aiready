@@ -145,7 +145,7 @@ const missingComponentCheck: RuleCheckFn = (node, context, options) => {
             subType: "unused-component" as const,
             nodeId: node.id,
             nodePath: context.path.join(" > "),
-            message: missingComponentMsg.unusedComponent(matchingComponent.name, sameNameFrames.length),
+            ...missingComponentMsg.unusedComponent(matchingComponent.name, sameNameFrames.length),
           };
         }
       }
@@ -163,7 +163,7 @@ const missingComponentCheck: RuleCheckFn = (node, context, options) => {
           subType: "name-repetition" as const,
           nodeId: node.id,
           nodePath: context.path.join(" > "),
-          message: missingComponentMsg.nameRepetition(node.name, sameNameFrames.length),
+          ...missingComponentMsg.nameRepetition(node.name, sameNameFrames.length),
         };
       }
     }
@@ -225,7 +225,7 @@ const missingComponentCheck: RuleCheckFn = (node, context, options) => {
           subType: "structure-repetition" as const,
           nodeId: node.id,
           nodePath: context.path.join(" > "),
-          message: missingComponentMsg.structureRepetition(node.name, count - 1),
+          ...missingComponentMsg.structureRepetition(node.name, count - 1),
         };
       }
     }
@@ -262,7 +262,7 @@ const missingComponentCheck: RuleCheckFn = (node, context, options) => {
         subType: "style-override" as const,
         nodeId: node.id,
         nodePath: context.path.join(" > "),
-        message: missingComponentMsg.styleOverride(componentName, overrides),
+        ...missingComponentMsg.styleOverride(componentName, overrides),
       };
     }
     return null;
@@ -306,7 +306,7 @@ const detachedInstanceCheck: RuleCheckFn = (node, context) => {
         ruleId: detachedInstanceDef.id,
         nodeId: node.id,
         nodePath: context.path.join(" > "),
-        message: detachedInstanceMsg(node.name, component.name),
+        ...detachedInstanceMsg(node.name, component.name),
       };
     }
   }
@@ -357,7 +357,7 @@ const variantStructureMismatchCheck: RuleCheckFn = (node, context) => {
     ruleId: variantStructureMismatchDef.id,
     nodeId: node.id,
     nodePath: context.path.join(" > "),
-    message: variantStructureMismatchMsg(node.name, mismatchCount, totalVariants),
+    ...variantStructureMismatchMsg(node.name, mismatchCount, totalVariants),
   };
 };
 

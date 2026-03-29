@@ -23,7 +23,7 @@ describe("non-standard-naming", () => {
     expect(result).not.toBeNull();
     expect(result!.subType).toBe("state-name");
     expect(result!.message).toContain("Clicked");
-    expect(result!.message).toContain("pressed");
+    expect(result!.suggestion).toContain("pressed");
   });
 
   it("flags 'On' → suggests 'active'", () => {
@@ -40,7 +40,7 @@ describe("non-standard-naming", () => {
 
     expect(result).not.toBeNull();
     expect(result!.message).toContain("On");
-    expect(result!.message).toContain("active");
+    expect(result!.suggestion).toContain("active");
   });
 
   it("flags 'Inactive' → suggests 'disabled'", () => {
@@ -57,7 +57,7 @@ describe("non-standard-naming", () => {
 
     expect(result).not.toBeNull();
     expect(result!.message).toContain("Inactive");
-    expect(result!.message).toContain("disabled");
+    expect(result!.suggestion).toContain("disabled");
   });
 
   it("passes when all state names are standard", () => {

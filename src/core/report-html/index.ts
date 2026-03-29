@@ -63,7 +63,6 @@ export function generateHtmlReport(
   <style>
 ${reportCss}
     .cli-topbar {
-      position: sticky; top: 0; z-index: 50;
       background: #09090b; color: white;
       border-bottom: 1px solid #27272a;
     }

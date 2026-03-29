@@ -40,7 +40,7 @@ const noAutoLayoutCheck: RuleCheckFn = (node, context) => {
               subType: "overlapping" as const,
               nodeId: node.id,
               nodePath: context.path.join(" > "),
-              message: noAutoLayoutMsg.overlapping(node.name),
+              ...noAutoLayoutMsg.overlapping(node.name),
             };
           }
         }
@@ -59,7 +59,7 @@ const noAutoLayoutCheck: RuleCheckFn = (node, context) => {
           subType: "nested" as const,
           nodeId: node.id,
           nodePath: context.path.join(" > "),
-          message: noAutoLayoutMsg.nested(node.name),
+          ...noAutoLayoutMsg.nested(node.name),
         };
       }
     }
@@ -88,7 +88,7 @@ const noAutoLayoutCheck: RuleCheckFn = (node, context) => {
     subType: "basic" as const,
     nodeId: node.id,
     nodePath: context.path.join(" > "),
-    message: noAutoLayoutMsg.basic(node.name, arrangement, directionHint),
+    ...noAutoLayoutMsg.basic(node.name, arrangement, directionHint),
   };
 };
 
@@ -121,7 +121,7 @@ const absolutePositionInAutoLayoutCheck: RuleCheckFn = (node, context) => {
     ruleId: absolutePositionInAutoLayoutDef.id,
     nodeId: node.id,
     nodePath: context.path.join(" > "),
-    message: absolutePositionMsg(node.name, context.parent.name),
+    ...absolutePositionMsg(node.name, context.parent.name),
   };
 };
 
@@ -168,7 +168,7 @@ const fixedSizeInAutoLayoutCheck: RuleCheckFn = (node, context) => {
       subType: "both-axes" as const,
       nodeId: node.id,
       nodePath: context.path.join(" > "),
-      message: fixedSizeMsg.bothAxes(node.name, width, height),
+      ...fixedSizeMsg.bothAxes(node.name, width, height),
     };
   }
 
@@ -188,7 +188,7 @@ const fixedSizeInAutoLayoutCheck: RuleCheckFn = (node, context) => {
       subType: "horizontal" as const,
       nodeId: node.id,
       nodePath: context.path.join(" > "),
-      message: fixedSizeMsg.horizontal(node.name, width),
+      ...fixedSizeMsg.horizontal(node.name, width),
     };
   }
 
@@ -228,7 +228,7 @@ const missingSizeConstraintCheck: RuleCheckFn = (node, context) => {
       subType: "wrap" as const,
       nodeId: node.id,
       nodePath,
-      message: missingSizeConstraintMsg.wrap(node.name),
+      ...missingSizeConstraintMsg.wrap(node.name),
     };
   }
 
@@ -239,7 +239,7 @@ const missingSizeConstraintCheck: RuleCheckFn = (node, context) => {
       subType: "grid" as const,
       nodeId: node.id,
       nodePath,
-      message: missingSizeConstraintMsg.grid(node.name),
+      ...missingSizeConstraintMsg.grid(node.name),
     };
   }
 
@@ -253,7 +253,7 @@ const missingSizeConstraintCheck: RuleCheckFn = (node, context) => {
       subType: "max-width" as const,
       nodeId: node.id,
       nodePath,
-      message: missingSizeConstraintMsg.maxWidth(node.name, currentWidth),
+      ...missingSizeConstraintMsg.maxWidth(node.name, currentWidth),
     };
   }
 
@@ -285,7 +285,7 @@ const nonLayoutContainerCheck: RuleCheckFn = (node, context) => {
       subType: "group" as const,
       nodeId: node.id,
       nodePath: context.path.join(" > "),
-      message: nonLayoutContainerMsg.group(node.name),
+      ...nonLayoutContainerMsg.group(node.name),
     };
   }
 
@@ -295,7 +295,7 @@ const nonLayoutContainerCheck: RuleCheckFn = (node, context) => {
       subType: "section" as const,
       nodeId: node.id,
       nodePath: context.path.join(" > "),
-      message: nonLayoutContainerMsg.section(node.name),
+      ...nonLayoutContainerMsg.section(node.name),
     };
   }
 
@@ -330,7 +330,7 @@ const deepNestingCheck: RuleCheckFn = (node, context, options) => {
     ruleId: deepNestingDef.id,
     nodeId: node.id,
     nodePath: context.path.join(" > "),
-    message: deepNestingMsg(node.name, context.componentDepth, maxDepth),
+    ...deepNestingMsg(node.name, context.componentDepth, maxDepth),
   };
 };
 

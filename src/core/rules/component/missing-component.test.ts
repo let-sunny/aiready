@@ -112,7 +112,7 @@ describe("missing-component — Stage 1: Component exists but not used", () => {
     expect(result).not.toBeNull();
     expect(result!.ruleId).toBe("missing-component");
     expect(result!.message).toContain('Component "Button" exists');
-    expect(result!.message).toContain("2 found");
+    expect(result!.suggestion).toContain("Replace frames with component instances");
   });
 
   it("only flags first occurrence (dedup)", () => {
@@ -298,7 +298,7 @@ describe("missing-component — Stage 3: Structure-based repetition", () => {
     expect(result!.ruleId).toBe("missing-component");
     expect(result!.message).toContain("Card A");
     expect(result!.message).toContain("1 sibling frame(s)");
-    expect(result!.message).toContain("extract a shared component");
+    expect(result!.suggestion).toContain("Extract a shared component");
   });
 
   it("only flags first matching sibling", () => {
@@ -535,7 +535,7 @@ describe("missing-component — Stage 4: Instance style overrides", () => {
     expect(result).not.toBeNull();
     expect(result!.message).toContain("Button");
     expect(result!.message).toContain("fills");
-    expect(result!.message).toContain("create a new variant");
+    expect(result!.suggestion).toContain("Create a new variant");
   });
 
   it("flags when instance has different cornerRadius from master", () => {

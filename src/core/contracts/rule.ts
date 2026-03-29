@@ -68,6 +68,8 @@ export interface RuleViolation {
   nodeId: string;
   nodePath: string;
   message: string;
+  suggestion: string;
+  guide?: string;
 }
 
 /**

@@ -115,7 +115,7 @@ const missingInteractionStateCheck: RuleCheckFn = (node, context) => {
       subType: state,
       nodeId: node.id,
       nodePath,
-      message: missingInteractionStateMsg[state](node.name),
+      ...missingInteractionStateMsg[state](node.name),
     };
   }
 
@@ -221,7 +221,7 @@ const missingPrototypeCheck: RuleCheckFn = (node, context) => {
     subType,
     nodeId: node.id,
     nodePath: context.path.join(" > "),
-    message: missingPrototypeMsg[subType](node.name),
+    ...missingPrototypeMsg[subType](node.name),
   };
 };
 
