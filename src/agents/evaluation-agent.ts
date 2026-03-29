@@ -186,6 +186,8 @@ export function runEvaluationAgent(
 
       if (newType === "validated") {
         validatedRuleSet.add(mismatch.ruleId);
+      } else {
+        validatedRuleSet.delete(mismatch.ruleId);
       }
     }
   }
@@ -202,8 +204,11 @@ export function runEvaluationAgent(
  * Higher delta = more responsive breakage = harder to implement.
  */
 function responsiveDeltaToDifficulty(delta: number): Difficulty {
-  if (delta <= 5) return "easy";      // minimal responsive breakage
-  if (delta <= 15) return "moderate";  // noticeable breakage
-  if (delta <= 30) return "hard";      // severe breakage
-  return "failed";                     // completely broken at expanded viewport
+  // Negative delta = expanded viewport matches better than original (unusual).
+  // Treat as easy — the design is not breaking at wider viewport.
+  const d = Math.max(0, delta);
+  if (d <= 5) return "easy";      // minimal responsive breakage
+  if (d <= 15) return "moderate";  // noticeable breakage
+  if (d <= 30) return "hard";      // severe breakage
+  return "failed";                  // completely broken at expanded viewport
 }
