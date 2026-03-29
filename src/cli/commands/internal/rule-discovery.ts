@@ -171,7 +171,7 @@ export function collectGapEvidence(runDir: string, fixture: string): DiscoveryEv
   for (const gap of parsed.data.gaps) {
     // Only actionable gaps not covered by existing rules
     if (!gap.actionable) continue;
-    if (gap.coveredByRule !== null && gap.coveredByRule !== undefined) continue;
+    if (gap.coveredByRule) continue; // truthy: skip if covered (handles string ruleId, null, undefined, "")
 
     entries.push({
       description: gap.description,

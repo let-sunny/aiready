@@ -415,7 +415,7 @@ describe("evidence-collector", () => {
       ]), "utf-8");
 
       appendDiscoveryEvidence([
-        { description: "new", category: "color", impact: "easy", fixture: "fx2", timestamp: "t1", source: "gap-analysis" },
+        { description: "new", category: "pixel-critical", impact: "easy", fixture: "fx2", timestamp: "t1", source: "gap-analysis" },
       ], disPath);
 
       const raw = JSON.parse(readFileSync(disPath, "utf-8")) as { schemaVersion: number; entries: DiscoveryEvidenceEntry[] };
@@ -433,6 +433,24 @@ describe("evidence-collector", () => {
 
       const after = readFileSync(disPath, "utf-8");
       expect(after).toBe(before);
+    });
+
+    it("warns on non-standard category", () => {
+      const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      appendDiscoveryEvidence([
+        { description: "gap1", category: "old-structure", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
+      ], disPath);
+      expect(spy).toHaveBeenCalledWith(expect.stringContaining('Non-standard category "old-structure"'));
+      spy.mockRestore();
+    });
+
+    it("does not warn on standard category", () => {
+      const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      appendDiscoveryEvidence([
+        { description: "gap1", category: "pixel-critical", impact: "hard", fixture: "fx1", timestamp: "t1", source: "evaluation" },
+      ], disPath);
+      expect(spy).not.toHaveBeenCalled();
+      spy.mockRestore();
     });
 
     it("throws when file has unsupported schemaVersion", () => {
