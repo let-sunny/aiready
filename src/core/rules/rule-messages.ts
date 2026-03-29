@@ -120,11 +120,11 @@ export const nonStandardNamingMsg = {
     `"${name}" has non-standard state name "${nonStandard}" — use "${suggestion}" for dev-friendly naming`,
 };
 
-// ── default-name ─────────────────────────────────────────────────────────────
+// ── non-semantic-name (merged: default-name + non-semantic-name) ─────────────
 
-export type DefaultNameSubType = "frame" | "group" | "vector" | "shape" | "text" | "image" | "component" | "instance";
+export type NonSemanticNameSubType = "frame" | "group" | "vector" | "shape" | "text" | "image" | "component" | "instance" | "shape-name";
 
-const DEFAULT_NAME_SUBTYPE_MAP: Record<string, DefaultNameSubType> = {
+const DEFAULT_NAME_SUBTYPE_MAP: Record<string, NonSemanticNameSubType> = {
   FRAME: "frame",
   GROUP: "group",
   RECTANGLE: "shape",
@@ -140,17 +140,12 @@ const DEFAULT_NAME_SUBTYPE_MAP: Record<string, DefaultNameSubType> = {
   INSTANCE: "instance",
 };
 
-export function getDefaultNameSubType(nodeType: string): DefaultNameSubType {
+export function getDefaultNameSubType(nodeType: string): NonSemanticNameSubType {
   return DEFAULT_NAME_SUBTYPE_MAP[nodeType] ?? "frame";
 }
 
-export const defaultNameMsg = (type: string, name: string) =>
-  `${type} "${name}" has a default name — rename to describe its purpose (e.g., "Header", "ProductCard")`;
-
-// ── non-semantic-name ────────────────────────────────────────────────────────
-
 export const nonSemanticNameMsg = (type: string, name: string) =>
-  `${type} "${name}" is a non-semantic name — rename to describe its role (e.g., "Divider", "Background")`;
+  `${type} "${name}" is a non-semantic name — rename to describe its role (e.g., "Header", "ProductCard", "Divider")`;
 
 // ── missing-interaction-state ─────────────────────────────────────────────────
 

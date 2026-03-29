@@ -295,12 +295,12 @@ const detachedInstanceCheck: RuleCheckFn = (node, context) => {
   // Heuristic: Frame with a name that looks like it came from a component
   if (node.type !== "FRAME") return null;
 
-  // Check if there's a component in the file with a similar name
+  // Check if there's a component in the file with a matching name (word boundary)
   const components = context.file.components;
-  const nodeName = node.name.toLowerCase();
 
   for (const [, component] of Object.entries(components)) {
-    if (nodeName.includes(component.name.toLowerCase())) {
+    const pattern = new RegExp(`\\b${component.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`);
+    if (pattern.test(node.name)) {
       // This frame might be a detached instance of this component
       return {
         ruleId: detachedInstanceDef.id,

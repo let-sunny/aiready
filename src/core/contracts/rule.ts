@@ -111,7 +111,6 @@ export type RuleId =
   | "missing-prototype"
   // Minor — naming issues with negligible impact (ΔV < 2%)
   | "non-standard-naming"
-  | "default-name"
   | "non-semantic-name"
   | "inconsistent-naming-convention";
 

@@ -74,7 +74,7 @@ describe("missing-component — Stage 1: Component exists but not used", () => {
       id: "0:1",
       name: "Document",
       type: "DOCUMENT",
-      children: [frame, makeNode({ id: "f:2", name: "Card" })],
+      children: [frame],
     });
 
     const ctx = makeContext({
@@ -118,11 +118,12 @@ describe("missing-component — Stage 1: Component exists but not used", () => {
   it("only flags first occurrence (dedup)", () => {
     const frameA = makeNode({ id: "f:1", name: "Button" });
     const frameB = makeNode({ id: "f:2", name: "Button" });
+    const frameC = makeNode({ id: "f:3", name: "Button" });
     const doc = makeNode({
       id: "0:1",
       name: "Document",
       type: "DOCUMENT",
-      children: [frameA, frameB],
+      children: [frameA, frameB, frameC],
     });
 
     const ctx = makeContext({
@@ -134,12 +135,13 @@ describe("missing-component — Stage 1: Component exists but not used", () => {
       }),
     });
 
-    // First call flags
+    // First call on frameA flags (stage 1: unused-component, frameA is first frame)
     const result1 = missingComponent.check(frameA, ctx);
     expect(result1).not.toBeNull();
+    expect(result1!.subType).toBe("unused-component");
 
-    // Second call with same name is deduped
-    const result2 = missingComponent.check(frameA, ctx);
+    // frameB is not first frame → stage 1 deduped, stage 2 skips (not first frame)
+    const result2 = missingComponent.check(frameB, ctx);
     expect(result2).toBeNull();
   });
 
@@ -179,19 +181,18 @@ describe("missing-component — Stage 2: Name-based repetition", () => {
 
   it("returns null below minRepetitions threshold", () => {
     const frameA = makeNode({ id: "f:1", name: "Card" });
-    const frameB = makeNode({ id: "f:2", name: "Card" });
     const doc = makeNode({
       id: "0:1",
       name: "Document",
       type: "DOCUMENT",
-      children: [frameA, frameB],
+      children: [frameA],
     });
 
     const ctx = makeContext({
       file: makeFile({ document: doc }),
     });
 
-    // Default minRepetitions is 3, only 2 frames
+    // Default minRepetitions is 2, only 1 frame
     expect(missingComponent.check(frameA, ctx)).toBeNull();
   });
 
@@ -724,11 +725,12 @@ describe("missing-component — General", () => {
   it("fresh analysisState clears dedup state", () => {
     const frameA = makeNode({ id: "f:1", name: "Button" });
     const frameB = makeNode({ id: "f:2", name: "Button" });
+    const frameC = makeNode({ id: "f:3", name: "Button" });
     const doc = makeNode({
       id: "0:1",
       name: "Document",
       type: "DOCUMENT",
-      children: [frameA, frameB],
+      children: [frameA, frameB, frameC],
     });
 
     const file = makeFile({
@@ -742,9 +744,8 @@ describe("missing-component — General", () => {
 
     // First call flags (Stage 1)
     expect(missingComponent.check(frameA, ctx)).not.toBeNull();
-
-    // Deduped
-    expect(missingComponent.check(frameA, ctx)).toBeNull();
+    // frameB: not first frame → deduped
+    expect(missingComponent.check(frameB, ctx)).toBeNull();
 
     // Fresh analysisState simulates a new analysis run — should flag again
     analysisState = new Map();

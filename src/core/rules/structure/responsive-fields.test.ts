@@ -173,7 +173,7 @@ describe("missing-size-constraint", () => {
     expect(issues).toHaveLength(0);
   });
 
-  it("does not flag when all siblings are FILL (e.g. list view)", () => {
+  it("flags when all siblings are FILL (max-width still needed)", () => {
     const file = makeFile(
       makeNode({
         name: "Page",
@@ -205,7 +205,7 @@ describe("missing-size-constraint", () => {
     const issues = result.issues.filter(
       (i) => i.rule.definition.id === "missing-size-constraint",
     );
-    expect(issues).toHaveLength(0);
+    expect(issues.length).toBeGreaterThan(0);
   });
 
   it("does not flag when parent has maxWidth", () => {
@@ -244,7 +244,7 @@ describe("missing-size-constraint", () => {
     expect(issues).toHaveLength(0);
   });
 
-  it("does not flag inside grid layout", () => {
+  it("flags inside grid layout (grid subType)", () => {
     const file = makeFile(
       makeNode({
         name: "Page",
@@ -270,10 +270,11 @@ describe("missing-size-constraint", () => {
     const issues = result.issues.filter(
       (i) => i.rule.definition.id === "missing-size-constraint",
     );
-    expect(issues).toHaveLength(0);
+    expect(issues.length).toBeGreaterThan(0);
+    expect(issues[0]!.violation.subType).toBe("grid");
   });
 
-  it("does not flag inside flex wrap", () => {
+  it("flags inside flex wrap (wrap subType)", () => {
     const file = makeFile(
       makeNode({
         name: "Page",
@@ -306,7 +307,8 @@ describe("missing-size-constraint", () => {
     const issues = result.issues.filter(
       (i) => i.rule.definition.id === "missing-size-constraint",
     );
-    expect(issues).toHaveLength(0);
+    expect(issues.length).toBeGreaterThan(0);
+    expect(issues[0]!.violation.subType).toBe("wrap");
   });
 
   it("does not flag FIXED container", () => {

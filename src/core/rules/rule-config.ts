@@ -31,7 +31,6 @@ export const RULE_ID_CATEGORY: Record<RuleId, Category> = {
   "missing-prototype": "interaction",
   // Minor
   "non-standard-naming": "minor",
-  "default-name": "minor",
   "non-semantic-name": "minor",
   "inconsistent-naming-convention": "minor",
 };
@@ -84,7 +83,7 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
     score: -7,
     enabled: true,
     options: {
-      minRepetitions: 3,
+      minRepetitions: 2,
       structureMinRepetitions: 2,
       maxFingerprintDepth: 3,
     },
@@ -119,7 +118,7 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
     score: -2,
     enabled: true,
     options: {
-      gridBase: 4,
+      gridBase: 2,
     },
   },
 
@@ -137,11 +136,6 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
 
   // ── Minor ──
   "non-standard-naming": {
-    severity: "suggestion",
-    score: -1,
-    enabled: true,
-  },
-  "default-name": {
     severity: "suggestion",
     score: -1,
     enabled: true,

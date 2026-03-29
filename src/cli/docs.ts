@@ -101,7 +101,7 @@ EXAMPLE
     "rules": {
       "no-auto-layout": { "score": -15, "severity": "blocking" },
       "raw-value": { "score": -5 },
-      "default-name": { "enabled": false }
+      "non-semantic-name": { "enabled": false }
     }
   }
 

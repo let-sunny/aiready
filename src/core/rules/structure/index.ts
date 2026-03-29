@@ -218,20 +218,46 @@ const missingSizeConstraintCheck: RuleCheckFn = (node, context) => {
   if (!isContainerNode(node) && !hasTextContent(node)) return null;
   // Skip if not in Auto Layout context
   if (!context.parent || !hasAutoLayout(context.parent)) return null;
-  // Only flag FILL containers — FIXED/HUG don't need min/max-width
-  if (node.layoutSizingHorizontal !== "FILL") return null;
 
-  if (isSizeConstraintExempt(node, context)) return null;
+  const nodePath = context.path.join(" > ");
 
-  const currentWidth = node.absoluteBoundingBox ? `${node.absoluteBoundingBox.width}px` : "unknown";
+  // Check 1: wrap parent → FILL children need min-width
+  if (context.parent.layoutWrap === "WRAP" && node.layoutSizingHorizontal === "FILL" && node.minWidth === undefined) {
+    return {
+      ruleId: missingSizeConstraintDef.id,
+      subType: "wrap" as const,
+      nodeId: node.id,
+      nodePath,
+      message: missingSizeConstraintMsg.wrap(node.name),
+    };
+  }
 
-  return {
-    ruleId: missingSizeConstraintDef.id,
-    subType: "max-width" as const,
-    nodeId: node.id,
-    nodePath: context.path.join(" > "),
-    message: missingSizeConstraintMsg.maxWidth(node.name, currentWidth),
-  };
+  // Check 2: grid parent → FILL children need size constraints
+  if (context.parent.layoutMode === "GRID" && node.layoutSizingHorizontal === "FILL" && node.minWidth === undefined && node.maxWidth === undefined) {
+    return {
+      ruleId: missingSizeConstraintDef.id,
+      subType: "grid" as const,
+      nodeId: node.id,
+      nodePath,
+      message: missingSizeConstraintMsg.grid(node.name),
+    };
+  }
+
+  // Check 3: FILL containers need max-width
+  if (node.layoutSizingHorizontal === "FILL") {
+    if (isSizeConstraintExempt(node, context)) return null;
+
+    const currentWidth = node.absoluteBoundingBox ? `${node.absoluteBoundingBox.width}px` : "unknown";
+    return {
+      ruleId: missingSizeConstraintDef.id,
+      subType: "max-width" as const,
+      nodeId: node.id,
+      nodePath,
+      message: missingSizeConstraintMsg.maxWidth(node.name, currentWidth),
+    };
+  }
+
+  return null;
 };
 
 export const missingSizeConstraint = defineRule({
@@ -264,8 +290,6 @@ const nonLayoutContainerCheck: RuleCheckFn = (node, context) => {
   }
 
   if (node.type === "SECTION") {
-    // Only flag Sections that have children (used as layout container)
-    if (!node.children || node.children.length === 0) return null;
     return {
       ruleId: nonLayoutContainerDef.id,
       subType: "section" as const,

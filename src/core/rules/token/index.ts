@@ -94,7 +94,7 @@ const rawValueCheck: RuleCheckFn = (node, context) => {
   }
 
   // Check 4: Raw opacity (non-default opacity without variable)
-  if (node.opacity !== undefined && !hasBoundVariable(node, "opacity")) {
+  if (node.opacity !== undefined && node.opacity < 1 && !hasBoundVariable(node, "opacity")) {
     return {
       ruleId: rawValueDef.id,
       subType: "opacity" as const,

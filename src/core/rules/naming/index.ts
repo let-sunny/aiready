@@ -1,6 +1,6 @@
 import type { RuleCheckFn, RuleDefinition } from "../../contracts/rule.js";
 import { defineRule } from "../rule-registry.js";
-import { defaultNameMsg, getDefaultNameSubType, nonSemanticNameMsg, inconsistentNamingMsg, nonStandardNamingMsg } from "../rule-messages.js";
+import { getDefaultNameSubType, nonSemanticNameMsg, inconsistentNamingMsg, nonStandardNamingMsg } from "../rule-messages.js";
 import { isExcludedName, isDefaultName, isNonSemanticName, STANDARD_STATE_NAMES, STATE_NAME_SUGGESTIONS, STATE_LIKE_PATTERN } from "../node-semantics.js";
 
 function detectNamingConvention(name: string): string | null {
@@ -14,67 +14,51 @@ function detectNamingConvention(name: string): string | null {
 }
 
 // ============================================
-// default-name
-// ============================================
-
-const defaultNameDef: RuleDefinition = {
-  id: "default-name",
-  name: "Default Name",
-  category: "minor",
-  why: "Default names like 'Frame 123' give AI no semantic context to choose appropriate HTML tags or class names",
-  impact: "AI generates generic <div> wrappers instead of semantic elements like <header>, <nav>, <article>",
-  fix: "Rename with a descriptive name (e.g., 'Header', 'ProductCard') so AI can infer semantic structure",
-};
-
-const defaultNameCheck: RuleCheckFn = (node, context) => {
-  if (!node.name) return null;
-  if (isExcludedName(node.name)) return null;
-  if (!isDefaultName(node.name)) return null;
-
-  return {
-    ruleId: defaultNameDef.id,
-    subType: getDefaultNameSubType(node.type),
-    nodeId: node.id,
-    nodePath: context.path.join(" > "),
-    message: defaultNameMsg(node.type, node.name),
-  };
-};
-
-export const defaultName = defineRule({
-  definition: defaultNameDef,
-  check: defaultNameCheck,
-});
-
-// ============================================
-// non-semantic-name
+// non-semantic-name (merged: default-name + non-semantic-name)
 // ============================================
 
 const nonSemanticNameDef: RuleDefinition = {
   id: "non-semantic-name",
   name: "Non-Semantic Name",
   category: "minor",
-  why: "Shape names like 'Rectangle' tell AI nothing about the element's role in the UI",
-  impact: "AI cannot distinguish a divider from a background from a border — all look like 'Rectangle'",
-  fix: "Use purpose-driven names (e.g., 'Divider', 'Avatar') so AI generates meaningful markup",
+  why: "Default or shape names give AI no semantic context — it cannot choose appropriate HTML tags or class names",
+  impact: "AI generates generic <div> wrappers instead of semantic elements like <header>, <nav>, <article>",
+  fix: "Rename with a descriptive, purpose-driven name (e.g., 'Header', 'ProductCard', 'Divider')",
 };
 
 const nonSemanticNameCheck: RuleCheckFn = (node, context) => {
   if (!node.name) return null;
   if (isExcludedName(node.name)) return null;
-  if (!isNonSemanticName(node.name)) return null;
 
-  // Allow non-semantic names for actual shape primitives at leaf level
-  if (!node.children || node.children.length === 0) {
-    const shapeTypes = ["RECTANGLE", "ELLIPSE", "VECTOR", "LINE", "STAR", "REGULAR_POLYGON"];
-    if (shapeTypes.includes(node.type)) return null;
+  // Check 1: Figma default names (Frame 1, Group 2, etc.)
+  if (isDefaultName(node.name)) {
+    return {
+      ruleId: nonSemanticNameDef.id,
+      subType: getDefaultNameSubType(node.type),
+      nodeId: node.id,
+      nodePath: context.path.join(" > "),
+      message: nonSemanticNameMsg(node.type, node.name),
+    };
   }
 
-  return {
-    ruleId: nonSemanticNameDef.id,
-    nodeId: node.id,
-    nodePath: context.path.join(" > "),
-    message: nonSemanticNameMsg(node.type, node.name),
-  };
+  // Check 2: Shape-only names (rectangle, ellipse, vector, etc.)
+  if (isNonSemanticName(node.name)) {
+    // Allow shape names for actual shape primitives at leaf level
+    if (!node.children || node.children.length === 0) {
+      const shapeTypes = ["RECTANGLE", "ELLIPSE", "VECTOR", "LINE", "STAR", "REGULAR_POLYGON"];
+      if (shapeTypes.includes(node.type)) return null;
+    }
+
+    return {
+      ruleId: nonSemanticNameDef.id,
+      subType: "shape-name" as const,
+      nodeId: node.id,
+      nodePath: context.path.join(" > "),
+      message: nonSemanticNameMsg(node.type, node.name),
+    };
+  }
+
+  return null;
 };
 
 export const nonSemanticName = defineRule({

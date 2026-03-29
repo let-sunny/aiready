@@ -206,14 +206,14 @@ describe("RuleEngine.analyze — rule filtering", () => {
     const file = makeFile({ document: doc });
 
     // Enable only default-name rule
-    const result = analyzeFile(file, { enabledRules: ["default-name"] });
+    const result = analyzeFile(file, { enabledRules: ["non-semantic-name"] });
 
     // Must have at least one issue to avoid vacuous pass
     expect(result.issues.length).toBeGreaterThan(0);
 
     // All issues should be from default-name only
     for (const issue of result.issues) {
-      expect(issue.violation.ruleId).toBe("default-name");
+      expect(issue.violation.ruleId).toBe("non-semantic-name");
     }
   });
 
@@ -229,13 +229,13 @@ describe("RuleEngine.analyze — rule filtering", () => {
     const file = makeFile({ document: doc });
 
     const resultAll = analyzeFile(file);
-    const resultDisabled = analyzeFile(file, { disabledRules: ["default-name"] });
+    const resultDisabled = analyzeFile(file, { disabledRules: ["non-semantic-name"] });
 
     const defaultNameAll = resultAll.issues.filter(
-      (i) => i.violation.ruleId === "default-name"
+      (i) => i.violation.ruleId === "non-semantic-name"
     );
     const defaultNameDisabled = resultDisabled.issues.filter(
-      (i) => i.violation.ruleId === "default-name"
+      (i) => i.violation.ruleId === "non-semantic-name"
     );
 
     // Baseline must have default-name issues to validate the filter
@@ -392,7 +392,7 @@ describe("RuleEngine.analyze — error resilience", () => {
     const file = makeFile({ document: doc });
 
     // Make an existing rule's check throw to verify error resilience
-    const defaultNameRule = ruleRegistry.get("default-name");
+    const defaultNameRule = ruleRegistry.get("non-semantic-name");
     expect(defaultNameRule).toBeDefined();
 
     const originalCheck = defaultNameRule!.check;
@@ -407,7 +407,7 @@ describe("RuleEngine.analyze — error resilience", () => {
       // failedRules should contain the failure details
       expect(result.failedRules.length).toBeGreaterThan(0);
 
-      const failure = result.failedRules.find((f) => f.ruleId === "default-name");
+      const failure = result.failedRules.find((f) => f.ruleId === "non-semantic-name");
       expect(failure).toBeDefined();
       expect(failure!.error).toBe("boom");
       expect(failure!.nodeName).toBeDefined();

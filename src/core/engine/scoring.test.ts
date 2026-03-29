@@ -75,7 +75,7 @@ describe("calculateScores", () => {
       makeIssue({ ruleId: "no-auto-layout", category: "pixel-critical", severity: "blocking" }),
       makeIssue({ ruleId: "non-layout-container", category: "pixel-critical", severity: "risk" }),
       makeIssue({ ruleId: "raw-value", category: "token-management", severity: "missing-info" }),
-      makeIssue({ ruleId: "default-name", category: "minor", severity: "suggestion" }),
+      makeIssue({ ruleId: "non-semantic-name", category: "minor", severity: "suggestion" }),
     ];
     const scores = calculateScores(makeResult(issues));
 
@@ -90,7 +90,7 @@ describe("calculateScores", () => {
     const heavyIssue = makeIssue({ ruleId: "no-auto-layout", category: "pixel-critical", severity: "blocking", score: -10 });
     heavyIssue.calculatedScore = -15; // Simulate depthWeight effect
 
-    const lightIssue = makeIssue({ ruleId: "default-name", category: "minor", severity: "suggestion", score: -1 });
+    const lightIssue = makeIssue({ ruleId: "non-semantic-name", category: "minor", severity: "suggestion", score: -1 });
     lightIssue.calculatedScore = -1;
 
     const heavy = calculateScores(makeResult([heavyIssue], 100));
@@ -159,7 +159,7 @@ describe("calculateScores", () => {
     ], 100));
 
     const lightRule = calculateScores(makeResult([
-      makeIssue({ ruleId: "default-name", category: "minor", severity: "suggestion", score: -1 }),
+      makeIssue({ ruleId: "non-semantic-name", category: "minor", severity: "suggestion", score: -1 }),
     ], 100));
 
     expect(heavyRule.byCategory["pixel-critical"].diversityScore).toBeLessThan(
@@ -169,7 +169,7 @@ describe("calculateScores", () => {
 
   it("low-severity rules have minimal diversity impact (intentional)", () => {
     const lowSeverity = calculateScores(makeResult([
-      makeIssue({ ruleId: "default-name", category: "minor", severity: "suggestion", score: -1 }),
+      makeIssue({ ruleId: "non-semantic-name", category: "minor", severity: "suggestion", score: -1 }),
     ], 100));
 
     const highSeverity = calculateScores(makeResult([
@@ -304,7 +304,7 @@ describe("calculateGrade (via calculateScores)", () => {
       "code-quality": ["missing-component", "detached-instance", "variant-structure-mismatch", "deep-nesting"],
       "token-management": ["raw-value", "irregular-spacing"],
       "interaction": ["missing-interaction-state", "missing-prototype"],
-      "minor": ["non-standard-naming", "default-name", "non-semantic-name", "inconsistent-naming-convention"],
+      "minor": ["non-standard-naming", "non-semantic-name", "inconsistent-naming-convention"],
     };
 
     for (const cat of categories) {
