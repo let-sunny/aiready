@@ -31,7 +31,7 @@ function getInteractiveType(node: AnalysisNode): InteractiveType | null {
 
 /** Expected state variants by interactive type */
 const EXPECTED_STATES: Record<InteractiveType, MissingInteractionStateSubType[]> = {
-  button: ["hover", "disabled"],
+  button: ["hover", "active", "disabled"],
   link: ["hover"],
   tab: ["hover", "active"],
   input: ["focus", "disabled"],
@@ -182,13 +182,23 @@ function getPrototypeSubType(node: AnalysisNode): MissingPrototypeSubType | null
   return null;
 }
 
-/** Check if node has any ON_CLICK prototype interaction */
-function hasClickInteraction(node: AnalysisNode): boolean {
+function hasInteractionTrigger(node: AnalysisNode, triggerType: string): boolean {
   if (!node.interactions || !Array.isArray(node.interactions)) return false;
   return node.interactions.some((interaction) => {
     const i = interaction as { trigger?: { type?: string } };
-    return i.trigger?.type === "ON_CLICK";
+    return i.trigger?.type === triggerType;
   });
+}
+
+/** Check if node (or its component master) has ON_CLICK prototype interaction */
+function hasClickInteraction(node: AnalysisNode, context: RuleContext): boolean {
+  if (hasInteractionTrigger(node, "ON_CLICK")) return true;
+  // INSTANCE nodes don't inherit interactions from master — check master fallback
+  if (node.componentId && context.file.componentDefinitions) {
+    const master = context.file.componentDefinitions[node.componentId];
+    if (master && hasInteractionTrigger(master, "ON_CLICK")) return true;
+  }
+  return false;
 }
 
 const missingPrototypeDef: RuleDefinition = {
@@ -212,8 +222,8 @@ const missingPrototypeCheck: RuleCheckFn = (node, context) => {
   const subType = getPrototypeSubType(node);
   if (!subType) return null;
 
-  // Already has click interaction
-  if (hasClickInteraction(node)) return null;
+  // Already has click interaction (check instance + master)
+  if (hasClickInteraction(node, context)) return null;
 
   // Dedup per componentId + subType
   const seen = getSeenProto(context);

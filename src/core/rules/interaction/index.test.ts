@@ -34,6 +34,20 @@ describe("missing-interaction-state", () => {
     expect(missingInteractionState.check(node, ctx)).toBeNull();
   });
 
+  it("passes when variant property has pressed option (active subType)", () => {
+    const node = makeNode({
+      id: "1:1",
+      name: "Button",
+      type: "INSTANCE",
+      componentId: "c:1",
+      componentPropertyDefinitions: {
+        "State": { type: "VARIANT", variantOptions: ["Default", "Hover", "Pressed", "Disabled"] },
+      },
+    });
+    const ctx = makeContext();
+    expect(missingInteractionState.check(node, ctx)).toBeNull();
+  });
+
   it("passes when variant property has hover option", () => {
     const node = makeNode({
       id: "1:1",
@@ -54,7 +68,7 @@ describe("missing-interaction-state", () => {
       name: "Button Master",
       type: "COMPONENT",
       componentPropertyDefinitions: {
-        "State": { type: "VARIANT", variantOptions: ["Default", "Hover", "Disabled"] },
+        "State": { type: "VARIANT", variantOptions: ["Default", "Hover", "Pressed", "Disabled"] },
       },
     });
     const node = makeNode({
@@ -175,6 +189,21 @@ describe("missing-prototype", () => {
       ],
     });
     const ctx = makeContext();
+    expect(missingPrototype.check(node, ctx)).toBeNull();
+  });
+
+  it("passes when component master has ON_CLICK (instance inheritance)", () => {
+    const masterNode = makeNode({
+      id: "c:1",
+      name: "Button Master",
+      type: "COMPONENT",
+      interactions: [
+        { trigger: { type: "ON_CLICK" }, actions: [{ navigation: "NAVIGATE", destinationId: "page:2" }] },
+      ],
+    });
+    const node = makeNode({ id: "1:1", name: "CTA Button", type: "INSTANCE", componentId: "c:1" });
+    const file = makeFile({ componentDefinitions: { "c:1": masterNode } });
+    const ctx = makeContext({ file, path: ["Page", "Button"] });
     expect(missingPrototype.check(node, ctx)).toBeNull();
   });
 

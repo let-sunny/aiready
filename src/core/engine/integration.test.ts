@@ -71,7 +71,7 @@ describe("Integration: fixture → analyze → score", () => {
     expect(scores.overall.score).toBe(scores.overall.percentage);
     expect(scores.overall.maxScore).toBe(100);
 
-    // Exactly 5 categories present
+    // Exactly 6 categories present
     const categories = Object.keys(scores.byCategory).sort();
     expect(categories).toEqual(
       ["code-quality", "interaction", "minor", "pixel-critical", "responsive-critical", "token-management"],
