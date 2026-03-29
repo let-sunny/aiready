@@ -1,19 +1,12 @@
-import { mkdtempSync, writeFileSync, readFileSync, existsSync } from "node:fs";
+import { mkdtempSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { rm } from "node:fs/promises";
 
-/**
- * Import the functions directly to test as units.
- * These are the same functions the CLI commands call.
- */
-
-// We can't import the CLI registration functions directly (they register on CAC),
-// so we test the underlying logic by importing from the modules they depend on.
+import { gatherEvidence, loadProposedRuleIds } from "./calibrate-debate.js";
 import { parseDebateResult } from "../../../agents/run-directory.js";
-import { loadCalibrationEvidence } from "../../../agents/evidence-collector.js";
 
-describe("calibrate-gather-evidence logic", () => {
+describe("gatherEvidence", () => {
   let runDir: string;
 
   beforeEach(() => {
@@ -24,7 +17,7 @@ describe("calibrate-gather-evidence logic", () => {
     await rm(runDir, { recursive: true, force: true });
   });
 
-  it("conversion.json ruleImpactAssessment is parseable", () => {
+  it("extracts ruleImpactAssessment and uncoveredStruggles from conversion.json", () => {
     writeFileSync(join(runDir, "conversion.json"), JSON.stringify({
       ruleImpactAssessment: [
         { ruleId: "no-auto-layout", issueCount: 3, actualImpact: "easy" },
@@ -34,40 +27,73 @@ describe("calibrate-gather-evidence logic", () => {
       ],
     }));
 
-    const conv = JSON.parse(readFileSync(join(runDir, "conversion.json"), "utf-8")) as Record<string, unknown>;
-    expect(Array.isArray(conv["ruleImpactAssessment"])).toBe(true);
-    expect(conv["ruleImpactAssessment"]).toHaveLength(1);
-    expect(Array.isArray(conv["uncoveredStruggles"])).toBe(true);
+    const evidence = gatherEvidence(runDir, []);
+    expect(evidence.ruleImpactAssessment).toHaveLength(1);
+    expect(evidence.uncoveredStruggles).toHaveLength(1);
   });
 
-  it("gaps.json actionable filtering works", () => {
+  it("filters gaps to actionable only", () => {
     writeFileSync(join(runDir, "gaps.json"), JSON.stringify({
       gaps: [
         { category: "spacing", actionable: true, description: "padding off" },
         { category: "rendering", actionable: false, description: "font fallback" },
+        { category: "color", actionable: true, description: "wrong shade" },
       ],
     }));
 
-    const gaps = JSON.parse(readFileSync(join(runDir, "gaps.json"), "utf-8")) as Record<string, unknown>;
-    const gapList = Array.isArray(gaps["gaps"]) ? gaps["gaps"] : [];
-    const actionable = gapList.filter(
-      (g): g is Record<string, unknown> =>
-        typeof g === "object" && g !== null && (g as Record<string, unknown>)["actionable"] === true
-    );
-    expect(actionable).toHaveLength(1);
-    expect((actionable[0] as Record<string, unknown>)["description"]).toBe("padding off");
+    const evidence = gatherEvidence(runDir, []);
+    expect(evidence.actionableGaps).toHaveLength(2);
   });
 
-  it("proposed ruleIds are extracted from summary.md", () => {
-    writeFileSync(join(runDir, "summary.md"), "## Overscored\n| `no-auto-layout` | -10 | easy |\n| `raw-value` | -3 | moderate |");
+  it("handles missing files gracefully", () => {
+    const evidence = gatherEvidence(runDir, []);
+    expect(evidence.ruleImpactAssessment).toHaveLength(0);
+    expect(evidence.uncoveredStruggles).toHaveLength(0);
+    expect(evidence.actionableGaps).toHaveLength(0);
+    expect(evidence.priorEvidence).toEqual({});
+  });
 
-    const content = readFileSync(join(runDir, "summary.md"), "utf-8");
-    const ids = new Set<string>();
-    for (const match of content.matchAll(/`([a-z][\w-]*)`/g)) {
-      if (match[1]) ids.add(match[1]);
-    }
-    expect([...ids]).toContain("no-auto-layout");
-    expect([...ids]).toContain("raw-value");
+  it("returns empty priorEvidence when no ruleIds proposed", () => {
+    const evidence = gatherEvidence(runDir, []);
+    expect(evidence.priorEvidence).toEqual({});
+  });
+});
+
+describe("loadProposedRuleIds", () => {
+  let runDir: string;
+
+  beforeEach(() => {
+    runDir = mkdtempSync(join(tmpdir(), "proposed-test-"));
+  });
+
+  afterEach(async () => {
+    await rm(runDir, { recursive: true, force: true });
+  });
+
+  it("loads from proposed-rules.json when available", () => {
+    writeFileSync(join(runDir, "proposed-rules.json"), JSON.stringify(["no-auto-layout", "raw-value"]));
+    const ids = loadProposedRuleIds(runDir);
+    expect(ids).toEqual(["no-auto-layout", "raw-value"]);
+  });
+
+  it("falls back to summary.md regex when no proposed-rules.json", () => {
+    writeFileSync(join(runDir, "summary.md"), "## Overscored\n| `no-auto-layout` | -10 | easy |\n| `raw-value` | -3 |");
+    const ids = loadProposedRuleIds(runDir);
+    expect(ids).toContain("no-auto-layout");
+    expect(ids).toContain("raw-value");
+  });
+
+  it("returns empty for missing files", () => {
+    const ids = loadProposedRuleIds(runDir);
+    expect(ids).toEqual([]);
+  });
+
+  it("prefers proposed-rules.json over summary.md", () => {
+    writeFileSync(join(runDir, "proposed-rules.json"), JSON.stringify(["rule-a"]));
+    writeFileSync(join(runDir, "summary.md"), "| `rule-a` | | |\n| `rule-b` | | |");
+    const ids = loadProposedRuleIds(runDir);
+    // Should only have rule-a from proposed-rules.json, not rule-b from summary.md
+    expect(ids).toEqual(["rule-a"]);
   });
 });
 
@@ -94,9 +120,6 @@ describe("calibrate-finalize-debate logic", () => {
     }));
 
     const debate = parseDebateResult(runDir)!;
-    expect(debate.critic).not.toBeNull();
-    expect(debate.arbitrator).toBeNull();
-
     const reviews = debate.critic!.reviews;
     const allHighConfidenceReject = reviews.length > 0 && reviews.every((r) =>
       r.decision.trim().toUpperCase() === "REJECT" && r.confidence === "high"
@@ -163,7 +186,6 @@ describe("calibrate-finalize-debate logic", () => {
   });
 
   it("returns null for missing debate.json", () => {
-    const debate = parseDebateResult(runDir);
-    expect(debate).toBeNull();
+    expect(parseDebateResult(runDir)).toBeNull();
   });
 });

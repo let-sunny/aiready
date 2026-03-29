@@ -7,7 +7,7 @@ import { loadCalibrationEvidence } from "../../../agents/evidence-collector.js";
 
 // ─── calibrate-gather-evidence ──────────────────────────────────────────────
 
-interface GatheredEvidence {
+export interface GatheredEvidence {
   ruleImpactAssessment: unknown[];
   uncoveredStruggles: unknown[];
   actionableGaps: unknown[];
@@ -18,7 +18,7 @@ interface GatheredEvidence {
  * Gather structured evidence for the Critic from run artifacts + cross-run data.
  * Pure data extraction — no LLM needed.
  */
-function gatherEvidence(runDir: string, proposedRuleIds: string[]): GatheredEvidence {
+export function gatherEvidence(runDir: string, proposedRuleIds: string[]): GatheredEvidence {
   const result: GatheredEvidence = {
     ruleImpactAssessment: [],
     uncoveredStruggles: [],
@@ -68,16 +68,25 @@ function gatherEvidence(runDir: string, proposedRuleIds: string[]): GatheredEvid
 }
 
 /**
- * Extract proposed ruleIds from summary.md.
- * Looks for rule IDs in markdown table rows or bullet points.
+ * Load proposed ruleIds from proposed-rules.json (written by calibrate-evaluate).
+ * Falls back to regex extraction from summary.md if file doesn't exist.
  */
-function extractProposedRuleIds(runDir: string): string[] {
+export function loadProposedRuleIds(runDir: string): string[] {
+  // Preferred: deterministic list from calibrate-evaluate
+  const proposedPath = join(runDir, "proposed-rules.json");
+  if (existsSync(proposedPath)) {
+    try {
+      const raw: unknown = JSON.parse(readFileSync(proposedPath, "utf-8"));
+      if (Array.isArray(raw)) return raw.filter((id): id is string => typeof id === "string");
+    } catch { /* fall through to regex */ }
+  }
+
+  // Fallback: extract from summary.md (may have false positives)
   const summaryPath = join(runDir, "summary.md");
   if (!existsSync(summaryPath)) return [];
   try {
     const content = readFileSync(summaryPath, "utf-8");
     const ids = new Set<string>();
-    // Match rule IDs in backticks (common in markdown tables)
     for (const match of content.matchAll(/`([a-z][\w-]*)`/g)) {
       if (match[1]) ids.add(match[1]);
     }
@@ -101,7 +110,7 @@ export function registerGatherEvidence(cli: CAC): void {
         return;
       }
 
-      const proposedRuleIds = extractProposedRuleIds(dir);
+      const proposedRuleIds = loadProposedRuleIds(dir);
       const evidence = gatherEvidence(dir, proposedRuleIds);
 
       // Write to file for orchestrator to include in Critic prompt
