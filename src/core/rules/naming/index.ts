@@ -124,12 +124,28 @@ const inconsistentNamingConventionCheck: RuleCheckFn = (node, context) => {
 
   // Detect conventions used by siblings
   const conventions = new Map<string, number>();
+  let ambiguousPascalCount = 0;
 
   for (const sibling of context.siblings) {
     if (!sibling.name) continue;
     const convention = detectNamingConvention(sibling.name);
     if (convention) {
       conventions.set(convention, (conventions.get(convention) ?? 0) + 1);
+      if (convention === "PascalCase" && /^[A-Z][a-z]+$/.test(sibling.name)) {
+        ambiguousPascalCount++;
+      }
+    }
+  }
+
+  // Single capitalized words (Header, Footer) are detected as PascalCase but are
+  // equally valid as Title Case. When both conventions appear, discount these
+  // ambiguous names so they don't bias the dominant convention toward PascalCase.
+  if (conventions.has("PascalCase") && conventions.has("Title Case") && ambiguousPascalCount > 0) {
+    const adjusted = (conventions.get("PascalCase") ?? 0) - ambiguousPascalCount;
+    if (adjusted <= 0) {
+      conventions.delete("PascalCase");
+    } else {
+      conventions.set("PascalCase", adjusted);
     }
   }
 
