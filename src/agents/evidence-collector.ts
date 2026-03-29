@@ -178,6 +178,7 @@ export function enrichCalibrationEvidence(
 
   if (matchCount === 0) {
     console.warn(`[enrich] No entries matched fixture="${fixture}" — evidence unchanged`);
+    return;
   }
   writeJsonArray(evidencePath, enriched);
 }

@@ -199,7 +199,7 @@ Spawn the `calibration-arbitrator` subagent. In the prompt:
 - Include proposals and the Critic's reviews from `$RUN_DIR/debate.json`
 - **Tell the agent: "Return your decisions as JSON. Only edit rule-config.ts if applying changes. Do NOT write to logs."**
 
-After the Arbitrator returns, **you** update `$RUN_DIR/debate.json` — read the existing content and add the `arbitrator` field. Also set `stoppingReason` at the **top level** (canonical location — never inside arbitrator object):
+After the Arbitrator returns, **you** update `$RUN_DIR/debate.json` — read the existing content and add the `arbitrator` field. Only set `stoppingReason` at the **top level** when non-normal termination occurred (e.g. `"low-confidence-hold"`, `"all-high-confidence-reject"`). Omit the field for normal completion:
 
 ```json
 {
@@ -218,7 +218,7 @@ After the Arbitrator returns, **you** update `$RUN_DIR/debate.json` — read the
       }
     ]
   },
-  "stoppingReason": "normal|low-confidence-hold"
+  "stoppingReason": "low-confidence-hold"
 }
 ```
 

@@ -142,14 +142,10 @@ export function registerEvidenceEnrich(cli: CAC): void {
       }
 
       const reviews = debate.critic.reviews.map((r) => {
-        const raw = r as Record<string, unknown>;
         const entry: Parameters<typeof enrichCalibrationEvidence>[0][number] = { ruleId: r.ruleId };
-        const conf = raw["confidence"];
-        if (conf === "high" || conf === "medium" || conf === "low") entry.confidence = conf;
-        const pro = raw["pro"];
-        if (Array.isArray(pro)) entry.pro = pro as string[];
-        const con = raw["con"];
-        if (Array.isArray(con)) entry.con = con as string[];
+        if (r.confidence) entry.confidence = r.confidence;
+        if (r.pro) entry.pro = r.pro;
+        if (r.con) entry.con = r.con;
         const dec = r.decision;
         if (dec === "APPROVE" || dec === "REJECT" || dec === "REVISE") entry.decision = dec;
         return entry;

@@ -76,6 +76,20 @@ describe("evidence-collector", () => {
       });
     });
 
+    it("deduplicates pro/con across entries", () => {
+      const entries: CalibrationEvidenceEntry[] = [
+        { ruleId: "rule-a", type: "overscored", actualDifficulty: "easy", fixture: "fx1", timestamp: "t1",
+          pro: ["easy in practice", "common pattern"], con: ["small fixture"] },
+        { ruleId: "rule-a", type: "overscored", actualDifficulty: "easy", fixture: "fx2", timestamp: "t2",
+          pro: ["easy in practice", "new evidence"], con: ["small fixture", "single run"] },
+      ];
+      writeFileSync(calPath, JSON.stringify(entries), "utf-8");
+
+      const result = loadCalibrationEvidence(calPath);
+      expect(result["rule-a"]!.allPro).toEqual(["easy in practice", "common pattern", "new evidence"]);
+      expect(result["rule-a"]!.allCon).toEqual(["small fixture", "single run"]);
+    });
+
     it("handles malformed JSON gracefully", () => {
       writeFileSync(calPath, "not json", "utf-8");
       const result = loadCalibrationEvidence(calPath);

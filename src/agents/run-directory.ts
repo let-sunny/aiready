@@ -168,14 +168,19 @@ const DebateDecisionSchema = z.object({
   reason: z.string().optional(),
 }).passthrough();
 
+const CriticReviewSchema = z.object({
+  ruleId: z.string(),
+  decision: z.string(),
+  reason: z.string().optional(),
+  revised: z.number().optional(),
+  confidence: z.enum(["high", "medium", "low"]).optional(),
+  pro: z.array(z.string()).optional(),
+  con: z.array(z.string()).optional(),
+}).passthrough();
+
 const CriticSchema = z.object({
   summary: z.string(),
-  reviews: z.array(z.object({
-    ruleId: z.string(),
-    decision: z.string(),
-    reason: z.string().optional(),
-    revised: z.number().optional(),
-  }).passthrough()),
+  reviews: z.array(CriticReviewSchema),
 }).passthrough();
 
 const ArbitratorSchema = z.object({
