@@ -93,7 +93,6 @@ Read and follow `.claude/skills/design-to-code/PROMPT.md` for all code generatio
    - `htmlLines`: line count
    - `cssClassCount`: unique CSS class selectors in `<style>` block
    - `cssVariableCount`: unique CSS custom properties (`--*:`) in `<style>` block
-   These proxy for token cost — larger/more complex output = more AI work.
 8. Note any difficulties NOT covered by existing rules as `uncoveredStruggles`
    - **Only include design-related issues** — problems in the Figma file structure, missing tokens, ambiguous layout, etc.
    - **Exclude environment/tooling issues** — font CDN availability, screenshot DPI/retina scaling, browser rendering quirks, network issues, CI limitations. These are not design problems and create noise in rule discovery.
