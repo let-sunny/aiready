@@ -77,14 +77,18 @@ export function loadCalibrationEvidence(
       group.underscoredDifficulties.push(entry.actualDifficulty);
     }
 
-    // Aggregate pro/con from enriched entries
+    // Aggregate pro/con from enriched entries (deduplicated)
     if (entry.pro) {
       group.allPro ??= [];
-      group.allPro.push(...entry.pro);
+      for (const p of entry.pro) {
+        if (!group.allPro.includes(p)) group.allPro.push(p);
+      }
     }
     if (entry.con) {
       group.allCon ??= [];
-      group.allCon.push(...entry.con);
+      for (const c of entry.con) {
+        if (!group.allCon.includes(c)) group.allCon.push(c);
+      }
     }
     // Keep last confidence/decision (most recent entry wins)
     if (entry.confidence) group.lastConfidence = entry.confidence;
@@ -157,10 +161,12 @@ export function enrichCalibrationEvidence(
   const reviewByRule = new Map(reviews.map((r) => [r.ruleId.trim(), r]));
   const fixtureTrimmed = fixture.trim();
 
+  let matchCount = 0;
   const enriched = existing.map((entry) => {
     if (entry.fixture.trim() !== fixtureTrimmed) return entry;
     const review = reviewByRule.get(entry.ruleId.trim());
     if (!review) return entry;
+    matchCount++;
     return {
       ...entry,
       ...(review.confidence && { confidence: review.confidence }),
@@ -170,6 +176,9 @@ export function enrichCalibrationEvidence(
     };
   });
 
+  if (matchCount === 0) {
+    console.warn(`[enrich] No entries matched fixture="${fixture}" — evidence unchanged`);
+  }
   writeJsonArray(evidencePath, enriched);
 }
 

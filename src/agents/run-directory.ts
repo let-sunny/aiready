@@ -184,10 +184,12 @@ const ArbitratorSchema = z.object({
   newRuleProposals: z.array(z.unknown()).optional(),
 }).passthrough();
 
+/** stoppingReason canonical location: debate.json top level (not inside arbitrator) */
 const DebateResultSchema = z.object({
   critic: CriticSchema.nullable().default(null),
   arbitrator: ArbitratorSchema.nullable().default(null),
   skipped: z.string().optional(),
+  stoppingReason: z.string().optional(),
 }).passthrough();
 
 /** A single decision from the Arbitrator in debate.json. */
@@ -274,9 +276,8 @@ export function checkConvergence(runDir: string, options?: ConvergenceOptions): 
   }
   if (!debate.arbitrator) {
     // Early-stop: Arbitrator skipped because all proposals rejected with high confidence
-    const stoppingReason = (debate as Record<string, unknown>)["stoppingReason"];
-    if (typeof stoppingReason === "string" && stoppingReason.length > 0) {
-      return { converged: true, mode, applied: 0, revised: 0, rejected: 0, hold: 0, kept: 0, total: 0, reason: `early-stop: ${stoppingReason}` };
+    if (debate.stoppingReason) {
+      return { converged: true, mode, applied: 0, revised: 0, rejected: 0, hold: 0, kept: 0, total: 0, reason: `early-stop: ${debate.stoppingReason}` };
     }
     return { converged: false, mode, applied: 0, revised: 0, rejected: 0, hold: 0, kept: 0, total: 0, reason: "no arbitrator result" };
   }
