@@ -14,6 +14,19 @@ describe("filterDiscoveryEvidence", () => {
     expect(result).toHaveLength(0);
   });
 
+  it("returns empty for single-character keyword", () => {
+    expect(filterDiscoveryEvidence("a")).toHaveLength(0);
+  });
+
+  it("returns empty for all-short-token keyword", () => {
+    expect(filterDiscoveryEvidence("a x y")).toHaveLength(0);
+  });
+
+  it("returns empty for empty string", () => {
+    expect(filterDiscoveryEvidence("")).toHaveLength(0);
+    expect(filterDiscoveryEvidence("   ")).toHaveLength(0);
+  });
+
   it("returns typed DiscoveryEvidenceEntry array", () => {
     const result = filterDiscoveryEvidence("anything");
     expect(Array.isArray(result)).toBe(true);

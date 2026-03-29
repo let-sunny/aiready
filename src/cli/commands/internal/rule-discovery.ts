@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import type { CAC } from "cac";
+import { z } from "zod";
 
 import { loadDiscoveryEvidence } from "../../../agents/evidence-collector.js";
 import type { DiscoveryEvidenceEntry } from "../../../agents/evidence-collector.js";
@@ -19,9 +20,10 @@ export function filterDiscoveryEvidence(keyword: string): DiscoveryEvidenceEntry
   const kw = keyword.toLowerCase().trim();
   if (kw.length === 0) return [];
 
-  const entries = loadDiscoveryEvidence();
   const tokens = kw.split(/\s+/).filter((w) => w.length >= MIN_TOKEN_LENGTH);
   if (tokens.length === 0) return [];
+
+  const entries = loadDiscoveryEvidence();
 
   return entries.filter((e) => {
     const cat = e.category.toLowerCase();
@@ -62,15 +64,15 @@ export function registerFilterDiscoveryEvidence(cli: CAC): void {
 
 // ─── rule-apply-decision ────────────────────────────────────────────────────
 
-interface DecisionFile {
-  decision: string;
-  ruleId?: string;
-  category?: string;
-  changes?: unknown;
-  reason?: string;
-}
+const DecisionFileSchema = z.object({
+  decision: z.string(),
+  ruleId: z.string().optional(),
+  category: z.string().optional(),
+  changes: z.unknown().optional(),
+  reason: z.string().optional(),
+}).passthrough();
 
-interface ApplyResult {
+export interface ApplyResult {
   action: "commit" | "revert" | "adjust";
   ruleId: string;
   category: string;
@@ -78,7 +80,7 @@ interface ApplyResult {
 }
 
 /**
- * Read decision.json and determine the action.
+ * Read decision.json, validate with Zod, and determine the action.
  * Does NOT execute git operations — returns the action for the orchestrator.
  */
 export function readDecision(runDir: string): ApplyResult | null {
@@ -86,11 +88,14 @@ export function readDecision(runDir: string): ApplyResult | null {
   if (!existsSync(decisionPath)) return null;
 
   try {
-    const raw = JSON.parse(readFileSync(decisionPath, "utf-8")) as DecisionFile;
-    const decision = (raw.decision ?? "").trim().toUpperCase();
-    const ruleId = raw.ruleId ?? "unknown";
-    const category = raw.category ?? "unknown";
-    const reason = raw.reason ?? "";
+    const raw: unknown = JSON.parse(readFileSync(decisionPath, "utf-8"));
+    const parsed = DecisionFileSchema.safeParse(raw);
+    if (!parsed.success) return null;
+
+    const decision = parsed.data.decision.trim().toUpperCase();
+    const ruleId = parsed.data.ruleId ?? "unknown";
+    const category = parsed.data.category ?? "unknown";
+    const reason = parsed.data.reason ?? "";
 
     switch (decision) {
       case "KEEP":
