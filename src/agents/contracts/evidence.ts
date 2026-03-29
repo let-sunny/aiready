@@ -54,3 +54,15 @@ export const DiscoveryEvidenceFileSchema = z.object({
 });
 
 export type DiscoveryEvidenceFile = z.infer<typeof DiscoveryEvidenceFileSchema>;
+
+// --- Rule discovery decision ---
+
+export const DecisionFileSchema = z.object({
+  decision: z.string(),
+  ruleId: z.string().optional(),
+  category: z.string().optional(),
+  changes: z.unknown().optional(),
+  reason: z.string().optional(),
+}).passthrough();
+
+export type DecisionFile = z.infer<typeof DecisionFileSchema>;
