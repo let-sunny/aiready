@@ -168,11 +168,12 @@ export function registerEvidencePrune(cli: CAC): void {
     .action((runDir: string) => {
       const parsed = RunDirArgSchema.safeParse(runDir);
       if (!parsed.success) { console.log(`Invalid runDir: ${parsed.error.issues[0]?.message}`); return; }
-      if (!existsSync(resolve(parsed.data))) {
+      const resolvedDir = resolve(parsed.data);
+      if (!existsSync(resolvedDir)) {
         console.log(`Run directory not found: ${runDir}`);
         return;
       }
-      const debate = parseDebateResult(resolve(parsed.data));
+      const debate = parseDebateResult(resolvedDir);
       if (!debate) {
         console.log("No debate.json found — nothing to prune.");
         return;
