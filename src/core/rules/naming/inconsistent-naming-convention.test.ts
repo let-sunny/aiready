@@ -57,4 +57,69 @@ describe("inconsistent-naming-convention", () => {
 
     expect(inconsistentNamingConvention.check(node, makeContext({ siblings }))).toBeNull();
   });
+
+  it("does not flag single-word PascalCase in Title Case context", () => {
+    // "Rating" is a single capitalized word — ambiguous between PascalCase and Title Case
+    const sibA = makeNode({ id: "2:1", name: "Card Grid" }); // Title Case
+    const sibB = makeNode({ id: "2:2", name: "Review Card" }); // Title Case
+    const node = makeNode({ id: "1:1", name: "Rating" }); // single word — should be ambiguous
+    const siblings = [node, sibA, sibB];
+
+    expect(inconsistentNamingConvention.check(node, makeContext({ siblings }))).toBeNull();
+  });
+
+  it("flags single-word PascalCase in camelCase context with concrete suggestion", () => {
+    const sibA = makeNode({ id: "2:1", name: "myCard" }); // camelCase
+    const sibB = makeNode({ id: "2:2", name: "myFooter" }); // camelCase
+    const node = makeNode({ id: "1:1", name: "Button" }); // PascalCase — not compatible with camelCase
+    const siblings = [node, sibA, sibB];
+
+    const result = inconsistentNamingConvention.check(node, makeContext({ siblings }));
+    expect(result).not.toBeNull();
+    expect(result!.suggestion).toContain('"button"');
+  });
+
+  it("does not let ambiguous single-words bias dominant convention", () => {
+    // "Header" and "Footer" are single-word — ambiguous between PascalCase and Title Case
+    // They should not inflate PascalCase count and cause "Product Card" to be flagged
+    const sibA = makeNode({ id: "2:1", name: "Header" });
+    const sibB = makeNode({ id: "2:2", name: "Footer" });
+    const node = makeNode({ id: "1:1", name: "Product Card" }); // Title Case — should NOT be flagged
+    const siblings = [node, sibA, sibB];
+
+    expect(inconsistentNamingConvention.check(node, makeContext({ siblings }))).toBeNull();
+  });
+
+  it("still flags single-word PascalCase in non-Title-Case context", () => {
+    // Ambiguity discount only applies when Title Case is present
+    const sibA = makeNode({ id: "2:1", name: "my-card" }); // kebab-case
+    const sibB = makeNode({ id: "2:2", name: "my-header" }); // kebab-case
+    const node = makeNode({ id: "1:1", name: "Button" }); // PascalCase — should be flagged
+    const siblings = [node, sibA, sibB];
+
+    const result = inconsistentNamingConvention.check(node, makeContext({ siblings }));
+    expect(result).not.toBeNull();
+  });
+
+  it("splits acronym runs correctly in suggested name", () => {
+    const sibA = makeNode({ id: "2:1", name: "my-card" }); // kebab-case
+    const sibB = makeNode({ id: "2:2", name: "my-header" }); // kebab-case
+    const node = makeNode({ id: "1:1", name: "myURLParser" }); // camelCase with acronym
+    const siblings = [node, sibA, sibB];
+
+    const result = inconsistentNamingConvention.check(node, makeContext({ siblings }));
+    expect(result).not.toBeNull();
+    expect(result!.suggestion).toContain('"my-url-parser"');
+  });
+
+  it("still flags multi-word PascalCase in Title Case context", () => {
+    const sibA = makeNode({ id: "2:1", name: "Card Grid" }); // Title Case
+    const sibB = makeNode({ id: "2:2", name: "Review Card" }); // Title Case
+    const node = makeNode({ id: "1:1", name: "ProductCard" }); // multi-word PascalCase
+    const siblings = [node, sibA, sibB];
+
+    const result = inconsistentNamingConvention.check(node, makeContext({ siblings }));
+    expect(result).not.toBeNull();
+    expect(result!.message).toContain("PascalCase");
+  });
 });

@@ -13,6 +13,49 @@ function detectNamingConvention(name: string): string | null {
   return null;
 }
 
+/** Single capitalized word is compatible with both PascalCase and Title Case */
+function isCompatible(nodeConvention: string, dominantConvention: string, name: string): boolean {
+  if (!/^[A-Z][a-z]+$/.test(name)) return false;
+  const pair = new Set([nodeConvention, dominantConvention]);
+  return pair.has("PascalCase") && pair.has("Title Case");
+}
+
+/** Split a name into words regardless of convention */
+function splitWords(name: string): string[] {
+  // Title Case / space-separated
+  if (/\s/.test(name)) return name.split(/\s+/);
+  // SCREAMING_SNAKE_CASE or snake_case
+  if (name.includes("_")) return name.split("_");
+  // kebab-case
+  if (name.includes("-")) return name.split("-");
+  // camelCase / PascalCase — split on uppercase boundaries (including acronym runs)
+  return name
+    .replace(/([a-z0-9])([A-Z])/g, "$1\0$2")
+    .replace(/([A-Z]+)([A-Z][a-z])/g, "$1\0$2")
+    .split("\0");
+}
+
+/** Convert a name to the target convention */
+function convertName(name: string, target: string): string {
+  const words = splitWords(name);
+  switch (target) {
+    case "kebab-case":
+      return words.map(w => w.toLowerCase()).join("-");
+    case "snake_case":
+      return words.map(w => w.toLowerCase()).join("_");
+    case "camelCase":
+      return words.map((w, i) => i === 0 ? w.toLowerCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join("");
+    case "PascalCase":
+      return words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join("");
+    case "SCREAMING_SNAKE_CASE":
+      return words.map(w => w.toUpperCase()).join("_");
+    case "Title Case":
+      return words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+    default:
+      return name;
+  }
+}
+
 // ============================================
 // non-semantic-name (merged: default-name + non-semantic-name)
 // ============================================
@@ -84,12 +127,28 @@ const inconsistentNamingConventionCheck: RuleCheckFn = (node, context) => {
 
   // Detect conventions used by siblings
   const conventions = new Map<string, number>();
+  let ambiguousPascalCount = 0;
 
   for (const sibling of context.siblings) {
     if (!sibling.name) continue;
     const convention = detectNamingConvention(sibling.name);
     if (convention) {
       conventions.set(convention, (conventions.get(convention) ?? 0) + 1);
+      if (convention === "PascalCase" && /^[A-Z][a-z]+$/.test(sibling.name)) {
+        ambiguousPascalCount++;
+      }
+    }
+  }
+
+  // Single capitalized words (Header, Footer) are detected as PascalCase but are
+  // equally valid as Title Case. When both conventions appear, discount these
+  // ambiguous names so they don't bias the dominant convention toward PascalCase.
+  if (conventions.has("PascalCase") && conventions.has("Title Case") && ambiguousPascalCount > 0) {
+    const adjusted = (conventions.get("PascalCase") ?? 0) - ambiguousPascalCount;
+    if (adjusted <= 0) {
+      conventions.delete("PascalCase");
+    } else {
+      conventions.set("PascalCase", adjusted);
     }
   }
 
@@ -109,11 +168,15 @@ const inconsistentNamingConventionCheck: RuleCheckFn = (node, context) => {
   // Check if current node violates the dominant convention
   const nodeConvention = detectNamingConvention(node.name);
   if (nodeConvention && nodeConvention !== dominantConvention && maxCount >= 2) {
+    // Single capitalized word is compatible with both PascalCase and Title Case
+    if (isCompatible(nodeConvention, dominantConvention, node.name)) return null;
+
+    const suggested = convertName(node.name, dominantConvention);
     return {
       ruleId: inconsistentNamingConventionDef.id,
       nodeId: node.id,
       nodePath: context.path.join(" > "),
-      ...inconsistentNamingMsg(node.name, nodeConvention, dominantConvention),
+      ...inconsistentNamingMsg(node.name, nodeConvention, dominantConvention, suggested),
     };
   }
 
