@@ -1,13 +1,11 @@
-import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import type { CAC } from "cac";
+import { z } from "zod";
 import { loadDiscoveryEvidence, appendDiscoveryEvidence } from "../../../agents/evidence-collector.js";
 import type { DiscoveryEvidenceEntry } from "../../../agents/evidence-collector.js";
 import { DecisionFileSchema } from "../../../agents/contracts/evidence.js";
-import { z } from "zod";
-
-const RUN_DIR_ARG_SCHEMA = z.string().trim().min(1, "runDir is required");
-const KEYWORD_ARG_SCHEMA = z.string().trim().min(1, "keyword is required");
+import { resolveRunDir, KEYWORD_ARG_SCHEMA } from "./cli-helpers.js";
 
 // ─── discovery-filter-evidence ──────────────────────────────────────────────
 
@@ -49,11 +47,8 @@ export function registerFilterDiscoveryEvidence(cli: CAC): void {
         const filtered = filterDiscoveryEvidence(kParsed.data);
 
         if (options.runDir) {
-          const dir = resolve(options.runDir);
-          if (!existsSync(dir) || !statSync(dir).isDirectory()) {
-            console.log(`Run directory not found or is not a directory: ${options.runDir}`);
-            return;
-          }
+          const dir = resolveRunDir(options.runDir);
+          if (!dir) return;
           const outPath = join(dir, "prior-evidence.json");
           writeFileSync(outPath, JSON.stringify(filtered, null, 2) + "\n", "utf-8");
           console.log(`Filtered ${filtered.length} entries for "${keyword}" → ${outPath}`);
@@ -116,13 +111,8 @@ export function registerApplyDecision(cli: CAC): void {
       "Read decision.json and output the action (commit/revert/adjust)"
     )
     .action((runDir: string) => {
-      const parsed = RUN_DIR_ARG_SCHEMA.safeParse(runDir);
-      if (!parsed.success) { console.log(`Invalid runDir: ${parsed.error.issues[0]?.message}`); return; }
-      const dir = resolve(parsed.data);
-      if (!existsSync(dir) || !statSync(dir).isDirectory()) {
-        console.log(`Run directory not found or is not a directory: ${runDir}`);
-        return;
-      }
+      const dir = resolveRunDir(runDir);
+      if (!dir) return;
 
       const result = readDecision(dir);
       if (!result) {
@@ -194,13 +184,8 @@ export function registerCollectGapEvidence(cli: CAC): void {
       "Collect uncovered actionable gaps from gaps.json into discovery evidence"
     )
     .action((runDir: string) => {
-      const parsed = RUN_DIR_ARG_SCHEMA.safeParse(runDir);
-      if (!parsed.success) { console.log(`Invalid runDir: ${parsed.error.issues[0]?.message}`); return; }
-      const dir = resolve(parsed.data);
-      if (!existsSync(dir) || !statSync(dir).isDirectory()) {
-        console.log(`Run directory not found or is not a directory: ${runDir}`);
-        return;
-      }
+      const dir = resolveRunDir(runDir);
+      if (!dir) return;
 
       // Extract fixture name from run dir
       const dirName = dir.split(/[/\\]/).pop() ?? "";
