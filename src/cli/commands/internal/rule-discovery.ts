@@ -1,10 +1,9 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import type { CAC } from "cac";
-import { z } from "zod";
-
 import { loadDiscoveryEvidence } from "../../../agents/evidence-collector.js";
 import type { DiscoveryEvidenceEntry } from "../../../agents/evidence-collector.js";
+import { DecisionFileSchema } from "../../../agents/contracts/evidence.js";
 
 // ─── discovery-filter-evidence ──────────────────────────────────────────────
 
@@ -45,8 +44,8 @@ export function registerFilterDiscoveryEvidence(cli: CAC): void {
 
         if (options.runDir) {
           const dir = resolve(options.runDir);
-          if (!existsSync(dir)) {
-            console.log(`Run directory not found: ${options.runDir}`);
+          if (!existsSync(dir) || !statSync(dir).isDirectory()) {
+            console.log(`Run directory not found or is not a directory: ${options.runDir}`);
             return;
           }
           const outPath = join(dir, "prior-evidence.json");
@@ -63,14 +62,6 @@ export function registerFilterDiscoveryEvidence(cli: CAC): void {
 }
 
 // ─── rule-apply-decision ────────────────────────────────────────────────────
-
-const DecisionFileSchema = z.object({
-  decision: z.string(),
-  ruleId: z.string().optional(),
-  category: z.string().optional(),
-  changes: z.unknown().optional(),
-  reason: z.string().optional(),
-}).passthrough();
 
 export interface ApplyResult {
   action: "commit" | "revert" | "adjust";
