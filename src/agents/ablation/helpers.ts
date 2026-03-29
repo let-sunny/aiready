@@ -7,7 +7,7 @@ import { resolve, join } from "node:path";
 import Anthropic from "@anthropic-ai/sdk";
 
 import { renderCodeScreenshot } from "../../core/engine/visual-compare.js";
-import { compareScreenshots } from "../../core/engine/visual-compare-helpers.js";
+import { compareScreenshots, inferExportScale } from "../../core/engine/visual-compare-helpers.js";
 
 // --- Configuration ---
 
@@ -150,10 +150,7 @@ export async function renderAndCompare(
   const { PNG } = await import("pngjs");
   const figmaImage = PNG.sync.read(readFileSync(figmaScreenshotPath));
   const figmaWidth = figmaImage.width;
-  // Figma save-fixture exports at @2x by default. 1920/768 condition screenshots are @1x.
-  // Detect: if width matches a known @1x size (1920, 768), use scale 1. Otherwise @2x.
-  const KNOWN_1X_WIDTHS = [1920, 768];
-  const exportScale = KNOWN_1X_WIDTHS.includes(figmaWidth) ? 1 : 2;
+  const exportScale = inferExportScale(figmaWidth);
   const logicalW = Math.max(1, Math.round(figmaWidth / exportScale));
   const logicalH = Math.max(1, Math.round(figmaImage.height / exportScale));
 

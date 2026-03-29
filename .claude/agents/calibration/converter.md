@@ -87,16 +87,16 @@ Read and follow `.claude/skills/design-to-code/PROMPT.md` for all code generatio
    | 50-69% | hard |
    | <50% | failed |
 
-6. **MANDATORY — Rule Impact Assessment**: For EVERY rule ID in `nodeIssueSummaries[].flaggedRuleIds`, assess its actual impact on conversion. Read the analysis JSON, collect all unique `flaggedRuleIds`, and for each one write an entry in `ruleImpactAssessment`. This array MUST NOT be empty if there are flagged rules.
+7. **MANDATORY — Rule Impact Assessment**: For EVERY rule ID in `nodeIssueSummaries[].flaggedRuleIds`, assess its actual impact on conversion. Read the analysis JSON, collect all unique `flaggedRuleIds`, and for each one write an entry in `ruleImpactAssessment`. This array MUST NOT be empty if there are flagged rules.
    - Did this rule's issue actually make the conversion harder?
    - What was its real impact on the final similarity score?
    - Rate as: `easy` (no real difficulty), `moderate` (some guessing needed), `hard` (significant pixel loss), `failed` (could not reproduce)
-7. **Code metrics**: After writing `output.html`, record these in conversion.json:
+8. **Code metrics**: After writing `output.html`, record these in conversion.json:
    - `htmlBytes`: file size in bytes
    - `htmlLines`: line count
    - `cssClassCount`: unique CSS class selectors in `<style>` block
    - `cssVariableCount`: unique CSS custom properties (`--*:`) in `<style>` block
-8. Note any difficulties NOT covered by existing rules as `uncoveredStruggles`
+9. Note any difficulties NOT covered by existing rules as `uncoveredStruggles`
    - **Only include design-related issues** — problems in the Figma file structure, missing tokens, ambiguous layout, etc.
    - **Exclude environment/tooling issues** — font CDN availability, screenshot DPI/retina scaling, browser rendering quirks, network issues, CI limitations. These are not design problems and create noise in rule discovery.
 
