@@ -160,9 +160,11 @@ export const missingInteractionStateMsg = {
 
 // ── missing-prototype ─────────────────────────────────────────────────────────
 
-export type MissingPrototypeSubType = "navigation" | "tab" | "dropdown";
+export type MissingPrototypeSubType = "button" | "navigation" | "tab" | "dropdown";
 
 export const missingPrototypeMsg = {
+  button: (name: string) =>
+    `"${name}" looks like a button but has no click prototype — add an ON_CLICK interaction to define the click behavior`,
   navigation: (name: string) =>
     `"${name}" looks like a navigation link but has no click prototype — add an ON_CLICK interaction to define the destination`,
   tab: (name: string) =>

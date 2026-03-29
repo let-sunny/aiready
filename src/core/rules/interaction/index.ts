@@ -170,6 +170,7 @@ export const missingInteractionState = defineRule({
 
 /** Interactive types that need click prototype */
 const PROTOTYPE_TYPES: Record<string, MissingPrototypeSubType> = {
+  button: "button",
   link: "navigation",
   tab: "tab",
 };
