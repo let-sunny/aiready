@@ -198,12 +198,6 @@ describe("renderSummaryDot", () => {
     expect(html).toContain("Blocking");
   });
 
-  it("includes tooltip text", () => {
-    const html = renderSummaryDot("sev-risk", 1, "Risk");
-    expect(html).toContain("Implementable now but will break");
-    expect(html).toContain('title=');
-  });
-
   it("renders zero count", () => {
     const html = renderSummaryDot("sev-suggestion", 0, "Suggestion");
     expect(html).toContain(">0<");

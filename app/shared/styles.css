@@ -151,8 +151,6 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  position: relative;
-  cursor: help;
 }
 .rpt-dot {
   width: 10px;
@@ -630,34 +628,3 @@ body {
 #results { display: none; }
 #results.visible { display: block; }
 
-/* ---- Tooltips (JS-based, for plugin) ---- */
-.cic-tooltip {
-  position: fixed;
-  padding: 5px 10px;
-  background: #18181b;
-  color: #fafafa;
-  font-size: 11px;
-  font-weight: 400;
-  line-height: 1.4;
-  border-radius: 6px;
-  white-space: normal;
-  max-width: 220px;
-  width: max-content;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.15s;
-  z-index: 1000;
-}
-.cic-tooltip.visible { opacity: 1; }
-.cic-tooltip-arrow {
-  position: fixed;
-  width: 8px;
-  height: 8px;
-  background: #18181b;
-  transform: rotate(45deg);
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.15s;
-  z-index: 999;
-}
-.cic-tooltip-arrow.visible { opacity: 1; }

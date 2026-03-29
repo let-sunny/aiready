@@ -70,7 +70,7 @@ export function renderReportBody(data: ReportData): string {
 ${CATEGORIES.map(cat => {
     const cs = scores.byCategory[cat];
     const desc = CATEGORY_DESCRIPTIONS[cat];
-    return `        <a href="#cat-${cat}" class="rpt-gauge-item" title="${esc(desc)}">
+    return `        <a href="#cat-${cat}" class="rpt-gauge-item">
           ${renderGaugeSvg(cs.percentage, 100, 7)}
           <span class="rpt-gauge-label">${CATEGORY_LABELS[cat]}</span>
           <span class="rpt-gauge-count">${cs.issueCount} issues</span>
@@ -109,16 +109,8 @@ ${CATEGORIES.map(cat => renderCategory(cat, scores, issuesByCategory.get(cat) ??
 
 // ---- Components ----
 
-const SEVERITY_TOOLTIPS: Record<string, string> = {
-  Blocking: "Cannot implement correctly without fixing. Direct impact on screen reproduction.",
-  Risk: "Implementable now but will break or increase cost later.",
-  "Missing Info": "Information is absent, forcing AI to guess.",
-  Suggestion: "Not immediately problematic, but improves systemization.",
-};
-
 export function renderSummaryDot(sevClass: string, count: number, label: string): string {
-  const tooltip = SEVERITY_TOOLTIPS[label] ?? "";
-  return `<div class="rpt-summary-item" title="${esc(tooltip)}">
+  return `<div class="rpt-summary-item">
           <span class="rpt-dot ${sevClass}"></span>
           <span class="rpt-summary-count">${count}</span>
           <span class="rpt-summary-label">${label}</span>
