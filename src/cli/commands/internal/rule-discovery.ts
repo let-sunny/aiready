@@ -13,17 +13,21 @@ import type { DiscoveryEvidenceEntry } from "../../../agents/evidence-collector.
  * This handles the concept-to-evidence mapping: a concept like "component description"
  * may match evidence with category "component" or description containing "component".
  */
+const MIN_TOKEN_LENGTH = 2;
+
 export function filterDiscoveryEvidence(keyword: string): DiscoveryEvidenceEntry[] {
-  const entries = loadDiscoveryEvidence();
   const kw = keyword.toLowerCase().trim();
-  return entries.filter((e) =>
-    e.category.toLowerCase().includes(kw) ||
-    e.description.toLowerCase().includes(kw) ||
-    kw.split(/\s+/).some((word) =>
-      e.category.toLowerCase().includes(word) ||
-      e.description.toLowerCase().includes(word)
-    )
-  );
+  if (kw.length === 0) return [];
+
+  const entries = loadDiscoveryEvidence();
+  const tokens = kw.split(/\s+/).filter((w) => w.length >= MIN_TOKEN_LENGTH);
+  if (tokens.length === 0) return [];
+
+  return entries.filter((e) => {
+    const cat = e.category.toLowerCase();
+    const desc = e.description.toLowerCase();
+    return tokens.some((t) => cat.includes(t) || desc.includes(t));
+  });
 }
 
 export function registerFilterDiscoveryEvidence(cli: CAC): void {
