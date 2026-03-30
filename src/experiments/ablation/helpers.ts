@@ -1,13 +1,21 @@
 /**
- * Shared utilities for ablation experiment scripts.
+ * Ablation experiment-specific utilities.
  *
- * Comparison/rendering logic lives in core/engine/visual-compare.ts.
- * This module provides API calls, HTML processing, and experiment configuration.
+ * Common utilities are in core:
+ * - HTML processing: core/engine/html-utils.ts
+ * - Fixture helpers: core/engine/fixture-helpers.ts
+ * - Rendering/comparison: core/engine/visual-compare.ts
+ *
+ * This module provides only experiment-specific things:
+ * API calls, response parsing, experiment config, input validation.
  */
 
-import { existsSync, mkdirSync, copyFileSync, readdirSync } from "node:fs";
-import { resolve, join } from "node:path";
+import { resolve } from "node:path";
 import Anthropic from "@anthropic-ai/sdk";
+
+// Re-export shared utilities so existing experiment scripts don't break
+export { extractHtml, sanitizeHtml, injectLocalFont, processHtml } from "../../core/engine/html-utils.js";
+export { getDesignTreeOptions, getFixtureScreenshotPath, copyFixtureImages } from "../../core/engine/fixture-helpers.js";
 
 // --- Configuration ---
 
@@ -22,69 +30,7 @@ export const DEFAULT_FIXTURES = [
   "desktop-ai-chat",
 ];
 
-// --- Design-tree helpers ---
-
-export function getDesignTreeOptions(fixture: string) {
-  const fixtureDir = resolve(`fixtures/${fixture}`);
-  const vectorDir = join(fixtureDir, "vectors");
-  const imageDir = join(fixtureDir, "images");
-  return {
-    ...(existsSync(vectorDir) ? { vectorDir } : {}),
-    ...(existsSync(imageDir) ? { imageDir } : {}),
-  };
-}
-
-export function getFixtureScreenshotPath(fixture: string, width?: number): string {
-  const w = width ?? (fixture.startsWith("mobile-") ? 375 : 1200);
-  return resolve(`fixtures/${fixture}/screenshot-${w}.png`);
-}
-
-// --- HTML parsing ---
-
-export function extractHtml(text: string): { html: string; method: string } {
-  const allBlocks = [...text.matchAll(/```(?:html|css|[a-z]*)?\s*\n([\s\S]*?)(?:```|$)/g)]
-    .map((m) => m[1]?.trim() ?? "")
-    .filter((block) => block.includes("<") && block.length > 50);
-  if (allBlocks.length === 0) return { html: "", method: "none" };
-  const fullDoc = allBlocks.find((b) => /^<!doctype|^<html/i.test(b));
-  if (fullDoc) return { html: fullDoc, method: "doctype" };
-  const hasBody = allBlocks.find((b) => /<body/i.test(b));
-  if (hasBody) return { html: hasBody, method: "body" };
-  return { html: allBlocks.reduce((a, b) => (a.length >= b.length ? a : b)), method: "largest" };
-}
-
-export function sanitizeHtml(html: string): string {
-  let result = html;
-  result = result.replace(/^\/\/\s*filename:.*\n/i, "");
-  result = result.replace(/<script[\s\S]*?<\/script>/gi, "");
-  result = result.replace(/\s+on\w+\s*=\s*"[^"]*"/gi, "");
-  result = result.replace(/\s+on\w+\s*=\s*'[^']*'/gi, "");
-  result = result.replace(/href\s*=\s*"javascript:[^"]*"/gi, 'href="#"');
-  result = result.replace(/href\s*=\s*'javascript:[^']*'/gi, "href='#'");
-  return result;
-}
-
-export function injectLocalFont(html: string): string {
-  const fontPath = resolve("assets/fonts/Inter.var.woff2");
-  if (!existsSync(fontPath)) return html;
-  const fontCss = `@font-face { font-family: "Inter"; src: url("file://${fontPath}") format("woff2"); font-weight: 100 900; }`;
-  let result = html;
-  result = result.replace(/<link[^>]*fonts\.googleapis\.com[^>]*>/gi, "");
-  result = result.replace(/<link[^>]*fonts\.gstatic\.com[^>]*>/gi, "");
-  if (result.includes("<style>")) {
-    result = result.replace("<style>", `<style>\n${fontCss}\n`);
-  } else if (result.includes("</head>")) {
-    result = result.replace("</head>", `<style>${fontCss}</style>\n</head>`);
-  }
-  return result;
-}
-
-/** Full pipeline: extract → sanitize → inject font */
-export function processHtml(responseText: string): { html: string; method: string } {
-  const { html: raw, method } = extractHtml(responseText);
-  const html = injectLocalFont(sanitizeHtml(raw));
-  return { html, method };
-}
+// --- API response ---
 
 /** Extract response text from API message */
 export function getResponseText(response: Anthropic.Message): string {
@@ -92,19 +38,6 @@ export function getResponseText(response: Anthropic.Message): string {
     .filter((block): block is Anthropic.TextBlock => block.type === "text")
     .map((block) => block.text)
     .join("\n");
-}
-
-// --- File operations ---
-
-export function copyFixtureImages(fixture: string, runDir: string): void {
-  const fixtureImagesDir = resolve(`fixtures/${fixture}/images`);
-  if (existsSync(fixtureImagesDir)) {
-    const runImagesDir = join(runDir, "images");
-    mkdirSync(runImagesDir, { recursive: true });
-    for (const f of readdirSync(fixtureImagesDir)) {
-      copyFileSync(join(fixtureImagesDir, f), join(runImagesDir, f));
-    }
-  }
 }
 
 // --- API call with retry ---
