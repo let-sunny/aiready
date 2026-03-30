@@ -32,8 +32,8 @@ export function sanitizeHtml(html: string): string {
   result = result.replace(/<script[\s\S]*?<\/script>/gi, "");
   result = result.replace(/\s+on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, "");
   result = result.replace(
-    /\s+(?:href|src|xlink:href)\s*=\s*(?:"\s*javascript:[^"]*"|'\s*javascript:[^']*'|javascript:[^\s>]+)/gi,
-    ' href="#"',
+    /\s+(href|src|xlink:href)\s*=\s*(?:"\s*javascript:[^"]*"|'\s*javascript:[^']*'|javascript:[^\s>]+)/gi,
+    (_, attr) => ` ${attr}="#"`,
   );
   return result;
 }
