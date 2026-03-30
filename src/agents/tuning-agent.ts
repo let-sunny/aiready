@@ -11,10 +11,10 @@ import type {
  * Difficulty-to-score midpoint mapping for proposing new scores
  */
 const DIFFICULTY_MIDPOINT: Record<string, number> = {
-  easy: -2,
-  moderate: -5,
-  hard: -10,
-  failed: -12,
+  easy: -3,
+  moderate: -10,
+  hard: -20,
+  failed: -25,
 };
 
 /**
@@ -41,9 +41,9 @@ function getConfidence(caseCount: number): Confidence {
  */
 const DIFFICULTY_SCORE_MAX: Record<string, number> = {
   easy: 0,
-  moderate: -4,
-  hard: -8,
-  failed: -8,
+  moderate: -6,
+  hard: -16,
+  failed: -16,
 };
 
 /**
@@ -78,11 +78,11 @@ function proposeSeverity(
   proposedScore: number
 ): Severity | undefined {
   let expectedSeverity: Severity;
-  if (proposedScore <= -8) {
+  if (proposedScore <= -16) {
     expectedSeverity = "blocking";
-  } else if (proposedScore <= -4) {
+  } else if (proposedScore <= -6) {
     expectedSeverity = "risk";
-  } else if (proposedScore <= -2) {
+  } else if (proposedScore <= -3) {
     expectedSeverity = "missing-info";
   } else {
     expectedSeverity = "suggestion";
@@ -170,9 +170,9 @@ export function runTuningAgent(
       : "";
 
     // Propose disable when rule converges to zero impact:
-    // score already at suggestion floor (-2) + 3+ cases + all easy
+    // score at suggestion floor + 3+ cases + all easy
     const shouldDisable =
-      proposedScore >= -2 &&
+      proposedScore >= -3 &&
       totalCases >= 3 &&
       allDifficulties.every((d) => d === "easy");
 

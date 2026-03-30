@@ -56,9 +56,12 @@ export type Grade = "S" | "A+" | "A" | "B+" | "B" | "C+" | "C" | "D" | "F";
  * making all rules within the same severity contribute equally and rendering
  * the per-rule scores in rule-config.ts effectively unused.
  *
- * Now: `no-auto-layout` (score: -10, depthWeight: 1.5) at root contributes 15
+ * Now: `no-auto-layout` (score: -25, depthWeight: 1.5) at root contributes 37.5
  * to density, while `non-semantic-name` (score: -1, no depthWeight) contributes 1.
  * This makes calibration loop score adjustments flow through to user-facing scores.
+ *
+ * Category weights (pixel-critical ×2.5, responsive-critical ×3.0, etc.) are
+ * baked into rule scores directly, so categories are classification tags only.
  */
 
 /**
@@ -83,26 +86,6 @@ function computeTotalScorePerCategory(
 
   return totals;
 }
-
-/**
- * Category weights for overall score, based on ablation experiment data (PR #149, #150).
- *
- * Evidence:
- * - responsive-critical: ΔV +15.9% at expanded viewport, mobile-shop +46% — highest impact
- * - pixel-critical: ΔV +5.4% when layout info stripped — direct pixel accuracy impact
- * - token-management: ΔV +3.5% (style-ref, Phase 2) — moderate
- * - code-quality: ΔV ≈0%, CSS classes -8~15 — affects structure, not pixels
- * - interaction: data incomplete (missing-prototype disabled, #139 fixture rebuild pending)
- * - minor: ΔV <2%, negligible code difference
- */
-export const CATEGORY_WEIGHT: Record<Category, number> = {
-  "pixel-critical": 2.5,
-  "responsive-critical": 3.0,
-  "code-quality": 1.0,
-  "token-management": 1.0,
-  "interaction": 0.5,
-  "minor": 0.3,
-};
 
 /**
  * Score composition weights (initial intuition, pending calibration validation).
@@ -250,18 +233,16 @@ export function calculateScores(
     catScore.maxScore = 100;
   }
 
-  // Calculate overall score as weighted average of categories
-  let totalWeight = 0;
-  let weightedSum = 0;
-
+  // Calculate overall score as simple average of categories
+  // Category importance is already encoded in rule scores (weight baked in),
+  // so no per-category weighting is needed.
+  let categorySum = 0;
   for (const category of CATEGORIES) {
-    const weight = CATEGORY_WEIGHT[category];
-    weightedSum += categoryScores[category].percentage * weight;
-    totalWeight += weight;
+    categorySum += categoryScores[category].percentage;
   }
 
-  const overallPercentage = totalWeight > 0
-    ? Math.round(weightedSum / totalWeight)
+  const overallPercentage = CATEGORIES.length > 0
+    ? Math.round(categorySum / CATEGORIES.length)
     : 100;
 
   // Count issues by severity
