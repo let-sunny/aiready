@@ -14,18 +14,17 @@ import { stripDeltaToDifficulty } from "../core/design-tree/delta.js";
 /**
  * Difficulty-to-score range mapping.
  * Used to determine if a rule's current score aligns with actual conversion difficulty.
- * Scores have category weight baked in (e.g. pixel-critical rules ×2.5).
  *
- * easy    → score should be 0 to -5
- * moderate → score should be -6 to -15
- * hard    → score should be -16 to -25
- * failed  → score should be -16 to -25
+ * easy    → score should be 0 to -3
+ * moderate → score should be -4 to -7
+ * hard    → score should be -8 to -12
+ * failed  → score should be -8 to -12
  */
 const DIFFICULTY_SCORE_RANGES: Record<Difficulty, { min: number; max: number }> = {
-  easy: { min: -5, max: 0 },
-  moderate: { min: -15, max: -6 },
-  hard: { min: -25, max: -16 },
-  failed: { min: -25, max: -16 },
+  easy: { min: -3, max: 0 },
+  moderate: { min: -7, max: -4 },
+  hard: { min: -12, max: -8 },
+  failed: { min: -12, max: -8 },
 };
 
 /**
@@ -49,8 +48,8 @@ function classifyFlaggedRule(
 
   // If actual difficulty is easier than what the score suggests
   if (
-    (actualDifficulty === "easy" && currentScore < -5) ||
-    (actualDifficulty === "moderate" && currentScore < -15)
+    (actualDifficulty === "easy" && currentScore < -3) ||
+    (actualDifficulty === "moderate" && currentScore < -7)
   ) {
     return "overscored";
   }

@@ -47,7 +47,7 @@ describe("runTuningAgent", () => {
     expect(result.adjustments).toHaveLength(1);
     const adj = result.adjustments[0]!;
     expect(adj.ruleId).toBe("no-auto-layout");
-    expect(adj.proposedScore).toBe(-3);
+    expect(adj.proposedScore).toBe(-2);
     expect(adj.currentScore).toBe(-8);
     expect(adj.confidence).toBe("medium");
     expect(adj.supportingCases).toBe(2);
@@ -94,10 +94,10 @@ describe("runTuningAgent", () => {
     expect(result.adjustments).toHaveLength(1);
     const adj = result.adjustments[0]!;
     expect(adj.ruleId).toBe("irregular-spacing");
-    expect(adj.proposedScore).toBe(-20);
+    expect(adj.proposedScore).toBe(-10);
     expect(adj.confidence).toBe("high");
     expect(adj.supportingCases).toBe(3);
-    // Score -20 maps to "blocking", current is "missing-info" → severity change proposed
+    // Score -10 maps to "blocking", current is "missing-info" → severity change proposed
     expect(adj.proposedSeverity).toBe("blocking");
     expect(adj.currentSeverity).toBe("missing-info");
     expect(result.newRuleProposals).toHaveLength(0);
@@ -147,7 +147,7 @@ describe("runTuningAgent", () => {
     expect(borderRadiusProposal).toBeDefined();
     expect(borderRadiusProposal!.suggestedId).toBe("new-border-radius-rule");
     expect(borderRadiusProposal!.suggestedSeverity).toBe("blocking");
-    expect(borderRadiusProposal!.suggestedScore).toBe(-20);
+    expect(borderRadiusProposal!.suggestedScore).toBe(-10);
     expect(borderRadiusProposal!.supportingCases).toBe(2);
 
     const textOverflowProposal = result.newRuleProposals.find(
@@ -156,7 +156,7 @@ describe("runTuningAgent", () => {
     expect(textOverflowProposal).toBeDefined();
     expect(textOverflowProposal!.suggestedId).toBe("new-text-overflow-rule");
     expect(textOverflowProposal!.suggestedSeverity).toBe("risk");
-    expect(textOverflowProposal!.suggestedScore).toBe(-10);
+    expect(textOverflowProposal!.suggestedScore).toBe(-5);
     expect(textOverflowProposal!.supportingCases).toBe(1);
   });
 

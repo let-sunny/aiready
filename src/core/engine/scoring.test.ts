@@ -155,7 +155,7 @@ describe("calculateScores", () => {
 
   it("diversity weights triggered rules by score severity", () => {
     const heavyRule = calculateScores(makeResult([
-      makeIssue({ ruleId: "no-auto-layout", category: "pixel-critical", severity: "blocking", score: -25 }),
+      makeIssue({ ruleId: "no-auto-layout", category: "pixel-critical", severity: "blocking", score: -10 }),
     ], 100));
 
     const lightRule = calculateScores(makeResult([
@@ -173,7 +173,7 @@ describe("calculateScores", () => {
     ], 100));
 
     const highSeverity = calculateScores(makeResult([
-      makeIssue({ ruleId: "no-auto-layout", category: "pixel-critical", severity: "blocking", score: -25 }),
+      makeIssue({ ruleId: "no-auto-layout", category: "pixel-critical", severity: "blocking", score: -10 }),
     ], 100));
 
     expect(lowSeverity.byCategory["minor"].diversityScore).toBeGreaterThan(50);
@@ -201,7 +201,7 @@ describe("calculateScores", () => {
     const issues: AnalysisIssue[] = [];
     for (const ruleId of pixelCriticalRules) {
       for (let i = 0; i < 200; i++) {
-        issues.push(makeIssue({ ruleId, category: "pixel-critical", severity: "blocking", score: -25 }));
+        issues.push(makeIssue({ ruleId, category: "pixel-critical", severity: "blocking", score: -10 }));
       }
     }
 

@@ -19,7 +19,7 @@ describe("runEvaluationAgent", () => {
         },
       ],
       ruleScores: {
-        "rule-a": { score: -20, severity: "blocking" },
+        "rule-a": { score: -10, severity: "blocking" },
       },
     };
 

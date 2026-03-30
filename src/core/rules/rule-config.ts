@@ -37,49 +37,50 @@ export const RULE_ID_CATEGORY: Record<RuleId, Category> = {
 
 /**
  * Central configuration for all rules.
- * Scores are effective scores with category weight baked in (score = base × categoryWeight).
- * Based on ablation experiment impact data (PR #149, #150):
- * - pixel-critical (×2.5): -25 ~ -18 (layout strip caused ΔV +5.4%)
- * - responsive-critical (×3.0): -18 ~ -15 (size-constraints ΔV +15.9% at responsive viewports)
- * - code-quality (×1.0): -7 ~ -3 (CSS classes -8~15, no pixel impact)
- * - token-management (×1.0): -3 ~ -2 (wrong input = wrong output, but values still present)
- * - interaction (×0.5): -2 (data incomplete)
- * - minor (×0.3): -1 (ΔV < 2%, negligible)
+ * Scores based on ablation experiment impact data (PR #149, #150):
+ * - pixel-critical: -10 ~ -7 (layout strip caused ΔV +5.4%)
+ * - responsive-critical: -7 ~ -5 (size-constraints ΔV +15.9% at responsive viewports)
+ * - code-quality: -5 ~ -3 (CSS classes -8~15, no pixel impact)
+ * - token-management: -3 ~ -2 (wrong input = wrong output, but values still present)
+ * - interaction: -3 (data incomplete)
+ * - minor: -2 ~ -1 (ΔV < 2%, negligible)
+ *
+ * Category weights removed (#196) — overall score is simple average of categories.
  */
 export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
-  // ── Pixel Critical (base × 2.5) ──
+  // ── Pixel Critical ──
   "no-auto-layout": {
     severity: "blocking",
-    score: -25,
+    score: -10,
     depthWeight: 1.5,
     enabled: true,
   },
   "absolute-position-in-auto-layout": {
     severity: "blocking",
-    score: -18,
+    score: -7,
     depthWeight: 1.3,
     enabled: true,
   },
   "non-layout-container": {
     severity: "blocking",
-    score: -20,
+    score: -8,
     depthWeight: 1.2,
     enabled: true,
   },
 
-  // ── Responsive Critical (base × 3.0) ──
+  // ── Responsive Critical ──
   "fixed-size-in-auto-layout": {
     severity: "risk",
-    score: -18,
+    score: -6,
     enabled: true,
   },
   "missing-size-constraint": {
     severity: "risk",
-    score: -15,
+    score: -5,
     enabled: true,
   },
 
-  // ── Code Quality (base × 1.0) ──
+  // ── Code Quality ──
   "missing-component": {
     severity: "risk",
     score: -7,
@@ -109,7 +110,7 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
     },
   },
 
-  // ── Token Management (base × 1.0) ──
+  // ── Token Management ──
   "raw-value": {
     severity: "missing-info",
     score: -3,
@@ -124,22 +125,22 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
     },
   },
 
-  // ── Interaction (base × 0.5) ──
+  // ── Interaction ──
   "missing-interaction-state": {
     severity: "missing-info",
-    score: -2,
+    score: -3,
     enabled: true,
   },
   "missing-prototype": {
     severity: "missing-info",
-    score: -2,
+    score: -3,
     enabled: false, // disabled: interactionDestinations data missing from fixtures (#139)
   },
 
-  // ── Minor (base × 0.3) ──
+  // ── Minor ──
   "non-standard-naming": {
     severity: "suggestion",
-    score: -1,
+    score: -3, // higher than other naming rules: non-standard state names break interaction detection pipeline
     enabled: true,
   },
   "non-semantic-name": {

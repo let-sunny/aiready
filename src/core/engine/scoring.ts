@@ -56,12 +56,13 @@ export type Grade = "S" | "A+" | "A" | "B+" | "B" | "C+" | "C" | "D" | "F";
  * making all rules within the same severity contribute equally and rendering
  * the per-rule scores in rule-config.ts effectively unused.
  *
- * Now: `no-auto-layout` (score: -25, depthWeight: 1.5) at root contributes 37.5
+ * Now: `no-auto-layout` (score: -10, depthWeight: 1.5) at root contributes 15
  * to density, while `non-semantic-name` (score: -1, no depthWeight) contributes 1.
  * This makes calibration loop score adjustments flow through to user-facing scores.
  *
- * Category weights (pixel-critical ×2.5, responsive-critical ×3.0, etc.) are
- * baked into rule scores directly, so categories are classification tags only.
+ * Category weights removed (#196) — overall score is simple average of categories.
+ * Category importance is already encoded in rule scores (pixel-critical -10
+ * vs minor -1), so per-category weighting is unnecessary.
  */
 
 /**
