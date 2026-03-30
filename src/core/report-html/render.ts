@@ -231,8 +231,6 @@ export function renderIssueRow(
 
 // ---- Interactions ----
 
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
-
 /**
  * Initialize tab switching + navigation for a rendered report.
  * Call after inserting renderReportBody() HTML into a container.
@@ -282,8 +280,6 @@ export function initReportInteractions(container: any): void {
   container._rptHandler = handler;
   container.addEventListener("click", handler);
 }
-
-/* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 
 // ---- Utils ----
 

@@ -33,7 +33,7 @@ reviews:
   # Static analysis tools
   tools:
     biome:
-      enabled: true
+      enabled: false
 
   # Per-path review instructions
   path_instructions:
