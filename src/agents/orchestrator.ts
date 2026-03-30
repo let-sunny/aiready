@@ -3,7 +3,7 @@ import { analyzeFile } from "../core/engine/rule-engine.js";
 import { RULE_CONFIGS } from "../core/rules/rule-config.js";
 
 import type { CalibrationConfigInput } from "./contracts/calibration.js";
-import { StripDeltasArraySchema } from "./contracts/conversion-agent.js";
+import { StripDeltasArraySchema, RuleImpactAssessmentSchema, UncoveredStrugglesInputSchema } from "./contracts/conversion-agent.js";
 import { CalibrationConfigSchema } from "./contracts/calibration.js";
 import type { NodeIssueSummary } from "./contracts/analysis-agent.js";
 import type { ScoreReport } from "../core/engine/scoring.js";
@@ -278,31 +278,36 @@ export function runCalibrationEvaluate(
     ruleRelatedStruggles: Array<{ ruleId: string; description: string; actualImpact: string }>;
     uncoveredStruggles: Array<{ description: string; suggestedCategory: string; estimatedImpact: string }>;
   }>;
+  let wholeDesign = false;
 
   if (Array.isArray(conversionJson["records"])) {
     // Old per-node format
     conversionRecords = conversionJson["records"] as typeof conversionRecords;
-  } else if (conversionJson["ruleImpactAssessment"]) {
-    // New whole-design format — convert to records format
-    const assessment = conversionJson["ruleImpactAssessment"] as Array<{
-      ruleId: string; issueCount: number; actualImpact: string; description: string;
-    }>;
-    const struggles = (conversionJson["uncoveredStruggles"] ?? []) as Array<{
-      description: string; suggestedCategory: string; estimatedImpact: string;
-    }>;
-    conversionRecords = [{
-      nodeId: (conversionJson["rootNodeId"] as string) ?? "root",
-      nodePath: "root",
-      difficulty: (conversionJson["difficulty"] as string) ?? "moderate",
-      ruleRelatedStruggles: assessment.map(a => ({
-        ruleId: a.ruleId,
-        description: a.description,
-        actualImpact: normalizeActualImpact(a.actualImpact),
-      })),
-      uncoveredStruggles: struggles,
-    }];
   } else {
-    conversionRecords = [];
+    // New whole-design format — Zod-validate before use
+    const assessmentParsed = RuleImpactAssessmentSchema.safeParse(conversionJson["ruleImpactAssessment"]);
+    if (assessmentParsed.success && assessmentParsed.data.length > 0) {
+      wholeDesign = true;
+      const assessment = assessmentParsed.data;
+      const strugglesParsed = UncoveredStrugglesInputSchema.safeParse(conversionJson["uncoveredStruggles"]);
+      const struggles = strugglesParsed.success ? strugglesParsed.data : [];
+      conversionRecords = [{
+        nodeId: typeof conversionJson["rootNodeId"] === "string" ? conversionJson["rootNodeId"] : "root",
+        nodePath: "root",
+        difficulty: typeof conversionJson["difficulty"] === "string" ? conversionJson["difficulty"] : "moderate",
+        ruleRelatedStruggles: assessment.map(a => ({
+          ruleId: a.ruleId,
+          description: a.description,
+          actualImpact: normalizeActualImpact(a.actualImpact),
+        })),
+        uncoveredStruggles: struggles.map(s => ({
+          ...s,
+          estimatedImpact: normalizeActualImpact(s.estimatedImpact),
+        })),
+      }];
+    } else {
+      conversionRecords = [];
+    }
   }
 
   // Extract responsive comparison data if available
@@ -332,6 +337,7 @@ export function runCalibrationEvaluate(
     ruleScores,
     responsiveDelta,
     stripDeltas,
+    wholeDesign,
   });
 
   // Load prior evidence if collecting

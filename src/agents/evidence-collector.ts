@@ -215,6 +215,11 @@ export function computeEvidenceRatio(group: CrossRunEvidenceGroup): EvidenceRati
 
 /**
  * Append new calibration evidence entries (overscored/underscored mismatches).
+ *
+ * Dedup policy: one entry per (ruleId, fixture) — last-write-wins within and across calls.
+ * This is intentional: with strip-ablation (#194) each rule gets one objective delta per fixture,
+ * so multiple entries for the same (ruleId, fixture) would be redundant.
+ * Cross-run confidence in `computeEvidenceRatio` counts entries (=fixtures), not occurrences.
  */
 export function appendCalibrationEvidence(
   entries: CalibrationEvidenceEntry[],
@@ -241,6 +246,7 @@ export function appendCalibrationEvidence(
 
 /**
  * Remove entries for rules whose scores were applied/revised by the Arbitrator.
+ * Prunes all fixtures for the given ruleIds — score changes are global.
  */
 export function pruneCalibrationEvidence(
   appliedRuleIds: string[],

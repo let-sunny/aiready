@@ -52,3 +52,20 @@ export const StripDeltasArraySchema = z.array(StripDeltaResultSchema);
 
 export type StripDeltaResult = z.infer<typeof StripDeltaResultSchema>;
 
+export const RuleImpactAssessmentSchema = z.array(
+  z.object({
+    ruleId: z.string(),
+    issueCount: z.number(),
+    actualImpact: z.string(),
+    description: z.string(),
+  })
+);
+
+export const UncoveredStrugglesInputSchema = z.array(
+  z.object({
+    description: z.string(),
+    suggestedCategory: z.string(),
+    estimatedImpact: z.string(),
+  })
+);
+

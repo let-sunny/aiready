@@ -82,6 +82,26 @@ function buildReasoning(
 }
 
 /**
+ * Merge all node issue summaries into a single virtual summary.
+ * Used when whole-design conversion produces a single root record but analysis
+ * flags rules on individual child nodes. Without merging, rules only flagged on
+ * non-root nodes would be silently dropped from evaluation.
+ */
+function mergeAllSummaries(
+  summaries: Array<{ nodeId: string; nodePath: string; flaggedRuleIds: string[] }>,
+  rootNodeId: string,
+  rootNodePath: string,
+): { nodeId: string; nodePath: string; flaggedRuleIds: string[] } {
+  const allRuleIds = new Set<string>();
+  for (const s of summaries) {
+    for (const id of s.flaggedRuleIds) {
+      allRuleIds.add(id);
+    }
+  }
+  return { nodeId: rootNodeId, nodePath: rootNodePath, flaggedRuleIds: [...allRuleIds] };
+}
+
+/**
  * Evaluation Agent - Step 3 of calibration pipeline
  *
  * Deterministic comparison of analysis results vs conversion results.
@@ -99,7 +119,9 @@ export function runEvaluationAgent(
   );
 
   for (const record of input.conversionRecords) {
-    const summary = nodeSummaryMap.get(record.nodeId);
+    const summary = input.wholeDesign
+      ? mergeAllSummaries(input.nodeIssueSummaries, record.nodeId, record.nodePath)
+      : nodeSummaryMap.get(record.nodeId);
     const difficulty = record.difficulty as Difficulty;
 
     // Process rule-related struggles from conversion

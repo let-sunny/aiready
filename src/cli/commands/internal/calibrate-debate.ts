@@ -5,7 +5,10 @@ import type { CAC } from "cac";
 import { parseDebateResult } from "../../../agents/run-directory.js";
 import { loadCalibrationEvidence, computeEvidenceRatio } from "../../../agents/evidence-collector.js";
 import type { EvidenceRatioSummary } from "../../../agents/contracts/evidence.js";
+import { RULE_CONFIGS } from "../../../core/rules/rule-config.js";
 import { resolveRunDir } from "./cli-helpers.js";
+
+const KNOWN_RULE_IDS = new Set(Object.keys(RULE_CONFIGS));
 
 // ─── calibrate-gather-evidence ──────────────────────────────────────────────
 
@@ -86,14 +89,14 @@ export function loadProposedRuleIds(runDir: string): string[] {
     } catch { /* fall through to regex */ }
   }
 
-  // Fallback: extract from summary.md (may have false positives)
+  // Fallback: extract from summary.md, filtered to known rule IDs only
   const summaryPath = join(runDir, "summary.md");
   if (!existsSync(summaryPath)) return [];
   try {
     const content = readFileSync(summaryPath, "utf-8");
     const ids = new Set<string>();
     for (const match of content.matchAll(/`([a-z][\w-]*)`/g)) {
-      if (match[1]) ids.add(match[1]);
+      if (match[1] && KNOWN_RULE_IDS.has(match[1])) ids.add(match[1]);
     }
     return [...ids];
   } catch {
