@@ -26,18 +26,18 @@ You will receive:
 3. **Gap analysis** — actionable pixel gaps between Figma and generated code
 4. **Prior evidence** — cross-run calibration evidence for the proposed rules (accumulated from past runs)
 5. **Evidence ratios** — `evidenceRatios` object with pre-computed statistical summaries per rule
-6. **Strip ablation deltas** — `stripDeltas` showing objective similarity degradation when specific design-tree info is removed. These are **measured, not self-reported** — they override Converter's subjective assessment.
+6. **Strip ablation deltas** — `stripDeltas` showing objective degradation when specific design-tree info is removed. These are **measured, not self-reported** — they override Converter's `ruleImpactAssessment` **when the evaluator actually applies strip-based override for that rule** (not all rules; see below).
 
 Use ALL inputs to form pro/con arguments. Do not rely on proposals alone.
 
 ### Strip Ablation Deltas (objective ground truth)
 
-When `stripDeltas` are present, they provide the **most reliable** difficulty signal (see `STRIP_TYPE_RULES` in `src/agents/evaluation-agent.ts`):
+When `stripDeltas` are present, they provide the **most reliable** difficulty signal **for rules where the evaluator applies strip ablation override** (see `STRIP_TYPE_RULES` in `src/agents/evaluation-agent.ts`):
 - They measure objective degradation when info is removed (not AI self-assessment): **pixel delta** (`stripDeltaToDifficulty`) for `layout-direction-spacing`; **difficulty from baseline vs stripped input-token ratio** (`tokenDeltaToDifficulty` — relative % savings, not absolute token drop) for `component-references`, `node-names-hierarchy`, `variable-references`, `style-references`; **responsive similarity delta** for `size-constraints` when that metric is recorded
 - Strip-to-rule mapping (calibration): `layout-direction-spacing` → `no-auto-layout`, `absolute-position-in-auto-layout`, `non-layout-container`, `irregular-spacing`; `size-constraints` → `missing-size-constraint`, `fixed-size-in-auto-layout`; `component-references` → `missing-component`, `detached-instance`, `variant-structure-mismatch`; `node-names-hierarchy` → `non-standard-naming`, `non-semantic-name`, `inconsistent-naming-convention`; `variable-references` / `style-references` → `raw-value`
-- For **responsive-critical** rules, the evaluator may use **baseline page** `responsiveDelta` when per-strip responsive compares are unavailable or strip override is skipped — do not assume strip rows always supersede that classification
-- Higher delta (for the metric used for that strip family) = removing that info hurt more = rule is more important
-- **Prefer per-strip metric evidence over Converter's `ruleImpactAssessment`** when they conflict and that strip metric applies to the rule in question
+- **Responsive-critical** rules (`missing-size-constraint`, `fixed-size-in-auto-layout`): the evaluator currently **skips** the strip ablation override pass for this category (so design-viewport pixel fallback on `size-constraints` cannot erase baseline responsive classification). Treat **`stripDeltas["size-constraints"]` as narrative context only** for these rules until per-strip responsive metrics are wired (#205); **trust baseline page `responsiveDelta`** (and the evaluation output) over Converter opinion — but **do not** treat strip rows as having overridden that path.
+- For **all other rules** that have a strip mapping, **prefer the strip-derived difficulty (pixel or token ratio)** over Converter's `ruleImpactAssessment` when they conflict — the strip metric is what the evaluator uses for those rules.
+- Higher delta (for the metric that applies to that strip family) = removing that info hurt more = rule is more important
 
 ### Evidence Ratios (critical for contradictory evidence)
 
