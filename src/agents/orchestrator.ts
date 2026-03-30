@@ -292,15 +292,18 @@ export function runCalibrationEvaluate(
       const strugglesParsed = UncoveredStrugglesInputSchema.safeParse(conversionJson["uncoveredStruggles"]);
       const struggles = strugglesParsed.success ? strugglesParsed.data : [];
       conversionRecords = [{
-        nodeId: (conversionJson["rootNodeId"] as string) ?? "root",
+        nodeId: typeof conversionJson["rootNodeId"] === "string" ? conversionJson["rootNodeId"] : "root",
         nodePath: "root",
-        difficulty: (conversionJson["difficulty"] as string) ?? "moderate",
+        difficulty: typeof conversionJson["difficulty"] === "string" ? conversionJson["difficulty"] : "moderate",
         ruleRelatedStruggles: assessment.map(a => ({
           ruleId: a.ruleId,
           description: a.description,
           actualImpact: normalizeActualImpact(a.actualImpact),
         })),
-        uncoveredStruggles: struggles,
+        uncoveredStruggles: struggles.map(s => ({
+          ...s,
+          estimatedImpact: normalizeActualImpact(s.estimatedImpact),
+        })),
       }];
     } else {
       conversionRecords = [];
