@@ -316,7 +316,7 @@ export function runCalibrationEvaluate(
   if (Array.isArray(stripDeltaResults) && stripDeltaResults.length > 0) {
     stripDeltas = {};
     for (const r of stripDeltaResults) {
-      if (typeof r.stripType === "string" && typeof r.delta === "number" && Number.isFinite(r.delta)) {
+      if (r && typeof r === "object" && typeof r.stripType === "string" && typeof r.delta === "number" && Number.isFinite(r.delta)) {
         stripDeltas[r.stripType] = r.delta;
       }
     }
