@@ -142,6 +142,7 @@ Two scripts, shared helpers:
 ANTHROPIC_API_KEY=sk-... npx tsx src/experiments/ablation/run-phase1.ts
 ABLATION_FIXTURES=desktop-product-detail ABLATION_TYPES=component-references npx tsx ...
 ```
+
 - Strips info from design-tree → implements via Claude API → renders → compares vs Figma screenshot
 - 5 strip types: layout-direction-spacing, component-references, node-names-hierarchy, variable-references, style-references
 - Output: `data/ablation/phase1/{config-version}/{fixture}/{type}/run-{n}/`
