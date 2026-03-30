@@ -16,7 +16,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { generateDesignTree } from "../../core/design-tree/design-tree.js";
 import { stripDesignTree } from "../../core/design-tree/strip.js";
 import { loadFigmaFileFromJson } from "../../core/adapters/figma-file-loader.js";
-import { renderAndCompare } from "../../core/engine/visual-compare.js";
+import { renderAndCompare } from "../../core/comparison/visual-compare.js";
 
 import {
   PROMPT_PATH, callApi, processHtml, getResponseText,

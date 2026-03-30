@@ -10,7 +10,7 @@
 import { existsSync, readFileSync, writeFileSync, readdirSync } from "node:fs";
 import { resolve, join } from "node:path";
 
-import { renderAndCompare } from "../../core/engine/visual-compare.js";
+import { renderAndCompare } from "../../core/comparison/visual-compare.js";
 import { getFixtureScreenshotPath, DEFAULT_FIXTURES } from "./helpers.js";
 
 const BASE_OUTPUT_DIR = resolve("data/ablation/phase1");

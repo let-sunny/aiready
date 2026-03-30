@@ -381,7 +381,7 @@ Requires: Playwright with Chromium installed, Figma API token.`,
   },
   async ({ codePath, figmaUrl, token, outputDir, figmaExportScale }) => {
     try {
-      const { visualCompare } = await import("../core/engine/visual-compare.js");
+      const { visualCompare } = await import("../core/comparison/visual-compare.js");
       const figmaToken = token ?? process.env["FIGMA_TOKEN"];
       if (!figmaToken) {
         return {

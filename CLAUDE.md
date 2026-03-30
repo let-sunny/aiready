@@ -40,7 +40,9 @@ This means:
 src/                          # Node.js runtime (tsup build)
 ├── core/                     # Shared analysis engine
 │   ├── design-tree/          # Design tree generation, stripping, delta mapping
-│   ├── engine/               # rule-engine, scoring, loader, visual-compare
+│   ├── engine/               # rule-engine, scoring, loader
+│   ├── comparison/           # visual-compare, html-utils
+│   ├── utils/                # fixture-helpers
 │   ├── rules/                # Rule definitions + config
 │   ├── contracts/            # Type definitions + Zod schemas
 │   ├── adapters/             # Figma API integrations

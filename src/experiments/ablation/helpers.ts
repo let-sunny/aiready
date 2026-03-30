@@ -2,9 +2,9 @@
  * Ablation experiment-specific utilities.
  *
  * Common utilities are in core:
- * - HTML processing: core/engine/html-utils.ts
- * - Fixture helpers: core/engine/fixture-helpers.ts
- * - Rendering/comparison: core/engine/visual-compare.ts
+ * - HTML processing: core/comparison/html-utils.ts
+ * - Fixture helpers: core/utils/fixture-helpers.ts
+ * - Rendering/comparison: core/comparison/visual-compare.ts
  *
  * This module provides only experiment-specific things:
  * API calls, response parsing, experiment config, input validation.
@@ -14,8 +14,8 @@ import { resolve } from "node:path";
 import Anthropic from "@anthropic-ai/sdk";
 
 // Re-export shared utilities so existing experiment scripts don't break
-export { extractHtml, sanitizeHtml, injectLocalFont, processHtml } from "../../core/engine/html-utils.js";
-export { getDesignTreeOptions, getFixtureScreenshotPath, copyFixtureImages } from "../../core/engine/fixture-helpers.js";
+export { extractHtml, sanitizeHtml, injectLocalFont, processHtml } from "../../core/comparison/html-utils.js";
+export { getDesignTreeOptions, getFixtureScreenshotPath, copyFixtureImages } from "../../core/utils/fixture-helpers.js";
 
 // --- Configuration ---
 

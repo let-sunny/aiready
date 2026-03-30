@@ -58,7 +58,7 @@ export function registerVisualCompare(cli: CAC): void {
           process.exitCode = 1; return;
         }
 
-        const { visualCompare } = await import("../../core/engine/visual-compare.js");
+        const { visualCompare } = await import("../../core/comparison/visual-compare.js");
 
         const exportScale =
           options.figmaScale !== undefined ? Number(options.figmaScale) : undefined;
