@@ -95,16 +95,16 @@ Override score, severity, or enable/disable individual rules:
 
 | Rule ID | Default Score | Default Severity |
 |---------|--------------|-----------------|
-| `no-auto-layout` | -25 | blocking |
-| `absolute-position-in-auto-layout` | -18 | blocking |
-| `non-layout-container` | -20 | blocking |
+| `no-auto-layout` | -10 | blocking |
+| `absolute-position-in-auto-layout` | -7 | blocking |
+| `non-layout-container` | -8 | blocking |
 
 **Responsive Critical (2 rules)**
 
 | Rule ID | Default Score | Default Severity |
 |---------|--------------|-----------------|
-| `fixed-size-in-auto-layout` | -18 | risk |
-| `missing-size-constraint` | -15 | risk |
+| `fixed-size-in-auto-layout` | -6 | risk |
+| `missing-size-constraint` | -5 | risk |
 
 **Code Quality (4 rules)**
 
@@ -128,14 +128,14 @@ Override score, severity, or enable/disable individual rules:
 |---------|--------------|-----------------|
 | `non-semantic-name` | -1 | suggestion |
 | `inconsistent-naming-convention` | -1 | suggestion |
-| `non-standard-naming` | -1 | suggestion |
+| `non-standard-naming` | -3 | suggestion |
 
 **Interaction (2 rules)**
 
 | Rule ID | Default Score | Default Severity |
 |---------|--------------|-----------------|
-| `missing-interaction-state` | -2 | missing-info |
-| `missing-prototype` *(disabled)* | -2 | missing-info |
+| `missing-interaction-state` | -3 | missing-info |
+| `missing-prototype` *(disabled)* | -3 | missing-info |
 <!-- RULE_TABLE_END -->
 
 ### Example Configs
