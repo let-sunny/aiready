@@ -214,7 +214,7 @@ Write results to `$RUN_DIR/conversion.json`.
       "baselineSimilarity": 87,
       "strippedSimilarity": 86,
       "delta": 1,
-      "deltaDifficulty": "easy",
+      "deltaDifficulty": "moderate",
       "baselineResponsiveSimilarity": 72,
       "strippedResponsiveSimilarity": 58,
       "responsiveDelta": 14,

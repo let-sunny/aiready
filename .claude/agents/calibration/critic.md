@@ -32,12 +32,12 @@ Use ALL inputs to form pro/con arguments. Do not rely on proposals alone.
 
 ### Strip Ablation Deltas (objective ground truth)
 
-When `stripDeltas` are present, they provide the **most reliable** difficulty signal:
-- They measure objective degradation when info is removed (not AI self-assessment): **pixel delta** for layout strips, **token-count delta** for component/naming/variable/style strips, **responsive similarity delta** for `size-constraints` when that metric is recorded
-- Strip-to-rule mapping (calibration): `layout-direction-spacing` → layout rules; `size-constraints` → `missing-size-constraint`, `fixed-size-in-auto-layout` (responsive-critical); `component-references` → component rules; `node-names-hierarchy` → naming rules; `variable-references` / `style-references` → `raw-value`
-- For **responsive-critical** rules, the evaluation agent may rely on baseline page `responsiveDelta` rather than strip rows when per-strip responsive compare is not yet reliable — do not assume strip entries always override those rules
+When `stripDeltas` are present, they provide the **most reliable** difficulty signal (see `STRIP_TYPE_RULES` in `src/agents/evaluation-agent.ts`):
+- They measure objective degradation when info is removed (not AI self-assessment): **pixel delta** (`stripDeltaToDifficulty`) for `layout-direction-spacing`; **difficulty from baseline vs stripped input-token ratio** (`tokenDeltaToDifficulty` — relative % savings, not absolute token drop) for `component-references`, `node-names-hierarchy`, `variable-references`, `style-references`; **responsive similarity delta** for `size-constraints` when that metric is recorded
+- Strip-to-rule mapping (calibration): `layout-direction-spacing` → `no-auto-layout`, `absolute-position-in-auto-layout`, `non-layout-container`, `irregular-spacing`; `size-constraints` → `missing-size-constraint`, `fixed-size-in-auto-layout`; `component-references` → `missing-component`, `detached-instance`, `variant-structure-mismatch`; `node-names-hierarchy` → `non-standard-naming`, `non-semantic-name`, `inconsistent-naming-convention`; `variable-references` / `style-references` → `raw-value`
+- For **responsive-critical** rules, the evaluator may use **baseline page** `responsiveDelta` when per-strip responsive compares are unavailable or strip override is skipped — do not assume strip rows always supersede that classification
 - Higher delta (for the metric used for that strip family) = removing that info hurt more = rule is more important
-- **Always weigh strip delta evidence above Converter's `ruleImpactAssessment`** when they conflict and the strip metric applies to that rule
+- **Prefer per-strip metric evidence over Converter's `ruleImpactAssessment`** when they conflict and that strip metric applies to the rule in question
 
 ### Evidence Ratios (critical for contradictory evidence)
 
