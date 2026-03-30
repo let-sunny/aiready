@@ -122,7 +122,7 @@ Override score, severity, or enable/disable individual rules:
 | `raw-value` | -3 | missing-info |
 | `irregular-spacing` | -5 | risk |
 
-**Minor (3 rules)**
+**Semantic (3 rules)**
 
 | Rule ID | Default Score | Default Severity |
 |---------|--------------|-----------------|

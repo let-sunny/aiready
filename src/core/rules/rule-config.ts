@@ -8,7 +8,7 @@ import type { RuleConfig, RuleId } from "../contracts/rule.js";
  * - responsive-critical: ΔV ≥ 15% at expanded viewport — size info critical for responsive
  * - code-quality: ΔV ≈ 0% but CSS classes -8~15 — affects code structure, not pixels
  * - token-management: raw values without design tokens — wrong input = wrong output
- * - minor: ΔV < 2%, negligible code difference — naming and minor issues
+ * - semantic: ΔV < 2%, negligible code difference — naming and minor issues
  */
 export const RULE_ID_CATEGORY: Record<RuleId, Category> = {
   // Pixel Critical
@@ -29,10 +29,10 @@ export const RULE_ID_CATEGORY: Record<RuleId, Category> = {
   // Interaction
   "missing-interaction-state": "interaction",
   "missing-prototype": "interaction",
-  // Minor
-  "non-standard-naming": "minor",
-  "non-semantic-name": "minor",
-  "inconsistent-naming-convention": "minor",
+  // Semantic
+  "non-standard-naming": "semantic",
+  "non-semantic-name": "semantic",
+  "inconsistent-naming-convention": "semantic",
 };
 
 /**
@@ -137,14 +137,14 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
     enabled: false, // disabled: interactionDestinations data missing from fixtures (#139)
   },
 
-  // ── Minor ──
+  // ── Semantic ──
   "non-standard-naming": {
     severity: "suggestion",
     score: -3, // higher than other naming rules: non-standard state names break interaction detection pipeline
     enabled: true,
   },
   "non-semantic-name": {
-    severity: "risk", // category is "minor" (ΔV < 2%) but severity elevated per interview (#200): non-semantic names block element purpose identification
+    severity: "risk", // category is "semantic" (ΔV < 2%) but severity elevated per interview (#200): non-semantic names block element purpose identification
     score: -4,
     enabled: true,
   },
