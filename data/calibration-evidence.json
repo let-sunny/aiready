@@ -1,1 +1,221 @@
-[]
+[
+  {
+    "ruleId": "non-semantic-name",
+    "type": "overscored",
+    "actualDifficulty": "easy",
+    "fixture": "desktop-about",
+    "timestamp": "2026-03-30T20:18:50.577Z",
+    "confidence": "medium",
+    "pro": [
+      "Converter rated actualImpact: easy — styles are explicit in design-tree",
+      "Strip ablation for node-names-hierarchy shows 0pp pixel delta and only 2.35% token reduction (easy)"
+    ],
+    "con": [
+      "Only 1 fixture — confidence is insufficient",
+      "Severity change from risk to missing-info proposed without high confidence",
+      "non-semantic-name was deliberately upgraded per AI implementation interview (#200)",
+      "Semantic names aid component identification; one fixture cannot disprove cross-project value"
+    ],
+    "decision": "REJECT"
+  },
+  {
+    "ruleId": "fixed-size-in-auto-layout",
+    "type": "underscored",
+    "actualDifficulty": "hard",
+    "fixture": "desktop-about",
+    "timestamp": "2026-03-30T20:18:50.577Z",
+    "confidence": "high",
+    "pro": [
+      "Baseline responsive delta is 28pp (hard)",
+      "Fixed sizes in auto-layout can theoretically cause responsive breakage"
+    ],
+    "con": [
+      "Only 1 fixture — confidence is insufficient",
+      "Size-constraints strip shows 0pp delta — zero measurable impact",
+      "Converter rated easy — only 3 issues flagged",
+      "Proposing -10 would equal no-auto-layout, the highest-impact rule — not justified"
+    ],
+    "decision": "REJECT"
+  },
+  {
+    "ruleId": "missing-interaction-state",
+    "type": "overscored",
+    "actualDifficulty": "easy",
+    "fixture": "desktop-about",
+    "timestamp": "2026-03-30T20:18:50.577Z",
+    "confidence": "medium",
+    "pro": [
+      "Converter rated actualImpact: easy — only matters for interactive testing",
+      "60% score reduction directionally plausible since interaction states not visible in static screenshots"
+    ],
+    "con": [
+      "Only 1 fixture — confidence is insufficient",
+      "Score change of 60% exceeds 30% limit for low confidence",
+      "Visual-compare methodology structurally biased against interaction rules (static screenshots only)",
+      "Interview-based calibration (#200) set this at -5 for good reason"
+    ],
+    "decision": "REJECT"
+  },
+  {
+    "ruleId": "non-semantic-name",
+    "type": "overscored",
+    "actualDifficulty": "easy",
+    "fixture": "mobile-about",
+    "timestamp": "2026-03-30T20:33:15.066Z",
+    "confidence": "medium",
+    "pro": [
+      "2/2 easy, strip 0pp pixel and 2.1% token (easy)"
+    ],
+    "con": [
+      "Severity change without high confidence (Rule 3)",
+      "#200 interview upgrade, methodology bias against naming rules"
+    ],
+    "decision": "REJECT"
+  },
+  {
+    "ruleId": "missing-interaction-state",
+    "type": "overscored",
+    "actualDifficulty": "easy",
+    "fixture": "mobile-about",
+    "timestamp": "2026-03-30T20:33:15.066Z",
+    "confidence": "medium",
+    "pro": [
+      "2/2 easy across fixtures"
+    ],
+    "con": [
+      "Severity change without high confidence (Rule 3)",
+      "60% change exceeds 50% limit (Rule 2)",
+      "Methodology structurally biased — static screenshots cannot measure interaction states"
+    ],
+    "decision": "REJECT"
+  },
+  {
+    "ruleId": "missing-size-constraint",
+    "type": "underscored",
+    "actualDifficulty": "failed",
+    "fixture": "desktop-ai-chat",
+    "timestamp": "2026-03-30T20:47:42.282Z",
+    "confidence": "high",
+    "pro": [
+      "Baseline responsive delta 36pp"
+    ],
+    "con": [
+      "Only 1 new case (Rule 1)",
+      "Score just changed -5→-8, needs validation",
+      "Strip shows -24pp responsive (improved)",
+      "50% change exceeds 30% limit for low confidence (Rule 2)"
+    ],
+    "decision": "REJECT"
+  },
+  {
+    "ruleId": "raw-value",
+    "type": "underscored",
+    "actualDifficulty": "moderate",
+    "fixture": "desktop-ai-chat",
+    "timestamp": "2026-03-30T20:47:42.282Z",
+    "confidence": "medium",
+    "pro": [
+      "7.4% token reduction (moderate)"
+    ],
+    "con": [
+      "Current -4 already in moderate range — validated, not underscored",
+      "Score just changed -3→-4",
+      "Severity change with low confidence (Rule 3)"
+    ],
+    "decision": "REJECT"
+  },
+  {
+    "ruleId": "fixed-size-in-auto-layout",
+    "type": "underscored",
+    "actualDifficulty": "failed",
+    "fixture": "desktop-ai-chat",
+    "timestamp": "2026-03-30T20:48:26.501Z",
+    "confidence": "high",
+    "pro": [
+      "3 cases hard/failed from baseline responsive delta"
+    ],
+    "con": [
+      "Strip shows -24pp responsive delta — stripping IMPROVED responsive",
+      "3rd fixture where removing size info helps or is neutral",
+      "Evaluator skips strip override for responsive-critical",
+      "Proposing -11 near no-auto-layout (-10) unsupported"
+    ],
+    "decision": "REJECT"
+  },
+  {
+    "ruleId": "missing-interaction-state",
+    "type": "overscored",
+    "actualDifficulty": "easy",
+    "fixture": "desktop-ai-chat",
+    "timestamp": "2026-03-30T20:48:26.501Z",
+    "confidence": "high",
+    "pro": [
+      "4/4 easy across 3 fixtures — strongest evidence",
+      "High confidence, no change limit applies"
+    ],
+    "con": [
+      "Methodology structurally cannot measure interaction states",
+      "#200 interview set -5 for valid reasons",
+      "All easy ratings are measurement artifacts"
+    ],
+    "decision": "REJECT"
+  },
+  {
+    "ruleId": "missing-interaction-state",
+    "type": "overscored",
+    "actualDifficulty": "easy",
+    "fixture": "desktop-article",
+    "timestamp": "2026-03-30T22:12:52.699Z",
+    "confidence": "high",
+    "pro": [
+      "4/4 easy across 4 fixtures"
+    ],
+    "con": [
+      "Methodology bias — static screenshots",
+      "#200 interview valid"
+    ],
+    "decision": "REJECT"
+  },
+  {
+    "ruleId": "fixed-size-in-auto-layout",
+    "type": "underscored",
+    "actualDifficulty": "failed",
+    "fixture": "desktop-article",
+    "timestamp": "2026-03-30T22:12:52.699Z",
+    "confidence": "medium",
+    "pro": [
+      "3 cases hard/failed from baseline responsive",
+      "First positive strip responsive delta (30pp)"
+    ],
+    "con": [
+      "3/4 fixtures show neutral or improved responsive when stripped",
+      "Proposing -11 near no-auto-layout",
+      "Attribution unclear"
+    ],
+    "decision": "REJECT"
+  },
+  {
+    "ruleId": "missing-size-constraint",
+    "type": "overscored",
+    "actualDifficulty": "easy",
+    "fixture": "mobile-article",
+    "timestamp": "2026-03-30T22:48:07.337Z"
+  },
+  {
+    "ruleId": "missing-interaction-state",
+    "type": "overscored",
+    "actualDifficulty": "easy",
+    "fixture": "mobile-article",
+    "timestamp": "2026-03-30T22:48:07.337Z",
+    "confidence": "high",
+    "pro": [
+      "5/5 easy across 5 fixtures"
+    ],
+    "con": [
+      "Methodology bias — static screenshots",
+      "#200 interview",
+      "DISABLE especially dangerous"
+    ],
+    "decision": "REJECT"
+  }
+]

@@ -104,7 +104,7 @@ Override score, severity, or enable/disable individual rules:
 | Rule ID | Default Score | Default Severity |
 |---------|--------------|-----------------|
 | `fixed-size-in-auto-layout` | -6 | risk |
-| `missing-size-constraint` | -5 | risk |
+| `missing-size-constraint` | -8 | risk |
 
 **Code Quality (4 rules)**
 
@@ -119,7 +119,7 @@ Override score, severity, or enable/disable individual rules:
 
 | Rule ID | Default Score | Default Severity |
 |---------|--------------|-----------------|
-| `raw-value` | -3 | missing-info |
+| `raw-value` | -4 | missing-info |
 | `irregular-spacing` | -5 | risk |
 
 **Semantic (3 rules)**

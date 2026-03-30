@@ -39,9 +39,9 @@ export const RULE_ID_CATEGORY: Record<RuleId, Category> = {
  * Central configuration for all rules.
  * Scores based on ablation experiment + AI implementation interview (#200):
  * - pixel-critical: -10 ~ -7 (layout strip caused ΔV +5.4%)
- * - responsive-critical: -7 ~ -5 (size-constraints ΔV +15.9% at responsive viewports)
+ * - responsive-critical: -8 ~ -6 (size-constraints ΔV +15.9% at responsive viewports)
  * - code-quality: -7 ~ -3 (CSS classes -8~15, no pixel impact)
- * - token-management: -5 ~ -3 (wrong input = wrong output, irregular spacing actively causes errors)
+ * - token-management: -5 ~ -4 (wrong input = wrong output, irregular spacing actively causes errors)
  * - interaction: -5 (wrong guess > omission, interview confirmed)
  * - semantic: -4 ~ -1 (non-semantic-name upgraded per interview — causes actual implementation errors)
  *
@@ -76,7 +76,7 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
   },
   "missing-size-constraint": {
     severity: "risk",
-    score: -5,
+    score: -8,
     enabled: true,
   },
 
@@ -113,7 +113,7 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
   // ── Token Management ──
   "raw-value": {
     severity: "missing-info",
-    score: -3,
+    score: -4,
     enabled: true,
   },
   "irregular-spacing": {
