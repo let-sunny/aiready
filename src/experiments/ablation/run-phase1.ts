@@ -287,17 +287,24 @@ async function main(): Promise<void> {
     if (!existsSync(join(fixturePath, "data.json"))) { console.error(`  SKIP: ${fixturePath}/data.json not found`); continue; }
     if (!existsSync(getFixtureScreenshotPath(fixture))) { console.error(`  SKIP: screenshot not found`); continue; }
 
-    // Step 1: Generate design tree (shared CLI)
-    const fixtureOutputDir = join(BASE_OUTPUT_DIR, CONFIG_VERSION, fixture);
-    mkdirSync(fixtureOutputDir, { recursive: true });
-    const baselineTreePath = join(fixtureOutputDir, "design-tree.txt");
-    execCli("design-tree", [fixturePath, "--output", baselineTreePath]);
-    const baselineTree = readFileSync(baselineTreePath, "utf-8");
-
-    // Step 2: Strip design tree (shared CLI)
     const typesToRun = requestedTypes ?? [...DESIGN_TREE_INFO_TYPES];
-    const strippedDir = join(fixtureOutputDir, "stripped");
-    execCli("design-tree-strip", [baselineTreePath, "--output-dir", strippedDir, "--types", typesToRun.join(",")]);
+    let baselineTree = "";
+    let strippedDir = "";
+    try {
+      // Step 1: Generate design tree (shared CLI)
+      const fixtureOutputDir = join(BASE_OUTPUT_DIR, CONFIG_VERSION, fixture);
+      mkdirSync(fixtureOutputDir, { recursive: true });
+      const baselineTreePath = join(fixtureOutputDir, "design-tree.txt");
+      execCli("design-tree", [fixturePath, "--output", baselineTreePath]);
+      baselineTree = readFileSync(baselineTreePath, "utf-8");
+
+      // Step 2: Strip design tree (shared CLI)
+      strippedDir = join(fixtureOutputDir, "stripped");
+      execCli("design-tree-strip", [baselineTreePath, "--output-dir", strippedDir, "--types", typesToRun.join(",")]);
+    } catch (err) {
+      console.error(`  SKIP [${fixture}]: ${err instanceof Error ? err.message : String(err)}`);
+      continue;
+    }
 
     // Detect no-op strips by comparing file content
     const skipTypes = new Set(typesToRun.filter((t) => {

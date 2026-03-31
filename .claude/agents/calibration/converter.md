@@ -147,11 +147,11 @@ Read and follow `.claude/skills/design-to-code/PROMPT.md` for all code generatio
        npx canicode code-metrics $RUN_DIR/stripped/<strip-type>.html  # stripped
        ```
        From JSON output: `baselineCssClassCount` / `baselineCssVariableCount` from baseline, `strippedCssClassCount` / `strippedCssVariableCount` from stripped. Also use `htmlBytes` for `baselineHtmlBytes` / `strippedHtmlBytes` and compute `htmlBytesDelta` = `baselineHtmlBytes - strippedHtmlBytes`.
-    g. **Responsive similarity at the expanded viewport** (same screenshot + width as step 6):
+    g. **Responsive similarity at the expanded viewport** (same screenshot + width as step 7):
 
-       If step 6 **skipped** (only one fixture screenshot): set `baselineResponsiveSimilarity`, `strippedResponsiveSimilarity`, `responsiveDelta`, and `responsiveViewport` to `null` on **every** strip row.
+       If step 7 **skipped** (only one fixture screenshot): set `baselineResponsiveSimilarity`, `strippedResponsiveSimilarity`, `responsiveDelta`, and `responsiveViewport` to `null` on **every** strip row.
 
-       If step 6 **ran**: reuse the same `LARGEST` screenshot path and `LARGEST_WIDTH` variables from step 6.
+       If step 7 **ran**: reuse the same `LARGEST` screenshot path and `LARGEST_WIDTH` variables from step 7.
 
        - **`size-constraints` (required):** Run visual-compare on the stripped HTML at the expanded viewport so missing size info shows up where it actually breaks (not only at design width):
 
