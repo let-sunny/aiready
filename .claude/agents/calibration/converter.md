@@ -137,16 +137,12 @@ Read and follow `.claude/skills/design-to-code/PROMPT.md` for all code generatio
        - `strippedInputTokens` = from `$RUN_DIR/stripped/<strip-type>.txt`  
        - `tokenDelta` = `baselineInputTokens - strippedInputTokens`  
        Example (Node): `node -e "const fs=require('fs'); const n=Math.ceil(fs.readFileSync(process.argv[1],'utf8').length/4); console.log(n)" "$RUN_DIR/design-tree.txt"`
-    e. **HTML output size (strip HTML vs baseline HTML):**  
-       - `baselineHtmlBytes` = byte size of `$RUN_DIR/output.html`  
-       - `strippedHtmlBytes` = byte size of `$RUN_DIR/stripped/<strip-type>.html`  
-       - `htmlBytesDelta` = `baselineHtmlBytes - strippedHtmlBytes`
-    f. **CSS metrics** (shared CLI):
+    e. **Code metrics** (shared CLI — covers HTML size + CSS metrics):
        ```bash
        npx canicode code-metrics $RUN_DIR/output.html           # baseline
        npx canicode code-metrics $RUN_DIR/stripped/<strip-type>.html  # stripped
        ```
-       From JSON output: `baselineCssClassCount` / `baselineCssVariableCount` from baseline, `strippedCssClassCount` / `strippedCssVariableCount` from stripped. Also use `htmlBytes` for `baselineHtmlBytes` / `strippedHtmlBytes` and compute `htmlBytesDelta` = `baselineHtmlBytes - strippedHtmlBytes`.
+       From JSON output: `baselineHtmlBytes` / `strippedHtmlBytes`, `baselineCssClassCount` / `strippedCssClassCount`, `baselineCssVariableCount` / `strippedCssVariableCount`. Compute `htmlBytesDelta` = `baselineHtmlBytes - strippedHtmlBytes`.
     g. **Responsive similarity at the expanded viewport** (same screenshot + width as step 7):
 
        If step 7 **skipped** (only one fixture screenshot): set `baselineResponsiveSimilarity`, `strippedResponsiveSimilarity`, `responsiveDelta`, and `responsiveViewport` to `null` on **every** strip row.
@@ -163,7 +159,7 @@ Read and follow `.claude/skills/design-to-code/PROMPT.md` for all code generatio
            --output $RUN_DIR/stripped/size-constraints-responsive
          ```
 
-         Record JSON stdout `similarity` as **`strippedResponsiveSimilarity`**. Set **`baselineResponsiveSimilarity`** to the root conversion field **`responsiveSimilarity`** from step 6 (baseline `output.html` at the same viewport — already measured). Set **`responsiveViewport`** to `LARGEST_WIDTH` (number). Set **`responsiveDelta`** = `baselineResponsiveSimilarity - strippedResponsiveSimilarity` (percentage points).
+         Record JSON stdout `similarity` as **`strippedResponsiveSimilarity`**. Set **`baselineResponsiveSimilarity`** to the root conversion field **`responsiveSimilarity`** from step 7 (baseline `output.html` at the same viewport — already measured). Set **`responsiveViewport`** to `LARGEST_WIDTH` (number). Set **`responsiveDelta`** = `baselineResponsiveSimilarity - strippedResponsiveSimilarity` (percentage points).
 
        - **Other strip types:** Optional — same command pattern with `$RUN_DIR/stripped/<strip-type>.html` and a distinct `--output` directory if you want responsive rows for reporting; otherwise set the four responsive fields to `null`.
 
