@@ -149,19 +149,16 @@
         <button onclick="closeAuthModal()" class="web-modal-close">&times;</button>
       </div>
       <div>
-        <label for="auth-token-input" class="web-input-label">Figma Personal Access Token</label>
-        <input id="auth-token-input" type="password" placeholder="figd_..." class="web-input">
-        <p class="web-hint">
-          Stored in your browser session only. Sent directly from your browser to Figma when you analyze or post a comment.
-        </p>
-        <p class="web-hint" style="margin-top:8px">
+        <p class="web-hint" style="margin-bottom:12px">
           Figma &rarr; Settings &rarr; Security &rarr; Personal access tokens &rarr; Generate new token
         </p>
+        <label for="auth-token-input" class="web-input-label">Figma Personal Access Token</label>
+        <input id="auth-token-input" type="password" placeholder="figd_..." class="web-input">
       </div>
       <div class="web-modal-actions">
         <button onclick="saveAuth()" class="btn-primary">Authorize</button>
-        <button onclick="clearAuth()" class="btn-secondary">Logout</button>
       </div>
+      <p class="web-hint" style="margin-top:8px;font-size:11px">Stored in your browser only. Requests go directly to Figma.</p>
     </div>
   </div>
 
@@ -256,14 +253,17 @@
       var token = getToken();
       var dot = document.getElementById('auth-dot');
       var label = document.getElementById('auth-label');
+      var btn = document.querySelector('.web-auth-btn');
       if (token) {
         dot.className = 'web-auth-dot ok';
         label.textContent = 'Authorized';
         label.className = 'web-auth-label ok';
+        if (btn) btn.textContent = 'Change token';
       } else {
         dot.className = 'web-auth-dot no';
         label.textContent = 'Not authorized';
         label.className = 'web-auth-label';
+        if (btn) btn.textContent = 'Authorize';
       }
     }
 
