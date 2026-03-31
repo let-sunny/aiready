@@ -103,11 +103,13 @@ Read and follow `.claude/skills/design-to-code/PROMPT.md` for all code generatio
    - Did this rule's issue actually make the conversion harder?
    - What was its real impact on the final similarity score?
    - Rate as: `easy` (no real difficulty), `moderate` (some guessing needed), `hard` (significant pixel loss), `failed` (could not reproduce)
-9. **Code metrics** (recorded for analysis/reporting — not consumed by evaluation):
-   - `htmlBytes`: file size in bytes
-   - `htmlLines`: line count
-   - `cssClassCount`: unique CSS class selectors in `<style>` block
-   - `cssVariableCount`: unique CSS custom properties (e.g., `--primary-color:`, `--spacing-md:`) in `<style>` block
+9. **Code metrics** (shared CLI — recorded for analysis/reporting):
+
+   ```bash
+   npx canicode code-metrics $RUN_DIR/output.html
+   ```
+
+   Returns JSON with `htmlBytes`, `htmlLines`, `cssClassCount`, `cssVariableCount`.
 10. Note any difficulties NOT covered by existing rules as `uncoveredStruggles`
     - **Only include design-related issues** — problems in the Figma file structure, missing tokens, ambiguous layout, etc.
     - **Exclude environment/tooling issues** — font CDN availability, screenshot DPI/retina scaling, browser rendering quirks, network issues, CI limitations. These are not design problems.
@@ -118,7 +120,10 @@ Read and follow `.claude/skills/design-to-code/PROMPT.md` for all code generatio
     For each `<strip-type>`:
 
     a. Read `$RUN_DIR/stripped/<strip-type>.txt`
-    b. Convert to HTML with the same rules as baseline (PROMPT.md); save `$RUN_DIR/stripped/<strip-type>.html`
+    b. Convert to HTML with the same rules as baseline (PROMPT.md); save `$RUN_DIR/stripped/<strip-type>.html`, then post-process:
+       ```bash
+       npx canicode html-postprocess $RUN_DIR/stripped/<strip-type>.html
+       ```
     c. **Pixel similarity** (design viewport — same framing as baseline):
        ```bash
        npx canicode visual-compare $RUN_DIR/stripped/<strip-type>.html \
@@ -136,9 +141,12 @@ Read and follow `.claude/skills/design-to-code/PROMPT.md` for all code generatio
        - `baselineHtmlBytes` = byte size of `$RUN_DIR/output.html`  
        - `strippedHtmlBytes` = byte size of `$RUN_DIR/stripped/<strip-type>.html`  
        - `htmlBytesDelta` = `baselineHtmlBytes - strippedHtmlBytes`
-    f. **CSS metrics** (same rules as step 9 — count only inside `<style>`):  
-       - `baselineCssClassCount` / `baselineCssVariableCount` from `$RUN_DIR/output.html`  
-       - `strippedCssClassCount` / `strippedCssVariableCount` from `$RUN_DIR/stripped/<strip-type>.html`
+    f. **CSS metrics** (shared CLI):
+       ```bash
+       npx canicode code-metrics $RUN_DIR/output.html           # baseline
+       npx canicode code-metrics $RUN_DIR/stripped/<strip-type>.html  # stripped
+       ```
+       From JSON output: `baselineCssClassCount` / `baselineCssVariableCount` from baseline, `strippedCssClassCount` / `strippedCssVariableCount` from stripped. Also use `htmlBytes` for `baselineHtmlBytes` / `strippedHtmlBytes` and compute `htmlBytesDelta` = `baselineHtmlBytes - strippedHtmlBytes`.
     g. **Responsive similarity at the expanded viewport** (same screenshot + width as step 6):
 
        If step 6 **skipped** (only one fixture screenshot): set `baselineResponsiveSimilarity`, `strippedResponsiveSimilarity`, `responsiveDelta`, and `responsiveViewport` to `null` on **every** strip row.
