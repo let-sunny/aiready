@@ -224,8 +224,8 @@ describe("expandRootWidth", () => {
   it("replaces first fixed pixel width with 100%", () => {
     const html = `<style>.root { width: 375px; } .card { width: 200px; }</style>`;
     const result = expandRootWidth(html);
-    expect(result).toContain("width: 100%");
-    expect(result).toContain("width: 200px");
+    expect(result).toContain(".root { width: 100%; }");
+    expect(result).toContain(".card { width: 200px; }");
   });
 
   it("removes min-width pixel constraints", () => {
@@ -255,12 +255,11 @@ describe("expandRootWidth", () => {
     expect(result).not.toContain("width: 375px");
   });
 
-  it("skips child width when another selector appears first", () => {
+  it("only modifies the first rule block, not later rules", () => {
     const html = `<style>.card { width: 200px; } .root { width: 375px; }</style>`;
     const result = expandRootWidth(html);
-    expect(result).toContain("width: 100%");
-    expect(result).toContain("width: 375px");
-    expect(result).not.toContain("width: 200px");
+    expect(result).toContain(".card { width: 100%; }");
+    expect(result).toContain(".root { width: 375px; }");
   });
 });
 

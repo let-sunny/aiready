@@ -51,27 +51,7 @@ export function registerVisualCompare(cli: CAC): void {
 
         const { visualCompare } = await import("../../core/comparison/visual-compare.js");
 
-        const exportScale =
-          options.figmaScale !== undefined ? Number(options.figmaScale) : undefined;
-        if (exportScale !== undefined && (!Number.isFinite(exportScale) || exportScale < 1)) {
-          console.error("Error: --figma-scale must be a number >= 1");
-          process.exitCode = 1; return;
-        }
-
-        // CAC passes option values as strings — coerce to numbers before validation
-        const width = options.width !== undefined ? Number(options.width) : undefined;
-        const height = options.height !== undefined ? Number(options.height) : undefined;
-
-        if (width !== undefined && (!Number.isFinite(width) || width <= 0)) {
-          console.error("Error: --width must be a positive number");
-          process.exitCode = 1; return;
-        }
-        if (height !== undefined && (!Number.isFinite(height) || height <= 0)) {
-          console.error("Error: --height must be a positive number");
-          process.exitCode = 1; return;
-        }
-
-        const hasViewportOverride = width !== undefined || height !== undefined;
+        const hasViewportOverride = options.width !== undefined || options.height !== undefined;
 
         // Progress to stderr so stdout contains only valid JSON
         console.error("Comparing...");
@@ -80,13 +60,13 @@ export function registerVisualCompare(cli: CAC): void {
           figmaToken: token ?? "",
           codePath: resolve(codePath),
           outputDir: options.output,
-          ...(exportScale !== undefined ? { figmaExportScale: exportScale } : {}),
+          ...(options.figmaScale !== undefined ? { figmaExportScale: options.figmaScale } : {}),
           ...(options.figmaScreenshot ? { figmaScreenshotPath: resolve(options.figmaScreenshot) } : {}),
           ...(hasViewportOverride
             ? {
                 viewport: {
-                  ...(width !== undefined ? { width } : {}),
-                  ...(height !== undefined ? { height } : {}),
+                  ...(options.width !== undefined ? { width: options.width } : {}),
+                  ...(options.height !== undefined ? { height: options.height } : {}),
                 },
               }
             : {}),

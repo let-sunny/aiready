@@ -192,25 +192,25 @@ export function compareScreenshots(
  * Originally from `src/experiments/ablation/run-condition.ts`.
  */
 export function expandRootWidth(html: string): string {
-  // Match first occurrence of root-level fixed width in <style> block
   const styleMatch = html.match(/<style[\s\S]*?<\/style>/i);
   if (!styleMatch) return html;
 
   const style = styleMatch[0];
-  // Replace the first standalone `width` (not min-width/max-width) with 100%
-  let replaced = false;
-  const newStyle = style.replace(/(?<![-\w])width:\s*\d+px/g, (match) => {
-    if (!replaced) {
-      replaced = true;
-      return "width: 100%";
-    }
-    return match;
-  });
+  // Find the first CSS rule block (the root element's rule)
+  const firstRuleMatch = style.match(/([^{}]*\{)([^}]*)\}/);
+  if (!firstRuleMatch) return html;
 
-  let result = html.replace(style, newStyle);
-  // Remove all min-width pixel constraints
-  result = result.replace(/min-width:\s*\d+px/g, "min-width: 0");
-  return result;
+  const rulePrefix = firstRuleMatch[1]!; // e.g. ".root {"
+  const ruleBody = firstRuleMatch[2]!;  // e.g. " width: 375px; min-width: 375px; "
+
+  // Replace width and min-width only inside the first rule
+  const newBody = ruleBody
+    .replace(/(?<![-\w])width:\s*\d+px/, "width: 100%")
+    .replace(/min-width:\s*\d+px/g, "min-width: 0");
+
+  const newRule = `${rulePrefix}${newBody}}`;
+  const newStyle = style.replace(firstRuleMatch[0], newRule);
+  return html.replace(style, newStyle);
 }
 
 // ── Code metrics (shared with ablation helpers) ─────────────────────────
