@@ -10,7 +10,7 @@
   <a href="https://github.com/let-sunny/canicode/actions/workflows/release.yml"><img src="https://github.com/let-sunny/canicode/actions/workflows/release.yml/badge.svg" alt="Release"></a>
 </p>
 
-<p align="center"><strong>Analyzes Figma designs to help AI implement them pixel-perfectly — with minimal token cost and responsive-ready output.</strong></p>
+<p align="center"><strong>Stop explaining your designs. Get scored by AI-calibrated rules.</strong></p>
 
 <p align="center">
   <strong><a href="https://let-sunny.github.io/canicode/">Try it in your browser</a></strong> — no install needed.
