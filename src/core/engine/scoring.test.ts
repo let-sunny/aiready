@@ -132,6 +132,8 @@ describe("calculateScores", () => {
     expect(many.byCategory["pixel-critical"].densityScore).toBeLessThan(
       few.byCategory["pixel-critical"].densityScore
     );
+    // Verify sqrt damping: 5 issues of score -5 → 5 × sqrt(5) ≈ 11.18
+    expect(many.byCategory["pixel-critical"].weightedIssueCount).toBeCloseTo(5 * Math.sqrt(5), 1);
   });
 
   it("diversity score penalizes more unique rules being triggered", () => {
