@@ -38,8 +38,8 @@ function normalizeActualImpact(impact: string): string {
 
 /**
  * Calibration tier thresholds (percentage-based).
- * - "full": Converter + visual-compare + Gap Analysis
- * - "visual-only": Converter + visual-compare (Gap Analysis skipped)
+ * - "full": Converter + Measurements + Gap Analysis
+ * - "visual-only": Converter + Measurements (Gap Analysis skipped)
  */
 export const CALIBRATION_TIER_THRESHOLDS = {
   full: 90,       // A or higher

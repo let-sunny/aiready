@@ -107,9 +107,9 @@ Calibration commands are NOT exposed as CLI commands. They run exclusively insid
 **`/calibrate-loop` (Claude Code command)**
 - Role: Autonomous rule-config.ts improvement via fixture-based calibration
 - Input: fixture directory path (e.g. `fixtures/material3-kit`)
-- Flow: Analysis → Converter (baseline + strip ablation → HTML + visual-compare) → Gap Analyzer → Evaluation → Critic → Arbitrator → Prune Evidence
-- Converter implements the full scoped design as one HTML page, runs `visual-compare` for pixel-level similarity
-- **Strip ablation**: Converter also converts 6 stripped design-trees (`DESIGN_TREE_INFO_TYPES` in `src/core/design-tree/strip.ts`: layout-direction-spacing, size-constraints, component-references, node-names-hierarchy, variable-references, style-references) → measures similarity delta vs baseline (plus tokens/HTML/CSS/responsive where recorded) → objective difficulty per rule category
+- Flow: Analysis → Converter (HTML generation) → Measurements (html-postprocess + visual-compare + code-metrics) → Gap Analyzer → Evaluation → Critic → Arbitrator → Prune Evidence
+- Converter implements the full scoped design as one HTML page + 6 stripped variants; orchestrator runs all measurements (visual-compare, code-metrics, responsive comparison)
+- **Strip ablation**: Orchestrator measures 6 stripped design-trees (`DESIGN_TREE_INFO_TYPES` in `src/core/design-tree/strip.ts`: layout-direction-spacing, size-constraints, component-references, node-names-hierarchy, variable-references, style-references) → similarity delta vs baseline (plus tokens/HTML/CSS/responsive) → objective difficulty per rule category
 - Gap Analyzer examines the diff image, categorizes pixel differences, saves to run directory
 - Cross-run evidence: Evaluation appends overscored/underscored findings to `data/calibration-evidence.json`
 - After Arbitrator applies changes, evidence for applied rules is pruned (`calibrate-prune-evidence`)

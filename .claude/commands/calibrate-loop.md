@@ -35,8 +35,8 @@ Read `$RUN_DIR/analysis.json`. If `issueCount` is 0, stop here.
 
 Read the `calibrationTier` field from `analysis.json`. The CLI determines the tier based on grade percentage. Branch accordingly:
 
-- **`"full"`**: Full pipeline — proceed to Step 2 (Converter + visual-compare + Gap Analysis)
-- **`"visual-only"`**: Converter + visual-compare, but **skip Step 3 (Gap Analysis)**. Gap analysis on diff images is only meaningful at high similarity.
+- **`"full"`**: Full pipeline — proceed to Step 2 (Converter + Measurements + Gap Analysis)
+- **`"visual-only"`**: Converter + Measurements, but **skip Step 3 (Gap Analysis)**. Gap analysis on diff images is only meaningful at high similarity.
 
 **Always run the Converter** regardless of tier. Low-scoring designs need score validation the most.
 
