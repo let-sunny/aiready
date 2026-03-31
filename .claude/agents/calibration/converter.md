@@ -143,7 +143,7 @@ Read and follow `.claude/skills/design-to-code/PROMPT.md` for all code generatio
        npx canicode code-metrics $RUN_DIR/stripped/<strip-type>.html  # stripped
        ```
        From JSON output: `baselineHtmlBytes` / `strippedHtmlBytes`, `baselineCssClassCount` / `strippedCssClassCount`, `baselineCssVariableCount` / `strippedCssVariableCount`. Compute `htmlBytesDelta` = `baselineHtmlBytes - strippedHtmlBytes`.
-    g. **Responsive similarity at the expanded viewport** (same screenshot + width as step 7):
+    f. **Responsive similarity at the expanded viewport** (same screenshot + width as step 7):
 
        If step 7 **skipped** (only one fixture screenshot): set `baselineResponsiveSimilarity`, `strippedResponsiveSimilarity`, `responsiveDelta`, and `responsiveViewport` to `null` on **every** strip row.
 
