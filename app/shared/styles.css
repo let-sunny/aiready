@@ -277,19 +277,6 @@ body {
   margin-bottom: 24px;
   position: relative;
 }
-@media (max-width: 600px) {
-  .rpt-tab-list::after {
-    content: "";
-    position: sticky;
-    right: 0;
-    width: 40px;
-    min-height: 100%;
-    background: linear-gradient(to right, transparent, var(--bg));
-    pointer-events: none;
-    flex-shrink: 0;
-    margin-left: -40px;
-  }
-}
 .rpt-tab-list {
   display: flex;
   gap: 4px;
