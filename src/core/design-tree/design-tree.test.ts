@@ -1141,6 +1141,7 @@ describe("generateDesignTree", () => {
       const output = generateDesignTree(file);
 
       expect(output).toContain("text-resize: truncate");
+      expect(output).toContain("text-overflow: ellipsis");
       expect(output).toContain("max-lines: 2");
     });
 
@@ -1179,6 +1180,60 @@ describe("generateDesignTree", () => {
       const output = generateDesignTree(file);
 
       expect(output).toContain("paragraph-spacing: 16px");
+    });
+
+    it("emits text-resize: truncate without max-lines when maxLines is not set", () => {
+      const file = makeFile(
+        makeNode({
+          id: "1:1",
+          name: "TruncateNoMax",
+          type: "TEXT",
+          characters: "Truncated",
+          style: { fontFamily: "Inter", textAutoResize: "TRUNCATE" },
+          absoluteBoundingBox: { x: 0, y: 0, width: 200, height: 40 },
+        })
+      );
+
+      const output = generateDesignTree(file);
+
+      expect(output).toContain("text-resize: truncate");
+      expect(output).toContain("text-overflow: ellipsis");
+      expect(output).not.toContain("max-lines:");
+    });
+
+    it("does not emit text-overflow for textTruncation: DISABLED", () => {
+      const file = makeFile(
+        makeNode({
+          id: "1:1",
+          name: "NoTruncation",
+          type: "TEXT",
+          characters: "Normal text",
+          style: { fontFamily: "Inter", textAutoResize: "HEIGHT" },
+          textTruncation: "DISABLED",
+          absoluteBoundingBox: { x: 0, y: 0, width: 200, height: 40 },
+        })
+      );
+
+      const output = generateDesignTree(file);
+
+      expect(output).not.toContain("text-overflow:");
+    });
+
+    it("does not emit paragraph-spacing for 0", () => {
+      const file = makeFile(
+        makeNode({
+          id: "1:1",
+          name: "ZeroSpacing",
+          type: "TEXT",
+          characters: "Text",
+          style: { fontFamily: "Inter", paragraphSpacing: 0 },
+          absoluteBoundingBox: { x: 0, y: 0, width: 200, height: 40 },
+        })
+      );
+
+      const output = generateDesignTree(file);
+
+      expect(output).not.toContain("paragraph-spacing:");
     });
 
     it("does not emit text-resize for NONE or missing textAutoResize", () => {

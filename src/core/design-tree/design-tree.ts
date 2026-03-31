@@ -499,6 +499,7 @@ function renderNode(
       styles.push("text-resize: fixed-height");
     } else if (textAutoResize === "TRUNCATE") {
       styles.push("text-resize: truncate");
+      styles.push("text-overflow: ellipsis");
       if (node.maxLines != null) {
         styles.push(`max-lines: ${node.maxLines}`);
       }
