@@ -70,7 +70,7 @@ Read and follow `.claude/skills/design-to-code/PROMPT.md` for all code generatio
 
    This saves `figma.png`, `code.png`, and `diff.png` into the run directory.
    Replace `:` with `-` in the nodeId for the URL.
-6. **Responsive comparison** (if expanded screenshot exists):
+7. **Responsive comparison** (if expanded screenshot exists):
 
    List `screenshot-*.png` in the fixture directory. Extract the width number from each filename, sort numerically. If 2+ screenshots exist, the smallest width is the original and the largest is the expanded viewport.
 
@@ -90,7 +90,7 @@ Read and follow `.claude/skills/design-to-code/PROMPT.md` for all code generatio
 
    The command outputs JSON to stdout with a `similarity` field. Record it as `responsiveSimilarity` and calculate `responsiveDelta = similarity - responsiveSimilarity`.
    If only 1 screenshot exists, skip responsive comparison and set `responsiveSimilarity`, `responsiveDelta`, and `responsiveViewport` to `null`.
-7. Use similarity to determine overall difficulty (thresholds defined in `src/agents/orchestrator.ts` → `SIMILARITY_DIFFICULTY_THRESHOLDS`):
+8. Use similarity to determine overall difficulty (thresholds defined in `src/agents/orchestrator.ts` → `SIMILARITY_DIFFICULTY_THRESHOLDS`):
 
    | Similarity | Difficulty |
    |-----------|-----------|
@@ -99,21 +99,21 @@ Read and follow `.claude/skills/design-to-code/PROMPT.md` for all code generatio
    | 50-69% | hard |
    | <50% | failed |
 
-8. **MANDATORY — Rule Impact Assessment**: For EVERY rule ID in `nodeIssueSummaries[].flaggedRuleIds`, assess its actual impact on conversion. Read the analysis JSON, collect all unique `flaggedRuleIds`, and for each one write an entry in `ruleImpactAssessment`. This array MUST NOT be empty if there are flagged rules.
+9. **MANDATORY — Rule Impact Assessment**: For EVERY rule ID in `nodeIssueSummaries[].flaggedRuleIds`, assess its actual impact on conversion. Read the analysis JSON, collect all unique `flaggedRuleIds`, and for each one write an entry in `ruleImpactAssessment`. This array MUST NOT be empty if there are flagged rules.
    - Did this rule's issue actually make the conversion harder?
    - What was its real impact on the final similarity score?
    - Rate as: `easy` (no real difficulty), `moderate` (some guessing needed), `hard` (significant pixel loss), `failed` (could not reproduce)
-9. **Code metrics** (shared CLI — recorded for analysis/reporting):
+10. **Code metrics** (shared CLI — recorded for analysis/reporting):
 
    ```bash
    npx canicode code-metrics $RUN_DIR/output.html
    ```
 
    Returns JSON with `htmlBytes`, `htmlLines`, `cssClassCount`, `cssVariableCount`.
-10. Note any difficulties NOT covered by existing rules as `uncoveredStruggles`
+11. Note any difficulties NOT covered by existing rules as `uncoveredStruggles`
     - **Only include design-related issues** — problems in the Figma file structure, missing tokens, ambiguous layout, etc.
     - **Exclude environment/tooling issues** — font CDN availability, screenshot DPI/retina scaling, browser rendering quirks, network issues, CI limitations. These are not design problems.
-11. **Strip Ablation** (objective difficulty measurement): For each of the **6** strip types, the orchestrator places stripped design-trees in `$RUN_DIR/stripped/`. Convert each to HTML, then collect the **same categories of metrics as the baseline** (pixel similarity, optional responsive similarity, design-tree token estimate, HTML size, CSS counts). Strip rows in `conversion.json` must populate `StripDeltaResultSchema` (`src/agents/contracts/conversion-agent.ts`).
+12. **Strip Ablation** (objective difficulty measurement): For each of the **6** strip types, the orchestrator places stripped design-trees in `$RUN_DIR/stripped/`. Convert each to HTML, then collect the **same categories of metrics as the baseline** (pixel similarity, optional responsive similarity, design-tree token estimate, HTML size, CSS counts). Strip rows in `conversion.json` must populate `StripDeltaResultSchema` (`src/agents/contracts/conversion-agent.ts`).
 
     **Strip types** (process every one): `layout-direction-spacing`, `size-constraints`, `component-references`, `node-names-hierarchy`, `variable-references`, `style-references`
 
