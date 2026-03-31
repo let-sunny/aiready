@@ -547,9 +547,6 @@ body {
    4. Responsive — narrow viewport (Figma plugin ~420px)
    ================================================================ */
 @media (max-width: 600px) {
-  .rpt-gauges-grid {
-    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
-  }
   .rpt-overall { padding: 24px 0 16px; }
   .rpt-gauges { padding: 16px; }
   .rpt-summary-inner { gap: 12px; }
