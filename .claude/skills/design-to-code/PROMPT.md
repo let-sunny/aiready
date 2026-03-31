@@ -2,7 +2,7 @@
 
 This prompt is used by all code generation pipelines:
 - Calibration Converter
-- Rule Discovery A/B Validation
+- Ablation experiments (API-based)
 - User-facing `canicode implement` command (default prompt)
 
 ## Stack

@@ -38,7 +38,7 @@ CanICode solves this:
 
 ### Scores You Can Trust
 
-Rule scores aren't guesswork. A 6-agent calibration pipeline converts real Figma designs to HTML, measures pixel-level similarity (via `visual-compare`), and adjusts scores based on actual implementation difficulty.
+Rule scores aren't guesswork. The calibration pipeline converts real Figma designs to HTML, measures pixel-level similarity (via `visual-compare`), and adjusts scores based on actual implementation difficulty.
 
 - Design that's hard to implement accurately → rule score goes **up**
 - Design that's easy despite the flag → rule score goes **down**
