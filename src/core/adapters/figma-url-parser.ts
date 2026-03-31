@@ -57,8 +57,8 @@ export function toCommentableNodeId(nodeId: string): string {
 }
 
 export function buildFigmaDeepLink(fileKey: string, nodeId: string): string {
-  // Figma URLs: colons → hyphens, semicolons kept as-is (not encoded)
-  // e.g. "I175:7425;18:9402" → "node-id=I175-7425;18-9402"
-  const urlNodeId = nodeId.replace(/:/g, "-");
-  return `https://www.figma.com/design/${fileKey}?node-id=${urlNodeId}`;
+  // Strip instance-internal path to top-level node:
+  // "I175:7425;1442:7704" → "175:7425" → "175-7425"
+  const topNodeId = toCommentableNodeId(nodeId).replace(/:/g, "-");
+  return `https://www.figma.com/design/${fileKey}?node-id=${topNodeId}`;
 }
