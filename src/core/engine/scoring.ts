@@ -49,16 +49,17 @@ export interface ScoreReport {
 export type Grade = "S" | "A+" | "A" | "B+" | "B" | "C+" | "C" | "D" | "F";
 
 /**
- * Density weighting now uses per-rule `calculatedScore` from the rule engine,
- * which incorporates both the calibrated rule score and depthWeight.
+ * Density weighting uses per-rule base |score| with sqrt damping (#226).
  *
- * Previously, flat severity weights (blocking=3.0, risk=2.0, etc.) were used,
- * making all rules within the same severity contribute equally and rendering
- * the per-rule scores in rule-config.ts effectively unused.
+ * Previously, each issue's |calculatedScore| was summed linearly — a rule
+ * triggering N times contributed N× its score. This over-penalized designs
+ * with many instances of the same issue (e.g., raw-value ×79 = -316 weight),
+ * causing most real files to score Grade D/F with no differentiation.
  *
- * Now: `no-auto-layout` (score: -10, depthWeight: 1.5) at root contributes 15
- * to density, while `non-semantic-name` (score: -4, no depthWeight) contributes 4.
- * This makes calibration loop score adjustments flow through to user-facing scores.
+ * Now: same rule triggered N times contributes |score| × sqrt(N).
+ * raw-value ×79 = 4 × sqrt(79) ≈ 36 instead of 316.
+ * At low counts sqrt ≈ linear (sqrt(1)=1, sqrt(4)=2), preserving sensitivity.
+ * At high counts the curve flattens — 79th occurrence adds ~0.2 vs 1st adding 4.
  *
  * Category weights removed (#196) — overall score is simple average of categories.
  * Category importance is already encoded in rule scores (pixel-critical -10
@@ -170,9 +171,12 @@ export function calculateScores(
   // Track unique rules and their base |score| per category
   const uniqueRulesPerCategory = new Map<Category, Set<string>>();
   const ruleScorePerCategory = new Map<Category, Map<string, number>>();
+  // Track issue counts per rule per category for sqrt damping (#226)
+  const ruleIssueCountPerCategory = new Map<Category, Map<string, number>>();
   for (const category of CATEGORIES) {
     uniqueRulesPerCategory.set(category, new Set());
     ruleScorePerCategory.set(category, new Map());
+    ruleIssueCountPerCategory.set(category, new Map());
   }
 
   // Compute totals from the config map.
@@ -189,9 +193,27 @@ export function calculateScores(
 
     categoryScores[category].issueCount++;
     categoryScores[category].bySeverity[severity]++;
-    categoryScores[category].weightedIssueCount += Math.abs(issue.calculatedScore);
     uniqueRulesPerCategory.get(category)!.add(ruleId);
     ruleScorePerCategory.get(category)!.set(ruleId, Math.abs(issue.config.score));
+    // Accumulate per-rule issue count (using |calculatedScore| as weight unit)
+    const ruleCountMap = ruleIssueCountPerCategory.get(category)!;
+    ruleCountMap.set(ruleId, (ruleCountMap.get(ruleId) ?? 0) + 1);
+  }
+
+  // Compute weightedIssueCount with sqrt damping per rule (#226).
+  // Same rule triggered N times contributes |score| × sqrt(N) instead of |score| × N.
+  // Rationale: 79 raw-value issues represent one systemic problem, not 79× the difficulty.
+  // First few occurrences identify the problem; subsequent ones have diminishing impact.
+  // At low counts sqrt ≈ linear (sqrt(1)=1, sqrt(4)=2), preserving sensitivity for rare issues.
+  for (const category of CATEGORIES) {
+    const ruleCountMap = ruleIssueCountPerCategory.get(category)!;
+    const ruleScoreMap = ruleScorePerCategory.get(category)!;
+    let dampedWeight = 0;
+    for (const [ruleId, count] of ruleCountMap) {
+      const ruleScore = ruleScoreMap.get(ruleId) ?? 0;
+      dampedWeight += ruleScore * Math.sqrt(count);
+    }
+    categoryScores[category].weightedIssueCount = dampedWeight;
   }
 
   // Calculate percentage for each category based on density + diversity
