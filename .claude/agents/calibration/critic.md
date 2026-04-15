@@ -143,7 +143,7 @@ Return this JSON structure:
 ## Rules
 
 - **Do NOT write any files.** The orchestrator handles all file I/O.
-- Do NOT modify `src/rules/rule-config.ts`.
+- Do NOT modify `src/core/rules/rule-config.ts`.
 - Be strict. When in doubt, REJECT or REVISE.
 - Return your full critique so the Arbitrator can decide.
 - **Every review MUST include pro, con, and confidence fields.** No exceptions.

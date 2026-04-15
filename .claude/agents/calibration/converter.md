@@ -52,7 +52,7 @@ Read and follow `.claude/skills/design-to-code/PROMPT.md` for all code generatio
 4. Convert the design tree to a single standalone HTML+CSS file
    - Each node in the tree maps 1:1 to an HTML element
    - Copy style values directly — they are already CSS-ready
-   - Follow all rules from DESIGN-TO-CODE-PROMPT.md
+   - Follow all rules from PROMPT.md
 5. Save to `$RUN_DIR/output.html`
 6. **Strip Ablation — HTML generation only**: For each of the **6** strip types, the orchestrator has placed stripped design-trees in `$RUN_DIR/stripped/`. Convert each to HTML.
 
