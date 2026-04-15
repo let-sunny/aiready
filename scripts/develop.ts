@@ -251,6 +251,14 @@ async function main(): Promise<void> {
       console.log("All steps completed. Nothing to resume.");
       return;
     }
+
+    // Ensure we're on the correct branch
+    const currentBranch = execSync("git branch --show-current", { encoding: "utf-8", cwd: PROJECT_ROOT }).trim();
+    if (currentBranch !== index.branch) {
+      console.log(`  Switching to branch: ${index.branch}`);
+      execSync(`git checkout ${shellEscape(index.branch)}`, { encoding: "utf-8", cwd: PROJECT_ROOT });
+    }
+
     index.status = "running";
     saveIndex(index);
     console.log(`Resuming development from step: ${resumeFrom}`);
@@ -389,6 +397,7 @@ async function runPipeline(index: DevelopRunIndex, issue: IssueData): Promise<vo
     markRunning(index, DEV_STEP_NAMES.TEST);
     let testPassed = false;
     let lastError = "";
+    let passedAttempt = 0;
 
     for (let attempt = 0; attempt <= MAX_TEST_RETRIES; attempt++) {
       try {
@@ -400,6 +409,7 @@ async function runPipeline(index: DevelopRunIndex, issue: IssueData): Promise<vo
         runCli("pnpm lint", "Type check");
         runCli("pnpm test:run", "Tests");
         testPassed = true;
+        passedAttempt = attempt + 1;
         break;
       } catch (err) {
         lastError = err instanceof Error ? err.message : String(err);
@@ -437,7 +447,7 @@ async function runPipeline(index: DevelopRunIndex, issue: IssueData): Promise<vo
     if (testPassed) {
       writeFileSync(join(runDir, "test-result.json"), JSON.stringify({
         passed: true,
-        attempt: getStep(index, DEV_STEP_NAMES.TEST).retries + 1,
+        attempt: passedAttempt,
       }, null, 2) + "\n");
       markCompleted(index, DEV_STEP_NAMES.TEST, {
         summary: "Lint + tests passed",
@@ -487,12 +497,9 @@ async function runPipeline(index: DevelopRunIndex, issue: IssueData): Promise<vo
           if (jsonMatch) {
             writeFileSync(join(runDir, "review.json"), jsonMatch[0] + "\n");
           } else {
-            // No structured review — treat as approve
-            writeFileSync(join(runDir, "review.json"), JSON.stringify({
-              verdict: "approve",
-              summary: "Review completed (unstructured output)",
-              findings: [],
-            }, null, 2) + "\n");
+            // Save raw output for debugging, then fail
+            writeFileSync(join(runDir, "review-raw.txt"), reviewOutput);
+            throw new Error("Reviewer did not produce structured review.json. Raw output saved to review-raw.txt");
           }
         }
 
