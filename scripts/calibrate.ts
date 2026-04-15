@@ -9,6 +9,7 @@
  *
  * Usage:
  *   npx tsx scripts/calibrate.ts <fixture-path>
+ *   npx tsx scripts/calibrate.ts --all
  *   npx tsx scripts/calibrate.ts --resume <run-dir>
  *
  * See: ADR-008, issue #245
@@ -306,7 +307,7 @@ async function runAll(): Promise<void> {
 
       // Convergence check: run fixture-done
       try {
-        const fdOutput = runCli(
+        runCli(
           `${CANICODE_CLI} fixture-done ${shellEscape(fixturePath)} --run-dir ${shellEscape(result.runDir)}`,
           "fixture-done (convergence check)",
         );
