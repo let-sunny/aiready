@@ -1,5 +1,22 @@
 {
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "CMD=$(echo \"$TOOL_INPUT\" | head -1); if echo \"$CMD\" | grep -qE '^\\s*rm\\s+.*-[a-zA-Z]*r[a-zA-Z]*f|^\\s*rm\\s+.*-[a-zA-Z]*f[a-zA-Z]*r'; then echo 'BLOCKED: rm -rf'; exit 2; fi; if echo \"$CMD\" | grep -qE '^\\s*git\\s+push\\s+.*--force|^\\s*git\\s+push\\s+-f'; then echo 'BLOCKED: git push --force'; exit 2; fi; if echo \"$CMD\" | grep -qE '^\\s*git\\s+reset\\s+--hard'; then echo 'BLOCKED: git reset --hard'; exit 2; fi; if echo \"$CMD\" | grep -qE '^\\s*git\\s+clean\\s+.*-[a-zA-Z]*f'; then echo 'BLOCKED: git clean -f'; exit 2; fi; if echo \"$CMD\" | grep -qE '^\\s*(npm|pnpm)\\s+publish'; then echo 'BLOCKED: npm/pnpm publish (CI only, see ADR-007)'; exit 2; fi"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "type": "command",
+        "command": "pnpm lint 2>&1 && pnpm build 2>&1"
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Edit|Write",
