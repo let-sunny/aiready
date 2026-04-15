@@ -63,167 +63,35 @@ app/                          # Browser runtime
 │   ├── src/                  # Source
 │   └── dist/                 # Build output (gitignored)
 
-.claude/skills/canicode/      # Entrypoint: Claude Code skill
+.claude/                      # Claude Code harness
+├── docs/                     # Internal reference (read when working on related areas)
+│   ├── ARCHITECTURE.md       # Channels, internal commands, file output structure
+│   ├── DESIGN-TREE.md        # Design tree format spec, annotations, conversion examples
+│   └── CALIBRATION.md        # Score calibration process, ablation experiments
+├── skills/                   # Claude Code skills
+├── agents/                   # Calibration subagents
+└── commands/                 # Claude Code commands (calibrate-loop, calibrate-night)
 ```
 
-## Architecture
+## Architecture Decision Records
 
-### External (5 User-Facing Channels)
+Core decisions that shape every session. For full history see [GitHub Wiki Decision Log](https://github.com/let-sunny/canicode/wiki/Decision-Log).
 
-**1. CLI (`canicode analyze`)**
-- Data source: Figma REST API (requires FIGMA_TOKEN) or JSON fixture
-- Output: HTML report (opens in browser)
-- Options: `--preset`, `--token`, `--output`, `--config`
-- Also: `canicode save-fixture` to save Figma data as JSON for offline analysis
-- Also: `canicode implement` to prepare a design-to-code package (analysis + design tree + assets + prompt)
-- Component master resolution: fetches `componentDefinitions` for accurate component analysis
-- Annotations: NOT available (REST API annotations field is private beta)
+- **ADR-001: design-tree > raw Figma JSON** — Use curated design-tree, never raw JSON. 94% vs 79% accuracy, 5x fewer tokens. Information curation > abundance.
+- **ADR-002: Ablation + visual-compare, not LLM self-report** — Measure rule impact by stripping + pixel comparison. LLM self-assessment is unreliable (self-attribution bias, weak counterfactual reasoning).
+- **ADR-003: No custom rules** — Removed `--custom-rules` entirely. We provide the perfect set. Do not add extensibility points.
+- **ADR-004: Score = gotcha burden prediction** — Score predicts how many gotchas a design needs. S-grade = none, D-grade = many. See [Round-Trip wiki](https://github.com/let-sunny/canicode/wiki/Round-Trip-Integration).
+- **ADR-005: Platform standards cover web + app** — Rules accept CSS, Material Design, and UIKit interaction state names equally.
+- **ADR-006: Large fixtures (270+) only for calibration** — Small fixtures produce misleading results. Never lower scores based on small fixture calibration.
+- **ADR-007: npm publish is CI only** — Never manual. Tags trigger GitHub Actions. Local `npm publish` blocked by safety hooks.
 
-**2. MCP Server (`canicode-mcp`)**
-- Install: `claude mcp add canicode -- npx -y -p canicode canicode-mcp`
-- Tools: `analyze`, `list-rules`, `visual-compare`, `version`, `docs`
-- Data source: Figma REST API via `input` param (Figma URL or fixture path). Requires FIGMA_TOKEN for live URLs.
+## Key References
 
+Detailed documentation lives in `.claude/docs/`. Read when working on related areas:
 
-**3. Claude Code Skill (`/canicode`)**
-- Location: `.claude/skills/canicode/SKILL.md` (copy to any project)
-- Uses CLI (`canicode analyze`) with FIGMA_TOKEN
-- Lightweight alternative to MCP server — no canicode MCP installation needed
-
-**4. Web App (GitHub Pages)**
-- Source: `app/web/src/index.html`
-- Build: `pnpm build:web` → `app/web/dist/` (deployed via GitHub Pages)
-- Shared UI from `app/shared/` inlined at build time
-
-**5. Figma Plugin**
-- Source: `app/figma-plugin/src/`
-- Build: `pnpm build:plugin` → `app/figma-plugin/dist/` (gitignored)
-- Shared UI from `app/shared/` inlined at build time
-
-### Internal (Claude Code Only)
-
-Calibration commands are NOT exposed as CLI commands. They run exclusively inside Claude Code via subagents.
-
-**`/calibrate-loop` (Claude Code command)**
-- Role: Autonomous rule-config.ts improvement via fixture-based calibration
-- Input: fixture directory path (e.g. `fixtures/material3-kit`)
-- Flow: Analysis → Converter (HTML generation) → Measurements (html-postprocess + visual-compare + code-metrics) → Gap Analyzer → Evaluation → Critic → Arbitrator → Prune Evidence
-- Converter implements the full scoped design as one HTML page + 6 stripped variants; orchestrator runs all measurements (visual-compare, code-metrics, responsive comparison)
-- **Strip ablation**: Orchestrator measures 6 stripped design-trees (`DESIGN_TREE_INFO_TYPES` in `src/core/design-tree/strip.ts`: layout-direction-spacing, size-constraints, component-references, node-names-hierarchy, variable-references, style-references) → similarity delta vs baseline (plus tokens/HTML/CSS/responsive) → objective difficulty per rule category
-- Gap Analyzer examines the diff image, categorizes pixel differences, saves to run directory
-- Cross-run evidence: Evaluation appends overscored/underscored findings to `data/calibration-evidence.json`
-- After Arbitrator applies changes, evidence for applied rules is pruned (`calibrate-prune-evidence`)
-- Each run creates a self-contained directory: `logs/calibration/<fixture>--<timestamp>/`
-- No API keys needed — works fully offline
-- Auto-commits agreed score changes
-
-**`/calibrate-night` (Claude Code command)**
-- Role: Run calibration on multiple fixtures sequentially, then generate aggregate report
-- Input: fixture directory path (e.g. `fixtures/my-designs`) — auto-discovers active fixtures
-- Flow: `fixture-list` → sequential `/calibrate-loop` per fixture → `fixture-done` (converged) → `calibrate-gap-report` → `logs/calibration/REPORT.md`
-
-**Ablation experiments (`src/experiments/ablation/`)**
-
-Two scripts, shared helpers:
-
-**`run-strip.ts` — Strip experiments**
-
-```bash
-ANTHROPIC_API_KEY=sk-... npx tsx src/experiments/ablation/run-strip.ts
-ABLATION_FIXTURES=desktop-product-detail ABLATION_TYPES=component-references npx tsx ...
-```
-
-- Strips info from design-tree → implements via Claude API → renders → compares vs Figma screenshot
-- Strip types follow `DESIGN_TREE_INFO_TYPES`: layout-direction-spacing, size-constraints, component-references, node-names-hierarchy, variable-references, style-references
-- Output: `data/ablation/phase1/{config-version}/{fixture}/{type}/run-{n}/`
-- Metrics recorded: pixel similarity, input/output tokens, HTML bytes/lines, CSS class count, CSS variable count
-- Cache: versioned by config hash. Never delete — previous versions preserved automatically.
-
-**`run-condition.ts` — Condition experiments**
-```bash
-ANTHROPIC_API_KEY=sk-... npx tsx src/experiments/ablation/run-condition.ts --type size-constraints
-ANTHROPIC_API_KEY=sk-... npx tsx src/experiments/ablation/run-condition.ts --type hover-interaction
-```
-- **size-constraints**: strip size info → implement via API → `removeRootFixedWidth` (1200px→100%, min-width→0) → render at 1920px (desktop) or 768px (mobile) → compare vs screenshot-1920/768.png. Both baseline and stripped get same treatment.
-- **hover-interaction**: implement with vs without `[hover]:` data → compare :hover CSS rules and values
-- Output: `data/ablation/conditions/{type}/{fixture}/`
-
-**`helpers.ts` — Shared utilities**
-- API call with retry (429/529), HTML parsing/sanitization, local font injection
-- CSS metrics, render+compare+crop pipeline, fixture validation
-
-**Parallel execution across agents**
-- Results saved to `data/ablation/` (git-tracked) so multiple cloud agents can contribute
-- Same config-version → same directory. Split work by fixture or type:
-  ```
-  Agent A: ABLATION_BASELINE_ONLY=true                              # baseline only
-  Agent B: ABLATION_TYPES=layout-direction-spacing,component-references
-  Agent C: ABLATION_TYPES=node-names-hierarchy,variable-references,style-references
-  ```
-- **Do NOT assign the same fixture+type+run to multiple agents** — results will conflict
-- After all agents finish, re-run the script (cached results reused) to generate combined summary.json
-
-### File Output Structure
-
-```
-data/calibration-evidence.json              # Cross-run calibration evidence (overscored/underscored rules)
-reports/                                    # HTML reports (canicode analyze)
-logs/calibration/                           # Calibration runs (internal)
-logs/calibration/<name>--<timestamp>/       # One calibration run = one folder
-  ├── analysis.json                         #   Rule analysis result
-  ├── conversion.json                       #   HTML conversion + similarity + stripDeltas
-  ├── stripped/                             #   Strip ablation outputs (6 types, see DESIGN_TREE_INFO_TYPES)
-  │   ├── <type>.txt                        #   Stripped design-tree
-  │   └── <type>.html                       #   HTML from stripped design-tree
-  ├── gaps.json                             #   Pixel gap analysis
-  ├── debate.json                           #   Critic + Arbitrator decisions
-  ├── activity.jsonl                        #   Agent step-by-step timeline
-  ├── summary.md                            #   Human-readable summary
-  ├── output.html                           #   Generated HTML page
-  ├── design-tree.txt                       #   Design tree (structure)
-  ├── figma.png                             #   Figma screenshot
-  ├── code.png                              #   Code rendering screenshot
-  └── diff.png                              #   Pixel diff image
-logs/calibration/REPORT.md                  # Cross-run aggregate report
-logs/activity/                              # Nightly orchestration logs
-```
-
-## Design Tree Format
-
-The design-tree is canicode's core output — a combined DOM + Style tree that merges Figma structure and styling into a single, CSS-ready representation. Generated by `generateDesignTree()` in `design-tree.ts`.
-
-```text
-Hero Section (FRAME, 375x960)              ← name (TYPE, WxH)
-  style: display: flex; gap: 32px          ← CSS properties (converted from Figma)
-  [component: Platform=Mobile, Size=Large] ← component with variant properties
-  Title (TEXT, 300x48)                     ← child node (indentation = hierarchy)
-    style: font-size: 48px; color: #2C2C2C ← inline CSS
-```
-
-### Node annotations
-
-- `(TYPE, WxH)` — Figma node type + dimensions
-- `style:` — CSS properties converted from Figma (layoutMode→flex, fills→color, etc.)
-- `[component: ComponentName]` — component instance annotation (outputs `comp.name`; variant components naturally have `Key=Value` names like `Platform=Mobile, State=Default`)
-- `[IMAGE]` — image placeholder (actual images in `images/` directory)
-- `svg:` — inline SVG for vector nodes
-- `SLOT` type — replaceable area in component
-
-### Key design decisions
-
-- **DOM + Style combined** — AI implements each node without cross-referencing separate files
-- **CSS-ready values** — Figma properties pre-converted (no r/g/b math, no layoutMode lookup)
-- **Noise removed** — no exportSettings, pluginData, internal IDs
-- **Responsive-friendly** — flex/layout properties pre-converted; `width: 100%` emitted when sizing mode is `FILL`
-
-### Conversion examples
-
-| Figma | design-tree |
-|---|---|
-| `layoutMode: "VERTICAL"` | `display: flex; flex-direction: column` |
-| `fills: [{color: {r:0.12,g:0.12,b:0.12,a:0.5}}]` | `rgba(30, 30, 30, 0.5)` |
-| `layoutSizingHorizontal: "FILL"` | `width: 100%` |
-| `imageRef: "abc123"` | `[IMAGE]` |
+- **`.claude/docs/ARCHITECTURE.md`** — 5 user-facing channels, internal calibration commands, file output structure
+- **`.claude/docs/DESIGN-TREE.md`** — Design tree format spec, node annotations, Figma-to-CSS conversion examples
+- **`.claude/docs/CALIBRATION.md`** — Score calibration process, strip ablation, experiment scripts, parallel execution
 
 ## Analysis Scope Policy
 
@@ -309,37 +177,6 @@ Rules are classified into 4 severity levels:
 - **risk**: Implementable now but will break or increase cost later.
 - **missing-info**: Information is absent, forcing developers to guess.
 - **suggestion**: Not immediately problematic, but improves systemization.
-
-## Score Calibration
-
-Rule scores started as intuition-based estimates. The calibration pipeline validates them against actual code conversion difficulty measured by pixel-level visual comparison.
-
-Process:
-1. Run analysis on real Figma files (`canicode calibrate-analyze`)
-2. Implement the entire scoped design as one HTML page (`Converter`)
-3. **Strip ablation** (#194): For each of 6 info types in `DESIGN_TREE_INFO_TYPES`, strip from design-tree → convert → measure similarity delta vs baseline → objective difficulty per rule category
-4. Run `canicode visual-compare` — pixel-level comparison against Figma screenshot
-5. Analyze the diff image to categorize pixel gaps (`Gap Analyzer`)
-6. Compare conversion difficulty vs rule scores (`canicode calibrate-evaluate`) — strip deltas override Converter self-assessment
-7. Debate loop (`/calibrate-loop`): Analysis → Converter (baseline + strips) → Gap Analyzer → Evaluation → Critic → Arbitrator
-
-**Critic receives structured evidence** (#144):
-- Proposals from evaluation
-- Converter's `ruleImpactAssessment` (actual implementation difficulty per rule)
-- Gap analysis (actionable pixel gaps)
-- Prior cross-run evidence for proposed rules
-- Outputs structured pro/con arguments + confidence level per proposal
-
-**Early-stop and self-consistency** (#144):
-- All proposals rejected with high confidence → Arbitrator skipped (early-stop)
-- Low-confidence decisions → held (not applied), evidence accumulates for future runs (self-consistency)
-- `stoppingReason` recorded in debate.json for traceability
-
-**Cross-run evidence** accumulates across sessions in `data/`:
-- `calibration-evidence.json` — overscored/underscored rules with confidence, pro/con, decision (fed to Critic for informed review)
-- Evidence is pruned after rules are applied (calibration)
-
-Final score adjustments in `rule-config.ts` are always reviewed by the developer via the Arbitrator's decisions.
 
 ## Adjustable Rule Config
 

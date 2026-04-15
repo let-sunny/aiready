@@ -1,0 +1,45 @@
+# Architecture Decision Records
+
+Core decisions that shape every session. For full history see [GitHub Wiki Decision Log](https://github.com/let-sunny/canicode/wiki/Decision-Log).
+
+## ADR-001: design-tree > raw Figma JSON
+
+**Decision**: Use curated design-tree format, never feed raw Figma JSON to AI.
+**Why**: design-tree 94% vs raw 79% pixel accuracy with 5x fewer tokens. Information curation > information abundance.
+**Impact**: All code generation pipelines use design-tree as input. Never bypass with raw JSON.
+
+## ADR-002: Ablation + visual-compare for calibration, not LLM self-report
+
+**Decision**: Measure rule impact by stripping info from design-tree and comparing visual output. Do not ask LLM what helped.
+**Why**: LLM self-assessment is unreliable — self-attribution bias (87.76% self-preference), weak counterfactual reasoning (25-40% accuracy drop), post-hoc rationalization. Academic evidence is clear.
+**Impact**: Calibration pipeline uses strip ablation (6 types) + pixel-level visual-compare. No survey-based scoring.
+
+## ADR-003: No custom rules
+
+**Decision**: Removed `--custom-rules` option entirely (-1,465 lines). Only `--config` for threshold tuning.
+**Why**: "We provide the perfect set." Custom rules added complexity (diversity denominator issues) without value.
+**Impact**: Do not add extensibility points for user-defined rules.
+
+## ADR-004: Score = gotcha burden prediction
+
+**Decision**: Analysis score predicts how many gotchas (manual annotations) a design needs for correct implementation.
+**Why**: Roundtrip pivot — canicode diagnoses, then elicits gotchas from users. S-grade = no gotchas needed, D-grade = many needed.
+**Impact**: Score/lint framing should always connect to gotcha burden. See [Round-Trip Integration wiki](https://github.com/let-sunny/canicode/wiki/Round-Trip-Integration).
+
+## ADR-005: Platform standards cover web + app
+
+**Decision**: Rules recognize CSS (hover, focused), Material Design (pressed), and UIKit (highlighted) standards equally.
+**Why**: Figma designs target web and mobile. Web-only standards would produce false positives for app designs.
+**Impact**: Rule detection patterns must accept all platform interaction state names.
+
+## ADR-006: Large fixtures (270+ nodes) only for calibration
+
+**Decision**: Only use large-scale fixtures for calibration. Small fixtures (50-100 nodes) are invalid.
+**Why**: Small fixtures produce misleading results — AI can guess layout at small scale. At 270+ nodes, information gaps become measurable (structure strip: -10% similarity).
+**Impact**: Never lower component-related rule scores based on small fixture calibration.
+
+## ADR-007: npm publish is CI only
+
+**Decision**: Never run `npm publish` manually. Tags trigger GitHub Actions.
+**Why**: Ensures provenance, consistent build environment, and review gate.
+**Impact**: Local `npm publish` is blocked by safety hooks.

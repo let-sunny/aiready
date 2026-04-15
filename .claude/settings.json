@@ -1,5 +1,22 @@
 {
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$TOOL_INPUT\" | grep -qE 'rm -rf|git push --force|git reset --hard|git clean -f|npm publish'; then echo 'BLOCKED: dangerous command detected. See .claude/docs/ADR.md#adr-007'; exit 2; fi"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "type": "command",
+        "command": "pnpm lint 2>&1 && pnpm build 2>&1"
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Edit|Write",
