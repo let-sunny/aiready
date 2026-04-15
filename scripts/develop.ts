@@ -28,6 +28,7 @@ import {
   createDevRunIndex,
   findDevResumePoint,
   DEV_STEP_NAMES,
+  DEV_STEP_ORDER,
   type DevelopRunIndex,
   type StepRecord,
 } from "../src/core/contracts/develop-run.js";
@@ -37,7 +38,7 @@ import { createDevelopRunDir } from "../src/agents/run-directory.js";
 // Constants
 // ---------------------------------------------------------------------------
 
-const MAX_TEST_RETRIES = 3;
+const MAX_FIX_ROUNDS = 3;
 const AGENT_TIMEOUT = 600_000; // 10 minutes
 const PROJECT_ROOT = resolve(import.meta.dirname ?? ".", "..");
 
@@ -49,6 +50,7 @@ const { values, positionals } = parseArgs({
   args: process.argv.slice(2),
   options: {
     resume: { type: "string" },
+    from: { type: "string" },
     help: { type: "boolean", short: "h" },
   },
   allowPositionals: true,
@@ -57,10 +59,13 @@ const { values, positionals } = parseArgs({
 if (values.help) {
   console.log(`Usage:
   npx tsx scripts/develop.ts <issue-number>
-  npx tsx scripts/develop.ts --resume <run-dir>
+  npx tsx scripts/develop.ts --resume <run-dir> [--from <step>]
+
+Steps: plan(1) implement(2) test(3) review(4) fix(5) verify(6) pr(7)
 
 Options:
-  --resume <run-dir>  Resume a failed run from the last incomplete step
+  --resume <run-dir>  Resume a failed run
+  --from <step>       Start from a specific step (name or number, requires --resume)
   -h, --help          Show this help message`);
   process.exit(0);
 }
@@ -174,6 +179,73 @@ function readJson<T = unknown>(path: string): T {
   return JSON.parse(readFileSync(path, "utf-8")) as T;
 }
 
+/** Resolve --from value (name or 1-based number) to step name. */
+function resolveFromStep(from: string): string {
+  const num = parseInt(from, 10);
+  if (!isNaN(num) && num >= 1 && num <= DEV_STEP_ORDER.length) {
+    return DEV_STEP_ORDER[num - 1]!;
+  }
+  if (DEV_STEP_ORDER.includes(from)) return from;
+  console.error(`Error: Unknown step '${from}'. Valid: ${DEV_STEP_ORDER.join(", ")} or 1-${DEV_STEP_ORDER.length}`);
+  process.exit(1);
+}
+
+/** Reset a step and all subsequent steps to pending. */
+function resetFrom(index: DevelopRunIndex, fromStep: string): void {
+  let found = false;
+  for (const step of index.steps) {
+    if (step.name === fromStep) found = true;
+    if (found) {
+      step.status = "pending";
+      step.error = undefined;
+      step.summary = undefined;
+      step.completedAt = undefined;
+      step.durationMs = undefined;
+    }
+  }
+  saveIndex(index);
+}
+
+// ---------------------------------------------------------------------------
+// Circuit breaker
+// ---------------------------------------------------------------------------
+
+interface CircuitState {
+  state: "closed" | "half-open" | "open";
+  errorCount: number;
+  previousErrorCount: number | null;
+  attempt: number;
+  replanAttempted: boolean;
+}
+
+function loadCircuit(runDir: string): CircuitState {
+  const path = join(runDir, "circuit.json");
+  if (existsSync(path)) return readJson<CircuitState>(path);
+  return { state: "closed", errorCount: 0, previousErrorCount: null, attempt: 0, replanAttempted: false };
+}
+
+function saveCircuit(runDir: string, circuit: CircuitState): void {
+  writeFileSync(join(runDir, "circuit.json"), JSON.stringify(circuit, null, 2) + "\n");
+}
+
+/** Count error-severity findings in review.json */
+function countReviewErrors(runDir: string): number {
+  if (!existsSync(join(runDir, "review.json"))) return 0;
+  const review = readJson<{ findings: Array<{ severity: string }> }>(join(runDir, "review.json"));
+  return review.findings.filter((f) => f.severity === "error").length;
+}
+
+/** Decide what to do after a verify failure */
+function circuitDecision(circuit: CircuitState): "fix-retry" | "re-plan" | "give-up" {
+  if (circuit.replanAttempted) return "give-up";
+  if (circuit.attempt >= MAX_FIX_ROUNDS) return "re-plan";
+  if (circuit.previousErrorCount !== null && circuit.errorCount >= circuit.previousErrorCount) {
+    // No progress — errors not decreasing
+    return "re-plan";
+  }
+  return "fix-retry";
+}
+
 // ---------------------------------------------------------------------------
 // Issue fetching
 // ---------------------------------------------------------------------------
@@ -252,6 +324,13 @@ async function main(): Promise<void> {
       return;
     }
 
+    // Apply --from override: reset from specified step
+    if (values.from) {
+      const fromStep = resolveFromStep(values.from);
+      resetFrom(index, fromStep);
+      console.log(`  Resetting from step: ${fromStep}`);
+    }
+
     // Ensure we're on the correct branch
     const currentBranch = execSync("git branch --show-current", { encoding: "utf-8", cwd: PROJECT_ROOT }).trim();
     if (currentBranch !== index.branch) {
@@ -259,9 +338,15 @@ async function main(): Promise<void> {
       execSync(`git checkout ${shellEscape(index.branch)}`, { encoding: "utf-8", cwd: PROJECT_ROOT });
     }
 
+    const actualResume = findDevResumePoint(index);
+    if (!actualResume) {
+      console.log("All steps completed. Nothing to resume.");
+      return;
+    }
+
     index.status = "running";
     saveIndex(index);
-    console.log(`Resuming development from step: ${resumeFrom}`);
+    console.log(`Resuming development from step: ${actualResume}`);
     console.log(`  Run directory: ${runDir}`);
   } else {
     // New run
@@ -335,9 +420,25 @@ async function runPipeline(index: DevelopRunIndex, issue: IssueData): Promise<vo
         }
       }
 
-      const plan = readJson<{ tasks: unknown[] }>(join(runDir, "plan.json"));
+      const plan = readJson<{ tasks: unknown[]; split?: boolean; remainingDescription?: string }>(join(runDir, "plan.json"));
+
+      // Handle issue splitting
+      if (plan.split && plan.remainingDescription) {
+        console.log(`  [split] Issue too large — creating follow-up issue...`);
+        try {
+          const followUpBody = `## Follow-up from #${issue.number}\n\n${plan.remainingDescription}\n\n---\nAuto-created by \`scripts/develop.ts\` (issue splitting)`;
+          const ghOutput = execSync(
+            `gh issue create --title ${shellEscape(`feat: ${issue.title} (part 2)`)} --body ${shellEscape(followUpBody)}`,
+            { encoding: "utf-8", cwd: PROJECT_ROOT },
+          ).trim();
+          console.log(`  [split] Follow-up issue: ${ghOutput}`);
+        } catch {
+          console.warn(`  [split] Failed to create follow-up issue — continuing with current plan`);
+        }
+      }
+
       markCompleted(index, DEV_STEP_NAMES.PLAN, {
-        summary: `${plan.tasks.length} tasks planned`,
+        summary: `${plan.tasks.length} tasks planned${plan.split ? " (split)" : ""}`,
         outputs: ["plan.json"],
       });
     } catch (err) {
@@ -392,70 +493,31 @@ async function runPipeline(index: DevelopRunIndex, issue: IssueData): Promise<vo
     }
   }
 
-  // ─── Step 3: Test (CLI with fix retry loop) ────────────────────────
+  // ─── Step 3: Test (CLI, non-blocking) ───────────────────────────────
+  // Test failures don't kill the pipeline — Review diagnoses them.
   if (shouldRun(DEV_STEP_NAMES.TEST)) {
     markRunning(index, DEV_STEP_NAMES.TEST);
-    let testPassed = false;
-    let lastError = "";
-    let passedAttempt = 0;
-
-    for (let attempt = 0; attempt <= MAX_TEST_RETRIES; attempt++) {
-      try {
-        if (attempt > 0) {
-          console.log(`  [retry] Test attempt ${attempt + 1}/${MAX_TEST_RETRIES + 1}`);
-        }
-
-        // Run lint and tests
-        runCli("pnpm lint", "Type check");
-        runCli("pnpm test:run", "Tests");
-        testPassed = true;
-        passedAttempt = attempt + 1;
-        break;
-      } catch (err) {
-        lastError = err instanceof Error ? err.message : String(err);
-        console.warn(`  [test] Failed (attempt ${attempt + 1}): ${lastError.slice(0, 200)}`);
-
-        // Save test failure for context
-        writeFileSync(join(runDir, "test-result.json"), JSON.stringify({
-          passed: false,
-          attempt: attempt + 1,
-          errors: lastError.slice(0, 5000),
-        }, null, 2) + "\n");
-
-        if (attempt < MAX_TEST_RETRIES) {
-          // Ask fix agent to resolve the issue
-          console.log(`  [agent] Calling fix agent for test failure...`);
-          const implLog = existsSync(join(runDir, "implement-log.json"))
-            ? readFileSync(join(runDir, "implement-log.json"), "utf-8")
-            : "{}";
-          const fixerDef = loadAgent("fixer");
-          const fixContext = buildContext(issue, runDir, {
-            "implement-log.json": implLog,
-            "Test errors": lastError.slice(0, 3000),
-          });
-          const fixPrompt = `${fixerDef}\n\n${fixContext}`;
-
-          try {
-            runAgent(fixPrompt, `Test Fix (attempt ${attempt + 1})`);
-          } catch (fixErr) {
-            console.warn(`  [agent] Fix agent failed: ${fixErr instanceof Error ? fixErr.message.slice(0, 200) : String(fixErr)}`);
-          }
-        }
-      }
-    }
-
-    if (testPassed) {
+    try {
+      runCli("pnpm lint", "Type check");
+      runCli("pnpm test:run", "Tests");
       writeFileSync(join(runDir, "test-result.json"), JSON.stringify({
         passed: true,
-        attempt: passedAttempt,
       }, null, 2) + "\n");
       markCompleted(index, DEV_STEP_NAMES.TEST, {
         summary: "Lint + tests passed",
         outputs: ["test-result.json"],
       });
-    } else {
-      markFailed(index, DEV_STEP_NAMES.TEST, `Tests failed after ${MAX_TEST_RETRIES + 1} attempts: ${lastError.slice(0, 500)}`);
-      throw new Error("Tests failed after retries");
+    } catch (err) {
+      const testError = err instanceof Error ? err.message : String(err);
+      console.warn(`  [test] Failed — continuing to Review for diagnosis`);
+      writeFileSync(join(runDir, "test-result.json"), JSON.stringify({
+        passed: false,
+        errors: testError.slice(0, 5000),
+      }, null, 2) + "\n");
+      markCompleted(index, DEV_STEP_NAMES.TEST, {
+        summary: "FAILED — forwarded to Review",
+        outputs: ["test-result.json"],
+      });
     }
   }
 
@@ -482,12 +544,21 @@ async function runPipeline(index: DevelopRunIndex, issue: IssueData): Promise<vo
           ? readFileSync(join(runDir, "implement-log.json"), "utf-8")
           : "{}";
 
-        const reviewerDef = loadAgent("reviewer");
-        const reviewContext = buildContext(issue, runDir, {
+        // Include test results if tests failed — reviewer diagnoses
+        const extras: Record<string, string> = {
           "plan.json": planJson,
           "implement-log.json": implLog,
           "git diff main...HEAD": truncatedDiff,
-        });
+        };
+        const testResult = existsSync(join(runDir, "test-result.json"))
+          ? readJson<{ passed: boolean; errors?: string }>(join(runDir, "test-result.json"))
+          : null;
+        if (testResult && !testResult.passed) {
+          extras["test-result.json (TESTS FAILED — diagnose this)"] = testResult.errors ?? "unknown error";
+        }
+
+        const reviewerDef = loadAgent("reviewer");
+        const reviewContext = buildContext(issue, runDir, extras);
         const reviewPrompt = `${reviewerDef}\n\n${reviewContext}`;
 
         const reviewOutput = runAgent(reviewPrompt, "Reviewer");
@@ -559,42 +630,107 @@ async function runPipeline(index: DevelopRunIndex, issue: IssueData): Promise<vo
     }
   }
 
-  // ─── Step 6: Verify (CLI) ──────────────────────────────────────────
+  // ─── Step 6: Verify (CLI with circuit breaker) ─────────────────────
+  // Loop: verify → fail → review → fix → verify. Circuit breaker detects
+  // stuck loops and triggers re-plan. Max MAX_FIX_ROUNDS rounds.
   if (shouldRun(DEV_STEP_NAMES.VERIFY)) {
     markRunning(index, DEV_STEP_NAMES.VERIFY);
-    try {
-      runCli("pnpm lint", "Type check (verify)");
-      runCli("pnpm test:run", "Tests (verify)");
-      runCli("pnpm build", "Build (verify)");
+    const circuit = loadCircuit(runDir);
 
-      markCompleted(index, DEV_STEP_NAMES.VERIFY, {
-        summary: "Lint + tests + build passed",
-      });
-    } catch (err) {
-      // One retry with fix agent
-      console.warn(`  [verify] Failed, calling fix agent...`);
-      const implLogVerify = existsSync(join(runDir, "implement-log.json"))
-        ? readFileSync(join(runDir, "implement-log.json"), "utf-8")
-        : "{}";
-      const fixerDefVerify = loadAgent("fixer");
-      const fixContextVerify = buildContext(issue, runDir, {
-        "implement-log.json": implLogVerify,
-        "Build errors": (err instanceof Error ? err.message : String(err)).slice(0, 3000),
-      });
-      const fixPrompt = `${fixerDefVerify}\n\n${fixContextVerify}`;
-
+    let verified = false;
+    while (!verified) {
       try {
-        runAgent(fixPrompt, "Verify Fix");
-        // Re-run verify
-        runCli("pnpm lint", "Type check (verify retry)");
-        runCli("pnpm test:run", "Tests (verify retry)");
-        runCli("pnpm build", "Build (verify retry)");
-        markCompleted(index, DEV_STEP_NAMES.VERIFY, { summary: "Lint + tests + build passed (after fix)" });
-      } catch (retryErr) {
-        markFailed(index, DEV_STEP_NAMES.VERIFY, retryErr instanceof Error ? retryErr.message : String(retryErr));
-        throw retryErr;
+        runCli("pnpm lint", `Type check (verify round ${circuit.attempt + 1})`);
+        runCli("pnpm test:run", `Tests (verify round ${circuit.attempt + 1})`);
+        runCli("pnpm build", `Build (verify round ${circuit.attempt + 1})`);
+        verified = true;
+      } catch (verifyErr) {
+        const verifyError = verifyErr instanceof Error ? verifyErr.message : String(verifyErr);
+        circuit.previousErrorCount = circuit.errorCount;
+        circuit.errorCount = countReviewErrors(runDir);
+        circuit.attempt++;
+        saveCircuit(runDir, circuit);
+
+        const action = circuitDecision(circuit);
+        console.log(`  [circuit] Round ${circuit.attempt}: errors=${circuit.errorCount} prev=${circuit.previousErrorCount ?? "n/a"} → ${action}`);
+
+        if (action === "give-up") {
+          markFailed(index, DEV_STEP_NAMES.VERIFY,
+            `Circuit breaker OPEN: re-plan already attempted, still failing. Manual intervention needed.`);
+          throw new Error("Circuit breaker: pipeline exhausted all recovery options");
+        }
+
+        if (action === "re-plan") {
+          console.log(`  [circuit] Triggering re-plan with failure context...`);
+          circuit.replanAttempted = true;
+          circuit.state = "half-open";
+          saveCircuit(runDir, circuit);
+
+          // Re-plan: planner reads previous plan + review failures
+          const prevPlan = existsSync(join(runDir, "plan.json"))
+            ? readFileSync(join(runDir, "plan.json"), "utf-8") : "{}";
+          const prevReview = existsSync(join(runDir, "review.json"))
+            ? readFileSync(join(runDir, "review.json"), "utf-8") : "{}";
+
+          const replanDef = loadAgent("planner");
+          const replanContext = buildContext(issue, runDir, {
+            "PREVIOUS plan.json (this approach FAILED)": prevPlan,
+            "PREVIOUS review.json (these issues were found)": prevReview,
+            "INSTRUCTION": "The previous plan failed. Analyze why from the review findings and try a DIFFERENT approach. Do NOT repeat the same plan.",
+          });
+          runAgent(`${replanDef}\n\n${replanContext}`, "Re-planner");
+
+          // Re-implement with new plan
+          const newPlan = readFileSync(join(runDir, "plan.json"), "utf-8");
+          const reimplDef = loadAgent("implementer");
+          const reimplContext = buildContext(issue, runDir, { "plan.json": newPlan });
+          runAgent(`${reimplDef}\n\n${reimplContext}`, "Re-implementer");
+
+          // Loop back to verify (one more chance)
+          continue;
+        }
+
+        // action === "fix-retry": run review → fix → loop back to verify
+        console.log(`  [circuit] Running review → fix cycle...`);
+
+        // Quick review of current state
+        const fixDiff = execSync("git diff main...HEAD", { encoding: "utf-8", cwd: PROJECT_ROOT });
+        const truncFixDiff = fixDiff.length > 30_000
+          ? fixDiff.slice(0, 30_000) + "\n\n... (truncated)"
+          : fixDiff;
+        const implLogFix = existsSync(join(runDir, "implement-log.json"))
+          ? readFileSync(join(runDir, "implement-log.json"), "utf-8") : "{}";
+
+        const reviewerDef = loadAgent("reviewer");
+        const rvCtx = buildContext(issue, runDir, {
+          "implement-log.json": implLogFix,
+          "git diff main...HEAD": truncFixDiff,
+          "Verify failure": verifyError.slice(0, 3000),
+        });
+        const rvOutput = runAgent(`${reviewerDef}\n\n${rvCtx}`, `Reviewer (round ${circuit.attempt})`);
+
+        // Save review
+        if (!existsSync(join(runDir, "review.json"))) {
+          const rvJson = rvOutput.match(/\{[\s\S]*"verdict"[\s\S]*\}/);
+          if (rvJson) writeFileSync(join(runDir, "review.json"), rvJson[0] + "\n");
+        }
+
+        // Fix
+        const fixerDef = loadAgent("fixer");
+        const fxCtx = buildContext(issue, runDir, {
+          "implement-log.json": implLogFix,
+          "Verify failure": verifyError.slice(0, 3000),
+        });
+        runAgent(`${fixerDef}\n\n${fxCtx}`, `Fixer (round ${circuit.attempt})`);
       }
     }
+
+    circuit.state = "closed";
+    saveCircuit(runDir, circuit);
+    markCompleted(index, DEV_STEP_NAMES.VERIFY, {
+      summary: `Lint + tests + build passed (${circuit.attempt} fix rounds)`,
+      outputs: ["circuit.json"],
+    });
   }
 
   // ─── Step 7: PR (CLI) ──────────────────────────────────────────────

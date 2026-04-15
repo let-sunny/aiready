@@ -45,9 +45,20 @@ Write `$RUN_DIR/plan.json`:
     "Which existing patterns to follow and why"
   ],
   "testStrategy": "How to verify the implementation works",
-  "risks": ["Known unknowns, potential edge cases, areas of uncertainty"]
+  "risks": ["Known unknowns, potential edge cases, areas of uncertainty"],
+  "split": false,
+  "remainingDescription": null
 }
 ```
+
+## Issue Splitting
+
+If the issue requires **more than 5 tasks**, the scope is too large for one PR. In this case:
+- Set `"split": true`
+- Include only the first 5 tasks (the most foundational ones)
+- Set `"remainingDescription"` to a description of the remaining work for a follow-up issue
+
+The orchestration script will automatically create a follow-up GitHub issue with the remaining work.
 
 ## Rules
 
@@ -55,6 +66,7 @@ Write `$RUN_DIR/plan.json`:
 - Each task must have concrete `files` — no vague "update relevant files"
 - Reference existing code patterns: "Follow the pattern in src/core/engine/X.ts"
 - Keep tasks ordered by dependency — task 2 may depend on task 1's output
+- **Max 5 tasks per plan** — split if more are needed
 - Do NOT write any code — only plan
 - Do NOT commit anything
 - Print a one-line summary to stdout when done
