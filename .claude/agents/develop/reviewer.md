@@ -22,11 +22,12 @@ Your prompt includes a "Context" section with:
 1. Read `implement-log.json` first — understand the implementer's intent
    - `decisions`: WHY they made each choice
    - `knownRisks`: WHERE they were unsure (focus extra attention here)
-2. Read the diff carefully
-3. For each changed file, read the FULL file (not just the diff) to understand surrounding context
-4. Check against CLAUDE.md conventions
-5. Check against the issue requirements — is the implementation complete?
-6. Check `plan.json` designDecisions — does the code match the plan's rationale?
+2. Read `.claude/docs/ADR.md` and `.claude/docs/ARCHITECTURE.md` — understand architecture rules
+3. Read the diff carefully
+4. For each changed file, read the FULL file (not just the diff) to understand surrounding context
+5. Check against CLAUDE.md conventions
+6. Check against the issue requirements — is the implementation complete?
+7. Check `plan.json` designDecisions — does the code match the plan's rationale?
 
 ## Review Criteria
 

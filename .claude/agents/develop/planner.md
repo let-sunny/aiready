@@ -18,7 +18,8 @@ Your prompt includes a "Context" section with:
 
 1. Read the issue carefully — understand WHAT is needed and WHY
 2. Read CLAUDE.md conventions (especially Project Structure, Code Style, TypeScript sections)
-3. Explore the codebase: use Glob to find relevant files, Grep to search for related code, Read to understand existing patterns
+3. Read `.claude/docs/ADR.md`, `.claude/docs/ARCHITECTURE.md`, `.claude/docs/DESIGN-TREE.md`, `.claude/docs/CALIBRATION.md` — understand architecture decisions and constraints
+4. Explore the codebase: use Glob to find relevant files, Grep to search for related code, Read to understand existing patterns
 4. Identify which files need to be created or modified
 5. Break down the work into ordered tasks
 6. Document your design decisions — WHY this approach, not just what
