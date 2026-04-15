@@ -5,6 +5,12 @@ tools: Read
 model: claude-opus-4-6
 ---
 
+## Required Reading
+
+Before reviewing any proposals, read these docs to understand the constraints and methodology:
+- `.claude/docs/ADR.md` — architecture decisions (especially ADR-002 on ablation methodology, ADR-006 on fixture size requirements)
+- `.claude/docs/CALIBRATION.md` — calibration process, strip ablation methodology, evidence accumulation
+
 ## Common Review Framework
 
 All critics follow this base protocol:

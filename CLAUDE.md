@@ -80,22 +80,13 @@ scripts/                        # Orchestration scripts (run with tsx)
 
 ## Architecture Decision Records
 
-Core decisions that shape every session. For full history see [GitHub Wiki Decision Log](https://github.com/let-sunny/canicode/wiki/Decision-Log).
-
-- **ADR-001: design-tree > raw Figma JSON** — Use curated design-tree for AI/codegen inputs, never raw JSON. Ingestion pipelines transform raw JSON into design-tree. 94% vs 79% accuracy, 5x fewer tokens.
-- **ADR-002: Ablation + visual-compare, not LLM self-report** — Measure rule impact by stripping + pixel comparison. LLM self-assessment is unreliable (self-attribution bias, weak counterfactual reasoning).
-- **ADR-003: No custom rules** — Removed `--custom-rules` entirely. We provide the perfect set. Do not add extensibility points.
-- **ADR-004: Score = gotcha burden prediction** — Score predicts how many gotchas a design needs. S-grade = none, D-grade = many. See [Round-Trip wiki](https://github.com/let-sunny/canicode/wiki/Round-Trip-Integration).
-- **ADR-005: Platform standards cover web + app** — Rules accept CSS, Material Design, and UIKit interaction state names equally.
-- **ADR-006: Large fixtures (270+) only for calibration** — Small fixtures produce misleading results. Never lower scores based on small fixture calibration.
-- **ADR-007: npm publish is CI only** — Never manual. Tags trigger GitHub Actions. Local `npm publish` blocked by safety hooks.
-- **ADR-008: Calibration pipeline — explicit claude -p orchestration** — TypeScript script calls CLI for deterministic steps, `claude -p` for judgment steps (converter, gap-analyzer, critic, arbitrator). Strip ablation runs 7 parallel sessions. Replaces delegated single-session orchestrator (#245).
+See `.claude/docs/ADR.md` for all architecture decisions. Read before making any architecture choices. For full history see [GitHub Wiki Decision Log](https://github.com/let-sunny/canicode/wiki/Decision-Log).
 
 ## Key References
 
 Detailed documentation lives in `.claude/docs/`. Read when working on related areas:
 
-- **`.claude/docs/ADR.md`** — Detailed ADR with Decision/Why/Impact format (the section above is the summary)
+- **`.claude/docs/ADR.md`** — Architecture Decision Records with Decision/Why/Impact format
 - **`.claude/docs/ARCHITECTURE.md`** — 5 user-facing channels, internal calibration commands, file output structure
 - **`.claude/docs/DESIGN-TREE.md`** — Design tree format spec, node annotations, Figma-to-CSS conversion examples
 - **`.claude/docs/CALIBRATION.md`** — Score calibration process, strip ablation, experiment scripts, parallel execution
