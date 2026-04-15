@@ -5,7 +5,8 @@ The design-tree is canicode's core output — a combined DOM + Style tree that m
 ```text
 Hero Section (FRAME, 375x960)              <- name (TYPE, WxH)
   style: display: flex; gap: 32px          <- CSS properties (converted from Figma)
-  [component: Platform=Mobile, Size=Large] <- component with variant properties
+  [component: Platform=Mobile, Size=Large] <- component name from componentId
+  component-properties: size=lg, icon=true <- instance override properties (separate line)
   Title (TEXT, 300x48)                     <- child node (indentation = hierarchy)
     style: font-size: 48px; color: #2C2C2C <- inline CSS
 ```
@@ -15,7 +16,9 @@ Hero Section (FRAME, 375x960)              <- name (TYPE, WxH)
 - `(TYPE, WxH)` — Figma node type + dimensions
 - `style:` — CSS properties converted from Figma (layoutMode->flex, fills->color, etc.)
 - `[component: ComponentName]` — component instance annotation (outputs `comp.name`; variant components naturally have `Key=Value` names like `Platform=Mobile, State=Default`)
-- `[IMAGE]` — image placeholder (actual images in `images/` directory)
+- `component-properties:` — instance override properties, emitted on a separate line after `[component:]`
+- `background-image: [IMAGE]` — image placeholder for nodes with children
+- `content-image: [IMAGE]` — image placeholder for leaf nodes (no children)
 - `svg:` — inline SVG for vector nodes
 - `SLOT` type — replaceable area in component
 
@@ -32,5 +35,7 @@ Hero Section (FRAME, 375x960)              <- name (TYPE, WxH)
 |---|---|
 | `layoutMode: "VERTICAL"` | `display: flex; flex-direction: column` |
 | `fills: [{color: {r:0.12,g:0.12,b:0.12,a:0.5}}]` | `rgba(30, 30, 30, 0.5)` |
-| `layoutSizingHorizontal: "FILL"` | `width: 100%` |
-| `imageRef: "abc123"` | `[IMAGE]` |
+| `fills: [{type: "IMAGE"}]` (has children) | `background-image: [IMAGE]` |
+| `fills: [{type: "IMAGE"}]` (leaf node) | `content-image: [IMAGE]` |
+| `layoutSizingHorizontal: "FILL"` | `width: 100%` (skipped when `layoutGrow === 1`) |
+| `layoutGrow: 1` | `flex-grow: 1` |

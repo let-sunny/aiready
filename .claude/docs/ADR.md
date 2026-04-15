@@ -4,9 +4,9 @@ Core decisions that shape every session. For full history see [GitHub Wiki Decis
 
 ## ADR-001: design-tree > raw Figma JSON
 
-**Decision**: Use curated design-tree format, never feed raw Figma JSON to AI.
+**Decision**: Use curated design-tree format for AI/codegen inputs. Do not feed raw Figma JSON into AI/codegen. Ingestion pipelines (loader, FigmaFileLoader) accept raw JSON and transform it into design-tree before any codegen use.
 **Why**: design-tree 94% vs raw 79% pixel accuracy with 5x fewer tokens. Information curation > information abundance.
-**Impact**: All code generation pipelines use design-tree as input. Never bypass with raw JSON.
+**Impact**: All code generation pipelines use design-tree as input. Raw JSON is only for ingestion/transformation, never passed directly to AI.
 
 ## ADR-002: Ablation + visual-compare for calibration, not LLM self-report
 

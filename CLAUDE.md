@@ -65,6 +65,7 @@ app/                          # Browser runtime
 
 .claude/                      # Claude Code harness
 ├── docs/                     # Internal reference (read when working on related areas)
+│   ├── ADR.md                # Architecture Decision Records (detailed version)
 │   ├── ARCHITECTURE.md       # Channels, internal commands, file output structure
 │   ├── DESIGN-TREE.md        # Design tree format spec, annotations, conversion examples
 │   └── CALIBRATION.md        # Score calibration process, ablation experiments
@@ -77,7 +78,7 @@ app/                          # Browser runtime
 
 Core decisions that shape every session. For full history see [GitHub Wiki Decision Log](https://github.com/let-sunny/canicode/wiki/Decision-Log).
 
-- **ADR-001: design-tree > raw Figma JSON** — Use curated design-tree, never raw JSON. 94% vs 79% accuracy, 5x fewer tokens. Information curation > abundance.
+- **ADR-001: design-tree > raw Figma JSON** — Use curated design-tree for AI/codegen inputs, never raw JSON. Ingestion pipelines transform raw JSON into design-tree. 94% vs 79% accuracy, 5x fewer tokens.
 - **ADR-002: Ablation + visual-compare, not LLM self-report** — Measure rule impact by stripping + pixel comparison. LLM self-assessment is unreliable (self-attribution bias, weak counterfactual reasoning).
 - **ADR-003: No custom rules** — Removed `--custom-rules` entirely. We provide the perfect set. Do not add extensibility points.
 - **ADR-004: Score = gotcha burden prediction** — Score predicts how many gotchas a design needs. S-grade = none, D-grade = many. See [Round-Trip wiki](https://github.com/let-sunny/canicode/wiki/Round-Trip-Integration).
@@ -89,6 +90,7 @@ Core decisions that shape every session. For full history see [GitHub Wiki Decis
 
 Detailed documentation lives in `.claude/docs/`. Read when working on related areas:
 
+- **`.claude/docs/ADR.md`** — Detailed ADR with Decision/Why/Impact format (the section above is the summary)
 - **`.claude/docs/ARCHITECTURE.md`** — 5 user-facing channels, internal calibration commands, file output structure
 - **`.claude/docs/DESIGN-TREE.md`** — Design tree format spec, node annotations, Figma-to-CSS conversion examples
 - **`.claude/docs/CALIBRATION.md`** — Score calibration process, strip ablation, experiment scripts, parallel execution

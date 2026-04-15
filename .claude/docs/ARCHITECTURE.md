@@ -55,7 +55,7 @@ Calibration commands are NOT exposed as CLI commands. They run exclusively insid
 
 ## File Output Structure
 
-```
+```text
 data/calibration-evidence.json              # Cross-run calibration evidence (overscored/underscored rules)
 reports/                                    # HTML reports (canicode analyze)
 logs/calibration/                           # Calibration runs (internal)
