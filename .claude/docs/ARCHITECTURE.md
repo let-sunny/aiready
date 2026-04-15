@@ -60,6 +60,8 @@ Calibration is orchestrated by `scripts/calibrate.ts` (ADR-008). CLI for determi
 - Flow: Plan (agent) → Implement (agent) → Test (cli, retry loop) → Review (agent) → Fix (agent) → Verify (cli) → PR (cli)
 - State tracked in `logs/develop/<issue>--<timestamp>/index.json`
 - Test/Verify steps have internal fix retry loops (max 3 retries with fix agent)
+- JSON handoff chain: `plan.json` (designDecisions) → `implement-log.json` (decisions, knownRisks) → `review.json` (implementIntent, intentConflict) → `fix-log.json` (resolution, skipped reasons)
+- Each `claude -p` agent receives previous step JSONs so it understands "why", not just "what"
 - See: issue #247
 
 ## File Output Structure
@@ -88,9 +90,12 @@ logs/calibration/REPORT.md                  # Cross-run aggregate report
 logs/develop/                               # Development pipeline runs
 logs/develop/<issue>--<timestamp>/          # One development run = one folder
   ├── index.json                            #   Pipeline state (per-step status, resume point)
-  ├── plan.json                             #   Implementation plan (tasks, risks)
-  ├── review.json                           #   Self-review findings
-  ├── implement-output.txt                  #   Implementer agent output
+  ├── plan.json                             #   Implementation plan (tasks, designDecisions, risks)
+  ├── implement-log.json                    #   Decisions + knownRisks (context chain for Review/Fix)
+  ├── implement-output.txt                  #   Implementer agent raw output
+  ├── test-result.json                      #   Test pass/fail + error details
+  ├── review.json                           #   Self-review (implementIntent, intentConflict flags)
+  ├── fix-log.json                          #   What was fixed/skipped and why
   └── pr-url.txt                            #   Created PR URL
 logs/activity/                              # Nightly orchestration logs
 ```

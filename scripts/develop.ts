@@ -340,10 +340,16 @@ Write a JSON plan to ${join(runDir, "plan.json")} with this structure:
       "approach": "How to implement this"
     }
   ],
+  "designDecisions": [
+    "Why this approach over alternatives — e.g. 'Extend existing X instead of creating new Y because Z'",
+    "Why touching these specific files — e.g. 'rule-config.ts owns all score values per ADR'"
+  ],
   "testStrategy": "How to verify the implementation",
   "risks": ["Potential issues to watch for"]
 }
 \`\`\`
+
+The \`designDecisions\` field is CRITICAL — it tells the next steps WHY you chose this plan so they don't undo intentional choices.
 
 Write the plan file, then print a one-line summary to stdout.`;
 
@@ -392,15 +398,30 @@ Implement ALL tasks from the plan above. Follow these rules:
 2. Create/modify files as specified in the plan
 3. Do NOT run tests — a separate step handles that
 4. Do NOT create a PR — a separate step handles that
-5. After implementation, stage your changes with \`git add\` and commit with a conventional commit message
 
-### Important
+### IMPORTANT: Write implement-log.json BEFORE committing
 
-- Read existing files before modifying them
-- Keep changes minimal — only what the plan requires
-- Use the project's existing patterns and utilities
+After implementing, write ${join(runDir, "implement-log.json")} with:
 
-After completing all tasks, print a summary of what you implemented.`;
+\`\`\`json
+{
+  "filesChanged": ["src/path/to.ts", "src/other.ts"],
+  "commits": ["feat: add X feature"],
+  "decisions": [
+    "Chose to extend existing Y instead of creating new Z because ...",
+    "Followed pattern from src/core/engine/X.ts for consistency"
+  ],
+  "knownRisks": [
+    "Edge case: empty input not handled yet",
+    "Not confident about the type narrowing in line 42"
+  ]
+}
+\`\`\`
+
+The \`decisions\` field tells the Review step WHY you made each choice — this prevents the reviewer from flagging intentional decisions as bugs.
+The \`knownRisks\` field tells the Review step what YOU are unsure about — the reviewer will focus extra attention there.
+
+Then stage your changes with \`git add\` and commit with a conventional commit message.`;
 
       const implOutput = runAgent(implementPrompt, "Implementer");
 
@@ -412,9 +433,19 @@ After completing all tasks, print a summary of what you implemented.`;
 
       writeFileSync(join(runDir, "implement-output.txt"), implOutput);
 
+      // Ensure implement-log.json exists (agent may have skipped it)
+      if (!existsSync(join(runDir, "implement-log.json"))) {
+        writeFileSync(join(runDir, "implement-log.json"), JSON.stringify({
+          filesChanged: [],
+          commits: [],
+          decisions: ["(implement-log.json not written by agent)"],
+          knownRisks: [],
+        }, null, 2) + "\n");
+      }
+
       markCompleted(index, DEV_STEP_NAMES.IMPLEMENT, {
         summary: diffStat.split("\n").pop() ?? "Changes committed",
-        outputs: ["implement-output.txt"],
+        outputs: ["implement-output.txt", "implement-log.json"],
       });
     } catch (err) {
       markFailed(index, DEV_STEP_NAMES.IMPLEMENT, err instanceof Error ? err.message : String(err));
@@ -443,12 +474,29 @@ After completing all tasks, print a summary of what you implemented.`;
         lastError = err instanceof Error ? err.message : String(err);
         console.warn(`  [test] Failed (attempt ${attempt + 1}): ${lastError.slice(0, 200)}`);
 
+        // Save test failure for context
+        writeFileSync(join(runDir, "test-result.json"), JSON.stringify({
+          passed: false,
+          attempt: attempt + 1,
+          errors: lastError.slice(0, 5000),
+        }, null, 2) + "\n");
+
         if (attempt < MAX_TEST_RETRIES) {
           // Ask fix agent to resolve the issue
           console.log(`  [agent] Calling fix agent for test failure...`);
+          const implLog = existsSync(join(runDir, "implement-log.json"))
+            ? readFileSync(join(runDir, "implement-log.json"), "utf-8")
+            : "{}";
           const fixPrompt = `You are a TypeScript developer fixing test/lint failures.
 
 ${baseContext}
+
+## Implementation Context (from implement-log.json)
+
+${implLog}
+
+Pay attention to \`decisions\` — these explain WHY the code was written this way.
+Pay attention to \`knownRisks\` — the implementer was already unsure about these areas.
 
 ## Test Failure
 
@@ -477,8 +525,13 @@ Focus on fixing the implementation to match what tests expect.`;
     }
 
     if (testPassed) {
+      writeFileSync(join(runDir, "test-result.json"), JSON.stringify({
+        passed: true,
+        attempt: getStep(index, DEV_STEP_NAMES.TEST).retries + 1,
+      }, null, 2) + "\n");
       markCompleted(index, DEV_STEP_NAMES.TEST, {
         summary: "Lint + tests passed",
+        outputs: ["test-result.json"],
       });
     } else {
       markFailed(index, DEV_STEP_NAMES.TEST, `Tests failed after ${MAX_TEST_RETRIES + 1} attempts: ${lastError.slice(0, 500)}`);
@@ -502,9 +555,28 @@ Focus on fixing the implementation to match what tests expect.`;
           ? diff.slice(0, maxDiffLen) + `\n\n... (truncated, ${diff.length - maxDiffLen} chars omitted)`
           : diff;
 
+        // Load context from previous steps
+        const planJson = existsSync(join(runDir, "plan.json"))
+          ? readFileSync(join(runDir, "plan.json"), "utf-8")
+          : "{}";
+        const implLog = existsSync(join(runDir, "implement-log.json"))
+          ? readFileSync(join(runDir, "implement-log.json"), "utf-8")
+          : "{}";
+
         const reviewPrompt = `You are a code reviewer checking a feature branch.
 
 ${baseContext}
+
+## Implementation Plan (plan.json)
+
+${planJson}
+
+## Implementation Log (implement-log.json)
+
+${implLog}
+
+Read \`decisions\` carefully — these explain WHY the implementer made each choice.
+Read \`knownRisks\` carefully — the implementer flagged these as uncertain areas. Pay EXTRA attention here.
 
 ## Changes (git diff main...HEAD)
 
@@ -519,6 +591,7 @@ Review the changes for:
 2. **Conventions**: Does it follow CLAUDE.md conventions? (ESM, .js extensions, strict TS, naming)
 3. **Security**: Injection risks, hardcoded secrets, unsafe operations
 4. **Completeness**: Does it fully address the issue requirements?
+5. **Intent alignment**: Do the changes match the plan's designDecisions?
 
 ### Output Format
 
@@ -528,17 +601,21 @@ Write a JSON review to ${join(runDir, "review.json")} with this structure:
 {
   "verdict": "approve" | "request-changes",
   "summary": "Overall assessment",
+  "implementIntent": "My understanding of the implementer's design decisions and trade-offs",
   "findings": [
     {
       "severity": "error" | "warning" | "suggestion",
       "file": "path/to/file.ts",
       "line": 42,
       "issue": "What's wrong",
-      "suggestion": "How to fix it"
+      "suggestion": "How to fix it",
+      "intentConflict": false
     }
   ]
 }
 \`\`\`
+
+The \`intentConflict\` field: set to true if the finding contradicts a stated decision from implement-log.json. These need careful judgment — the implementer may have had a good reason.
 
 Be strict but fair. Only flag real issues, not style preferences already handled by the project conventions.`;
 
@@ -590,19 +667,44 @@ Be strict but fair. Only flag real issues, not style preferences already handled
       if (actionable.length === 0) {
         markSkipped(index, DEV_STEP_NAMES.FIX, "No actionable findings");
       } else {
+        const implLog = existsSync(join(runDir, "implement-log.json"))
+          ? readFileSync(join(runDir, "implement-log.json"), "utf-8")
+          : "{}";
+
         const fixPrompt = `You are a TypeScript developer fixing code review findings.
 
 ${baseContext}
+
+## Implementation Intent (implement-log.json)
+
+${implLog}
+
+Read \`decisions\` — these explain WHY the code was written this way. Do NOT undo intentional decisions unless the finding proves them wrong.
 
 ## Review Findings to Fix
 
 ${JSON.stringify(actionable, null, 2)}
 
+Note: findings with \`intentConflict: true\` contradict a stated design decision. Be careful — fix them only if the reviewer's reasoning is stronger.
+
 ## Your Task
 
 1. Read each file mentioned in the findings
 2. Fix all errors and warnings
-3. Stage and commit with message: "fix: address review findings"
+3. Write ${join(runDir, "fix-log.json")} with what you fixed and why:
+
+\`\`\`json
+{
+  "fixed": [
+    { "finding": "description", "resolution": "what was changed and why" }
+  ],
+  "skipped": [
+    { "finding": "description", "reason": "why this was intentionally kept" }
+  ]
+}
+\`\`\`
+
+4. Stage and commit with message: "fix: address review findings"
 
 Do NOT fix suggestions — only errors and warnings.
 Do NOT make unrelated changes.`;
@@ -611,6 +713,7 @@ Do NOT make unrelated changes.`;
 
         markCompleted(index, DEV_STEP_NAMES.FIX, {
           summary: `Fixed ${actionable.length} findings`,
+          outputs: ["fix-log.json"],
         });
       }
     } catch (err) {
@@ -632,9 +735,16 @@ Do NOT make unrelated changes.`;
     } catch (err) {
       // One retry with fix agent
       console.warn(`  [verify] Failed, calling fix agent...`);
+      const implLogVerify = existsSync(join(runDir, "implement-log.json"))
+        ? readFileSync(join(runDir, "implement-log.json"), "utf-8")
+        : "{}";
       const fixPrompt = `You are a TypeScript developer fixing build/lint failures.
 
 ${baseContext}
+
+## Implementation Intent (implement-log.json)
+
+${implLogVerify}
 
 ## Build/Lint Failure
 
