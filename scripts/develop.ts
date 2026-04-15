@@ -209,21 +209,23 @@ function loadClaudeMd(): string {
   return existsSync(path) ? readFileSync(path, "utf-8") : "";
 }
 
-function buildBaseContext(issue: IssueData, runDir: string): string {
-  return `## Project Instructions (CLAUDE.md)
+/** Load an agent definition file from .claude/agents/develop/ */
+function loadAgent(name: string): string {
+  const path = resolve(PROJECT_ROOT, `.claude/agents/develop/${name}.md`);
+  return readFileSync(path, "utf-8");
+}
 
-${loadClaudeMd()}
-
-## Target Issue
-
-**#${issue.number}: ${issue.title}**
-
-${issue.body}
-
-## Run Directory
-
-${runDir}
-`;
+/** Build the context block injected after the agent definition */
+function buildContext(issue: IssueData, runDir: string, extras: Record<string, string> = {}): string {
+  const sections = [
+    `Run directory: ${runDir}`,
+    `Issue: #${issue.number} — ${issue.title}\n\n${issue.body}`,
+    `CLAUDE.md:\n\n${loadClaudeMd()}`,
+  ];
+  for (const [label, content] of Object.entries(extras)) {
+    sections.push(`${label}:\n\n${content}`);
+  }
+  return `## Context (injected by orchestration script)\n\n${sections.join("\n\n---\n\n")}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -264,13 +266,15 @@ async function main(): Promise<void> {
     issue = fetchIssue(issueNum);
     console.log(`\nStarting development pipeline for: #${issue.number} ${issue.title}`);
 
-    // Create branch
+    // Create branch — fail if it already exists (use --resume for existing runs)
     const branchName = `develop/${issue.number}`;
     try {
       execSync(`git checkout -b ${shellEscape(branchName)} main`, { encoding: "utf-8", cwd: PROJECT_ROOT });
     } catch {
-      // Branch may already exist (from a previous attempt)
-      execSync(`git checkout ${shellEscape(branchName)}`, { encoding: "utf-8", cwd: PROJECT_ROOT });
+      console.error(`Error: Branch '${branchName}' already exists.`);
+      console.error(`  To resume a previous run: npx tsx scripts/develop.ts --resume <run-dir>`);
+      console.error(`  To start fresh: git branch -D ${branchName}`);
+      process.exit(1);
     }
 
     runDir = createDevelopRunDir(issue.number);
@@ -303,55 +307,13 @@ async function runPipeline(index: DevelopRunIndex, issue: IssueData): Promise<vo
     return step.status !== "completed" && step.status !== "skipped";
   };
 
-  const baseContext = buildBaseContext(issue, runDir);
-
   // ─── Step 1: Plan (agent) ──────────────────────────────────────────
   if (shouldRun(DEV_STEP_NAMES.PLAN)) {
     markRunning(index, DEV_STEP_NAMES.PLAN);
     try {
-      const planPrompt = `You are a software architect planning the implementation for a GitHub issue.
-
-${baseContext}
-
-## Your Task
-
-Analyze the issue and the codebase, then produce a detailed implementation plan.
-
-### Instructions
-
-1. Read the issue carefully and understand the requirements
-2. Explore the relevant parts of the codebase (use Glob, Grep, Read)
-3. Identify which files need to be created or modified
-4. Break down the work into ordered tasks
-
-### Output Format
-
-Write a JSON plan to ${join(runDir, "plan.json")} with this structure:
-
-\`\`\`json
-{
-  "summary": "One-paragraph summary of what needs to be done",
-  "tasks": [
-    {
-      "id": 1,
-      "title": "Short task title",
-      "description": "What to do and why",
-      "files": ["src/path/to/file.ts"],
-      "approach": "How to implement this"
-    }
-  ],
-  "designDecisions": [
-    "Why this approach over alternatives — e.g. 'Extend existing X instead of creating new Y because Z'",
-    "Why touching these specific files — e.g. 'rule-config.ts owns all score values per ADR'"
-  ],
-  "testStrategy": "How to verify the implementation",
-  "risks": ["Potential issues to watch for"]
-}
-\`\`\`
-
-The \`designDecisions\` field is CRITICAL — it tells the next steps WHY you chose this plan so they don't undo intentional choices.
-
-Write the plan file, then print a one-line summary to stdout.`;
+      const agentDef = loadAgent("planner");
+      const context = buildContext(issue, runDir);
+      const planPrompt = `${agentDef}\n\n${context}`;
 
       const planOutput = runAgent(planPrompt, "Planner");
 
@@ -381,52 +343,21 @@ Write the plan file, then print a one-line summary to stdout.`;
     markRunning(index, DEV_STEP_NAMES.IMPLEMENT);
     try {
       const plan = readFileSync(join(runDir, "plan.json"), "utf-8");
-
-      const implementPrompt = `You are a senior TypeScript developer implementing a planned feature.
-
-${baseContext}
-
-## Implementation Plan
-
-${plan}
-
-## Your Task
-
-Implement ALL tasks from the plan above. Follow these rules:
-
-1. Follow the project conventions in CLAUDE.md strictly (ESM, .js extensions, strict TS, etc.)
-2. Create/modify files as specified in the plan
-3. Do NOT run tests — a separate step handles that
-4. Do NOT create a PR — a separate step handles that
-
-### IMPORTANT: Write implement-log.json BEFORE committing
-
-After implementing, write ${join(runDir, "implement-log.json")} with:
-
-\`\`\`json
-{
-  "filesChanged": ["src/path/to.ts", "src/other.ts"],
-  "commits": ["feat: add X feature"],
-  "decisions": [
-    "Chose to extend existing Y instead of creating new Z because ...",
-    "Followed pattern from src/core/engine/X.ts for consistency"
-  ],
-  "knownRisks": [
-    "Edge case: empty input not handled yet",
-    "Not confident about the type narrowing in line 42"
-  ]
-}
-\`\`\`
-
-The \`decisions\` field tells the Review step WHY you made each choice — this prevents the reviewer from flagging intentional decisions as bugs.
-The \`knownRisks\` field tells the Review step what YOU are unsure about — the reviewer will focus extra attention there.
-
-Then stage your changes with \`git add\` and commit with a conventional commit message.`;
+      const agentDef = loadAgent("implementer");
+      const context = buildContext(issue, runDir, { "plan.json": plan });
+      const implementPrompt = `${agentDef}\n\n${context}`;
 
       const implOutput = runAgent(implementPrompt, "Implementer");
 
-      // Check that changes were made
-      const diffStat = execSync("git diff --stat HEAD~1 2>/dev/null || git diff --stat HEAD", {
+      // Check that changes were committed
+      const commitCount = execSync("git rev-list --count main...HEAD", {
+        encoding: "utf-8",
+        cwd: PROJECT_ROOT,
+      }).trim();
+      if (commitCount === "0") {
+        throw new Error("Implementer did not create any commits");
+      }
+      const diffStat = execSync("git diff --stat main...HEAD", {
         encoding: "utf-8",
         cwd: PROJECT_ROOT,
       }).trim();
@@ -487,33 +418,12 @@ Then stage your changes with \`git add\` and commit with a conventional commit m
           const implLog = existsSync(join(runDir, "implement-log.json"))
             ? readFileSync(join(runDir, "implement-log.json"), "utf-8")
             : "{}";
-          const fixPrompt = `You are a TypeScript developer fixing test/lint failures.
-
-${baseContext}
-
-## Implementation Context (from implement-log.json)
-
-${implLog}
-
-Pay attention to \`decisions\` — these explain WHY the code was written this way.
-Pay attention to \`knownRisks\` — the implementer was already unsure about these areas.
-
-## Test Failure
-
-The following test/lint command failed:
-
-\`\`\`
-${lastError.slice(0, 3000)}
-\`\`\`
-
-## Your Task
-
-1. Read the failing files and understand the errors
-2. Fix the issues — type errors, test failures, etc.
-3. Stage and commit your fixes with message: "fix: resolve test failures"
-
-Do NOT change test expectations unless the test is genuinely wrong.
-Focus on fixing the implementation to match what tests expect.`;
+          const fixerDef = loadAgent("fixer");
+          const fixContext = buildContext(issue, runDir, {
+            "implement-log.json": implLog,
+            "Test errors": lastError.slice(0, 3000),
+          });
+          const fixPrompt = `${fixerDef}\n\n${fixContext}`;
 
           try {
             runAgent(fixPrompt, `Test Fix (attempt ${attempt + 1})`);
@@ -555,7 +465,6 @@ Focus on fixing the implementation to match what tests expect.`;
           ? diff.slice(0, maxDiffLen) + `\n\n... (truncated, ${diff.length - maxDiffLen} chars omitted)`
           : diff;
 
-        // Load context from previous steps
         const planJson = existsSync(join(runDir, "plan.json"))
           ? readFileSync(join(runDir, "plan.json"), "utf-8")
           : "{}";
@@ -563,61 +472,13 @@ Focus on fixing the implementation to match what tests expect.`;
           ? readFileSync(join(runDir, "implement-log.json"), "utf-8")
           : "{}";
 
-        const reviewPrompt = `You are a code reviewer checking a feature branch.
-
-${baseContext}
-
-## Implementation Plan (plan.json)
-
-${planJson}
-
-## Implementation Log (implement-log.json)
-
-${implLog}
-
-Read \`decisions\` carefully — these explain WHY the implementer made each choice.
-Read \`knownRisks\` carefully — the implementer flagged these as uncertain areas. Pay EXTRA attention here.
-
-## Changes (git diff main...HEAD)
-
-\`\`\`diff
-${truncatedDiff}
-\`\`\`
-
-## Your Task
-
-Review the changes for:
-1. **Correctness**: Logic errors, edge cases, off-by-one errors
-2. **Conventions**: Does it follow CLAUDE.md conventions? (ESM, .js extensions, strict TS, naming)
-3. **Security**: Injection risks, hardcoded secrets, unsafe operations
-4. **Completeness**: Does it fully address the issue requirements?
-5. **Intent alignment**: Do the changes match the plan's designDecisions?
-
-### Output Format
-
-Write a JSON review to ${join(runDir, "review.json")} with this structure:
-
-\`\`\`json
-{
-  "verdict": "approve" | "request-changes",
-  "summary": "Overall assessment",
-  "implementIntent": "My understanding of the implementer's design decisions and trade-offs",
-  "findings": [
-    {
-      "severity": "error" | "warning" | "suggestion",
-      "file": "path/to/file.ts",
-      "line": 42,
-      "issue": "What's wrong",
-      "suggestion": "How to fix it",
-      "intentConflict": false
-    }
-  ]
-}
-\`\`\`
-
-The \`intentConflict\` field: set to true if the finding contradicts a stated decision from implement-log.json. These need careful judgment — the implementer may have had a good reason.
-
-Be strict but fair. Only flag real issues, not style preferences already handled by the project conventions.`;
+        const reviewerDef = loadAgent("reviewer");
+        const reviewContext = buildContext(issue, runDir, {
+          "plan.json": planJson,
+          "implement-log.json": implLog,
+          "git diff main...HEAD": truncatedDiff,
+        });
+        const reviewPrompt = `${reviewerDef}\n\n${reviewContext}`;
 
         const reviewOutput = runAgent(reviewPrompt, "Reviewer");
 
@@ -671,43 +532,12 @@ Be strict but fair. Only flag real issues, not style preferences already handled
           ? readFileSync(join(runDir, "implement-log.json"), "utf-8")
           : "{}";
 
-        const fixPrompt = `You are a TypeScript developer fixing code review findings.
-
-${baseContext}
-
-## Implementation Intent (implement-log.json)
-
-${implLog}
-
-Read \`decisions\` — these explain WHY the code was written this way. Do NOT undo intentional decisions unless the finding proves them wrong.
-
-## Review Findings to Fix
-
-${JSON.stringify(actionable, null, 2)}
-
-Note: findings with \`intentConflict: true\` contradict a stated design decision. Be careful — fix them only if the reviewer's reasoning is stronger.
-
-## Your Task
-
-1. Read each file mentioned in the findings
-2. Fix all errors and warnings
-3. Write ${join(runDir, "fix-log.json")} with what you fixed and why:
-
-\`\`\`json
-{
-  "fixed": [
-    { "finding": "description", "resolution": "what was changed and why" }
-  ],
-  "skipped": [
-    { "finding": "description", "reason": "why this was intentionally kept" }
-  ]
-}
-\`\`\`
-
-4. Stage and commit with message: "fix: address review findings"
-
-Do NOT fix suggestions — only errors and warnings.
-Do NOT make unrelated changes.`;
+        const fixerDef = loadAgent("fixer");
+        const fixContext = buildContext(issue, runDir, {
+          "implement-log.json": implLog,
+          "review.json (actionable findings)": JSON.stringify(actionable, null, 2),
+        });
+        const fixPrompt = `${fixerDef}\n\n${fixContext}`;
 
         runAgent(fixPrompt, "Fixer");
 
@@ -727,10 +557,11 @@ Do NOT make unrelated changes.`;
     markRunning(index, DEV_STEP_NAMES.VERIFY);
     try {
       runCli("pnpm lint", "Type check (verify)");
+      runCli("pnpm test:run", "Tests (verify)");
       runCli("pnpm build", "Build (verify)");
 
       markCompleted(index, DEV_STEP_NAMES.VERIFY, {
-        summary: "Lint + build passed",
+        summary: "Lint + tests + build passed",
       });
     } catch (err) {
       // One retry with fix agent
@@ -738,30 +569,20 @@ Do NOT make unrelated changes.`;
       const implLogVerify = existsSync(join(runDir, "implement-log.json"))
         ? readFileSync(join(runDir, "implement-log.json"), "utf-8")
         : "{}";
-      const fixPrompt = `You are a TypeScript developer fixing build/lint failures.
-
-${baseContext}
-
-## Implementation Intent (implement-log.json)
-
-${implLogVerify}
-
-## Build/Lint Failure
-
-\`\`\`
-${(err instanceof Error ? err.message : String(err)).slice(0, 3000)}
-\`\`\`
-
-## Your Task
-
-Fix the build/lint errors. Stage and commit with message: "fix: resolve build errors"`;
+      const fixerDefVerify = loadAgent("fixer");
+      const fixContextVerify = buildContext(issue, runDir, {
+        "implement-log.json": implLogVerify,
+        "Build errors": (err instanceof Error ? err.message : String(err)).slice(0, 3000),
+      });
+      const fixPrompt = `${fixerDefVerify}\n\n${fixContextVerify}`;
 
       try {
         runAgent(fixPrompt, "Verify Fix");
         // Re-run verify
         runCli("pnpm lint", "Type check (verify retry)");
+        runCli("pnpm test:run", "Tests (verify retry)");
         runCli("pnpm build", "Build (verify retry)");
-        markCompleted(index, DEV_STEP_NAMES.VERIFY, { summary: "Lint + build passed (after fix)" });
+        markCompleted(index, DEV_STEP_NAMES.VERIFY, { summary: "Lint + tests + build passed (after fix)" });
       } catch (retryErr) {
         markFailed(index, DEV_STEP_NAMES.VERIFY, retryErr instanceof Error ? retryErr.message : String(retryErr));
         throw retryErr;
@@ -776,9 +597,20 @@ Fix the build/lint errors. Stage and commit with message: "fix: resolve build er
       // Push branch
       runCli(`git push -u origin ${shellEscape(index.branch)}`, "Push branch");
 
-      // Build PR body from plan and review
+      // Build PR body from plan, review, and fix results
       const plan = readJson<{ summary: string; tasks: Array<{ title: string }> }>(join(runDir, "plan.json"));
       const taskList = plan.tasks.map((t) => `- ${t.title}`).join("\n");
+
+      // Include self-review results if available
+      let reviewSection = "";
+      if (existsSync(join(runDir, "review.json"))) {
+        const review = readJson<{ verdict: string; summary: string; findings: Array<{ severity: string }> }>(
+          join(runDir, "review.json"),
+        );
+        const errorCount = review.findings.filter((f) => f.severity === "error").length;
+        const warningCount = review.findings.filter((f) => f.severity === "warning").length;
+        reviewSection = `\n## Self-review\n\n${review.summary}\n- Verdict: ${review.verdict}\n- Errors: ${errorCount}, Warnings: ${warningCount}, Total: ${review.findings.length}\n`;
+      }
 
       const prBody = `## Summary
 
@@ -787,7 +619,7 @@ ${plan.summary}
 ## Tasks
 
 ${taskList}
-
+${reviewSection}
 ## Test plan
 
 - [ ] \`pnpm lint\` passes
