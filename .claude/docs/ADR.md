@@ -43,3 +43,9 @@ Core decisions that shape every session. For full history see [GitHub Wiki Decis
 **Decision**: Never run `npm publish` manually. Tags trigger GitHub Actions.
 **Why**: Ensures provenance, consistent build environment, and review gate.
 **Impact**: Local `npm publish` is blocked by safety hooks.
+
+## ADR-008: Calibration pipeline — explicit claude -p orchestration
+
+**Decision**: Replace single-session delegated orchestrator with TypeScript script (`scripts/calibrate.ts`) that explicitly calls CLI commands for deterministic steps and `claude -p` for judgment steps (converter, gap-analyzer, critic, arbitrator). Strip ablation runs 7 parallel sessions. Delete `orchestrator.ts`.
+**Why**: Delegated orchestration accumulates context pressure, can't retry individual steps, and hides flow logic in Claude's head. Explicit orchestration is transparent, debuggable, and gives fresh context per step.
+**Impact**: Calibration flow is script-controlled. Each step produces artifacts in run directory with `index.json` state tracking. Agents are judgment-only, CLI handles computation. See #245.

@@ -85,6 +85,7 @@ Core decisions that shape every session. For full history see [GitHub Wiki Decis
 - **ADR-005: Platform standards cover web + app** — Rules accept CSS, Material Design, and UIKit interaction state names equally.
 - **ADR-006: Large fixtures (270+) only for calibration** — Small fixtures produce misleading results. Never lower scores based on small fixture calibration.
 - **ADR-007: npm publish is CI only** — Never manual. Tags trigger GitHub Actions. Local `npm publish` blocked by safety hooks.
+- **ADR-008: Calibration pipeline — explicit claude -p orchestration** — TypeScript script calls CLI for deterministic steps, `claude -p` for judgment steps (converter, gap-analyzer, critic, arbitrator). Strip ablation runs 7 parallel sessions. Replaces delegated single-session orchestrator (#245).
 
 ## Key References
 
