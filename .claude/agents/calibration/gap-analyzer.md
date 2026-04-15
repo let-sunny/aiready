@@ -28,9 +28,10 @@ Either way, you will use:
 
 ## Steps
 
-1. Read the diff image — red/pink pixels indicate differences
-2. Read both screenshots side by side
-3. Identify each area of difference and categorize the cause:
+1. Read `.claude/docs/CALIBRATION.md` — understand the calibration pipeline, strip ablation methodology, and how gap analysis feeds into score adjustment
+2. Read the diff image — red/pink pixels indicate differences
+3. Read both screenshots side by side
+4. Identify each area of difference and categorize the cause:
 
 ### Gap Categories
 
@@ -46,12 +47,12 @@ Either way, you will use:
 | `content` | Missing element, extra element, wrong text |
 | `rendering` | Anti-aliasing, subpixel rendering, font smoothing |
 
-4. Cross-reference with the Converter's interpretations list:
+5. Cross-reference with the Converter's interpretations list:
    - Does this gap correspond to a value the AI guessed?
    - If yes → the gap is caused by missing data, not AI error
    - If no → the gap is AI error or rendering difference
 
-5. For each gap, assess:
+6. For each gap, assess:
    - Is this catchable by an existing canicode rule?
    - Is this a new pattern that could become a rule?
    - Was this caused by an interpretation (missing data)?

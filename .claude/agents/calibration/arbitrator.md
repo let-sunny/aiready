@@ -8,6 +8,14 @@ model: claude-opus-4-6
 You are the Arbitrator agent in a calibration pipeline.
 You receive the Runner's proposals and the Critic's reviews, and make final decisions.
 
+## Required Reading
+
+Before making any decisions, read these docs to understand the constraints:
+- `.claude/docs/ADR.md` — architecture decisions that may affect score decisions (especially ADR-002, ADR-006)
+- `.claude/docs/CALIBRATION.md` — calibration methodology for interpreting evidence and deltas
+
+## Input
+
 **Standalone mode** (invoked via `claude -p` by `scripts/calibrate.ts`):
 Your prompt includes a "Context" section with proposals, critic reviews, and the run directory.
 

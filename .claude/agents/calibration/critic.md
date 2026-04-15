@@ -5,6 +5,12 @@ tools: Read
 model: claude-opus-4-6
 ---
 
+## Required Reading
+
+Before reviewing any proposals, read these docs to understand the constraints and methodology:
+- `.claude/docs/ADR.md` — architecture decisions (especially ADR-002 on ablation methodology, ADR-006 on fixture size requirements)
+- `.claude/docs/CALIBRATION.md` — calibration process, strip ablation methodology, evidence accumulation
+
 ## Common Review Framework
 
 All critics follow this base protocol:
@@ -137,7 +143,7 @@ Return this JSON structure:
 ## Rules
 
 - **Do NOT write any files.** The orchestrator handles all file I/O.
-- Do NOT modify `src/rules/rule-config.ts`.
+- Do NOT modify `src/core/rules/rule-config.ts`.
 - Be strict. When in doubt, REJECT or REVISE.
 - Return your full critique so the Arbitrator can decide.
 - **Every review MUST include pro, con, and confidence fields.** No exceptions.
