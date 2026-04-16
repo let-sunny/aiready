@@ -19,6 +19,12 @@
 - Uses CLI (`canicode analyze`) with FIGMA_TOKEN
 - Lightweight alternative to MCP server — no canicode MCP installation needed
 
+**3a. Claude Code Skill (`/canicode-gotchas`)**
+- Location: `.claude/skills/canicode-gotchas/SKILL.md` (copy to any project)
+- Data source: `gotcha-survey` MCP tool (requires canicode MCP server)
+- Workflow: calls gotcha-survey → presents questions to user → collects answers → writes `.claude/skills/canicode-gotchas/SKILL.md` in the user's project
+- Output: skill file with design gotcha Q&A pairs (nodeId, ruleId, severity, question, answer) for code generation reference
+
 **4. Web App (GitHub Pages)**
 - Source: `app/web/src/index.html`
 - Build: `pnpm build:web` → `app/web/dist/` (deployed via GitHub Pages)
