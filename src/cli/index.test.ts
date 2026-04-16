@@ -1,10 +1,11 @@
 import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { INTERNAL_COMMANDS } from "./internal-commands.js";
 
 const CLI_PATH = resolve(import.meta.dirname, "../../dist/cli/index.js");
 
-describe("CLI --help", () => {
+describe.skipIf(!existsSync(CLI_PATH))("CLI --help", () => {
 
   it("should not show internal commands in --help output", () => {
     const output = execFileSync("node", [CLI_PATH, "--help"], {

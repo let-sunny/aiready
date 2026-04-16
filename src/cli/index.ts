@@ -29,6 +29,7 @@ import { registerPrompt } from "./commands/prompt.js";
 import { INTERNAL_COMMANDS } from "./internal-commands.js";
 
 // Internal commands (used by subagents, hidden from user help)
+// When adding a new internal command, also add its name to internal-commands.ts
 import { registerCalibrateAnalyze } from "./commands/internal/calibrate-analyze.js";
 import { registerCalibrateEvaluate } from "./commands/internal/calibrate-evaluate.js";
 import { registerCalibrateGapReport } from "./commands/internal/calibrate-gap-report.js";
