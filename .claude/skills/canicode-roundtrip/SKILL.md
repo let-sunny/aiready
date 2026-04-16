@@ -166,7 +166,7 @@ If user **declines** any structural modification, add an annotation instead (sam
 
 These rules cannot be auto-fixed via Plugin API. Add the gotcha answer as a Figma annotation on the node so designers see it in Dev Mode.
 
-**Rules**: `absolute-position-in-auto-layout`, `variant-structure-mismatch`
+**Rules from gotcha survey**: `absolute-position-in-auto-layout`, `variant-structure-mismatch`
 
 ```javascript
 const node = figma.getNodeById("nodeId");
@@ -179,11 +179,54 @@ if (node && "annotations" in node) {
 
 Important: use `labelMarkdown` only — `label` and `labelMarkdown` are mutually exclusive. Preserve existing annotations by spreading `node.annotations`.
 
+#### Strategy D: Auto-fix lower-severity issues from analysis
+
+The gotcha survey only covers blocking/risk severity (11 rules). The remaining 5 rules appear in the Step 1 analysis `issues` array but not in the survey. Process them directly — no gotcha question needed.
+
+**Auto-fix naming** — apply directly from the analysis issue data:
+
+**`non-standard-naming`** — The analysis identifies non-standard state names. Rename to the standard equivalent:
+```javascript
+const node = figma.getNodeById("nodeId");
+if (node) node.name = "Hover"; // standardize from "hover_v1", "on_hover", etc.
+```
+Standard state names: Default, Hover, Active, Pressed, Selected, Highlighted, Disabled, Enabled, Focus, Focused, Dragged.
+
+**`inconsistent-naming-convention`** — The analysis identifies the dominant convention among siblings. Rename minority nodes to match:
+```javascript
+const node = figma.getNodeById("nodeId");
+if (node) node.name = "CardTitle"; // convert to dominant convention (e.g., PascalCase)
+```
+
+**Annotate** — these require designer judgment, no auto-fix possible:
+
+**`raw-value`** — Raw colors/fonts/spacing without design tokens. Annotate which values need token binding:
+```javascript
+node.annotations = [...(node.annotations || []), {
+  labelMarkdown: "**[canicode] raw-value**\n\nThis node uses raw values without design tokens.\n**Issue:** {issue message from analysis}"
+}];
+```
+
+**`missing-interaction-state`** — Missing hover/active/disabled variants. Annotate what states are needed:
+```javascript
+node.annotations = [...(node.annotations || []), {
+  labelMarkdown: "**[canicode] missing-interaction-state**\n\nThis component is missing interaction state variants.\n**Missing:** {missing states from analysis}"
+}];
+```
+
+**`missing-prototype`** — Missing prototype interactions (rule currently disabled, include for completeness):
+```javascript
+node.annotations = [...(node.annotations || []), {
+  labelMarkdown: "**[canicode] missing-prototype**\n\nThis interactive element has no prototype interaction defined.\n**Expected:** {expected interaction from analysis}"
+}];
+```
+
 #### Execution order
 
 1. **Batch all property modifications** (Strategy A) into a single `use_figma` call for efficiency.
 2. **Present structural modifications** (Strategy B) one by one, apply confirmed ones.
 3. **Batch all annotations** (Strategy C + declined structural mods) into a single `use_figma` call.
+4. **Batch all auto-fixes and annotations for lower-severity issues** (Strategy D) into a single `use_figma` call.
 
 After applying, report what was done:
 
@@ -193,6 +236,8 @@ Applied {N} changes to the Figma design:
 - ✅ {nodeName}: itemSpacing → 16px (irregular-spacing)
 - ⏭️ {nodeName}: declined by user, added annotation (deep-nesting)
 - 📝 {nodeName}: annotation added (absolute-position-in-auto-layout)
+- 🔧 {nodeName}: auto-fixed to "Hover" (non-standard-naming)
+- 📝 {nodeName}: annotation — raw color needs token binding (raw-value)
 ```
 
 ### Step 5: Re-analyze and verify
