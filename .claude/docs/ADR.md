@@ -57,6 +57,12 @@ Core decisions that shape every session. For full history see [GitHub Wiki Decis
 - [noemuch/bridge](https://github.com/noemuch/bridge) — bridge-ds source, learning-from-corrections pattern
 - [From Claude Code to Figma — and Back Again](https://fig-events.figma.com/claude-to-figma/) — gotcha pattern (49:36–50:17), skill auto-loading (42:26–42:43)
 
+## ADR-010: Roundtrip — gotcha answers applied back to Figma design
+
+**Decision**: Apply gotcha answers back to the Figma design via `use_figma` (Plugin API), not just pass them as code generation context. Three strategies by rule type: (1) property modification for 8 rules (naming, spacing, sizing, variables), (2) structural modification for 4 rules (nesting, components) with user confirmation, (3) annotations for 4 rules that cannot be auto-fixed (absolute positioning, variant structure, interaction states, prototypes).
+**Why**: One-way flow (analyze → gotcha → code gen) is not a true roundtrip. Applying answers to the design means the next analysis passes without gotchas — the design itself improves. PoC confirmed all three strategies work via Figma Plugin API: `node.name`, `itemSpacing`, `setBoundVariable()`, `layoutSizingHorizontal`, `node.annotations`. Annotations enable designer communication for issues that require manual judgment.
+**Impact**: `canicode-roundtrip` becomes a true roundtrip: analyze → gotcha → apply to Figma → re-analyze → pass → code gen. All 16 rules are covered (modify or annotate). Requires Full seat + file edit permission. See #281.
+
 ## ADR-008: Calibration pipeline — explicit claude -p orchestration
 
 **Decision**: Replace single-session delegated orchestrator with TypeScript script (`scripts/calibrate.ts`) that explicitly calls CLI commands for deterministic steps and `claude -p` for judgment steps (converter, gap-analyzer, critic, arbitrator). Strip ablation runs 7 parallel sessions. Delete `orchestrator.ts`.
