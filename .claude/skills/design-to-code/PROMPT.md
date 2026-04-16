@@ -3,7 +3,7 @@
 This prompt is used by all code generation pipelines:
 - Calibration Converter
 - Ablation experiments (API-based)
-- User-facing `canicode implement` command (default prompt)
+- `canicode calibrate-implement` command (default prompt)
 
 ## Stack
 - HTML + CSS (single file)
