@@ -20,7 +20,7 @@ Read `$ARGUMENTS/plan.json` and assess:
 - Are the tasks well-scoped and aligned with the issue?
 - Are designDecisions reasonable and well-justified?
 - Are risks identified and realistic?
-- Does the split decision make sense for the issue size?
+- Does `split` / `remainingDescription` make sense for the issue size?
 
 ### Step 3 — Implementation Review
 
@@ -39,15 +39,22 @@ Assess:
 - Are the knownRisks legitimate concerns?
 - Does the diff look clean — no unrelated changes, no leftover debug code?
 
-### Step 4 — Self-Review Findings
+### Step 4 — Test Results
+
+Read `$ARGUMENTS/test-result.json` (may not exist if test was skipped).
+
+If it exists, check whether lint and tests passed or what failed.
+
+### Step 5 — Self-Review Findings
 
 Read `$ARGUMENTS/review.json` and assess:
+
 - Is the review verdict reasonable given the findings?
 - Are the findings legitimate issues or false positives?
 - Did the reviewer catch the implementer's knownRisks?
 - Are intentConflict flags used correctly?
 
-### Step 5 — Fix Coverage
+### Step 6 — Fix Coverage
 
 Read `$ARGUMENTS/fix-log.json` (may not exist if fix was skipped).
 
@@ -56,7 +63,7 @@ If it exists, assess:
 - For skipped findings: are the skip reasons justified?
 - Did the fix introduce any new concerns?
 
-### Step 6 — Verify State
+### Step 7 — Verify State
 
 Read `$ARGUMENTS/circuit.json` (may not exist if verify was skipped).
 
@@ -65,7 +72,7 @@ If it exists, check:
 - Were retries needed? If so, what failed?
 - Was a re-plan attempted?
 
-### Step 7 — Final Verdict
+### Step 8 — Final Verdict
 
 Synthesize all findings into a structured assessment:
 

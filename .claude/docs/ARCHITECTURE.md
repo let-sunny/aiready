@@ -65,6 +65,11 @@ Calibration is orchestrated by `scripts/calibrate.ts` (ADR-008). CLI for determi
 - Each `claude -p` agent receives previous step JSONs so it understands "why", not just "what"
 - See: issue #247
 
+**`/review-run` (Claude Code command)**
+- Role: QA review of a completed `/develop` pipeline run — reads all output artifacts and produces a structured assessment
+- Input: run directory path (e.g. `logs/develop/253--2026-04-16-0903`)
+- Flow: index.json → plan.json → implement-log.json + git diff → test-result.json → review.json → fix-log.json → circuit.json → final verdict
+
 ## File Output Structure
 
 ```text
