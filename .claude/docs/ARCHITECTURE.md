@@ -28,11 +28,11 @@
 
 **3b. Claude Code Skill (`/canicode-roundtrip`)**
 - Location: `.claude/skills/canicode-roundtrip/SKILL.md` (copy to any project)
-- Data source: `analyze` + `gotcha-survey` MCP tools (canicode MCP server) + Figma MCP tools (`get_design_context`, `get_screenshot`)
-- Workflow: analyze → gate on `isReadyForCodeGen` → gotcha survey (if needed) → code generation with gotcha context injected inline
-- Orchestrates existing MCP tools — no new tools or CLI commands introduced
-- Gotcha answers are saved to `.claude/skills/canicode-gotchas/SKILL.md` (reusable) and also kept as inline conversation context for the implementation step
-- See #277
+- Data source: `analyze` + `gotcha-survey` MCP tools (canicode MCP server) + Figma MCP tools (`get_design_context`, `get_screenshot`, `use_figma`)
+- Workflow: analyze → gate on `isReadyForCodeGen` → gotcha survey (if needed) → **apply fixes to Figma via `use_figma`** → re-analyze → code generation
+- True roundtrip: gotcha answers are applied back to the Figma design (property modification, structural modification with confirmation, or annotations for unfixable issues) so the design itself improves
+- Requires Figma Full seat + file edit permission for `use_figma`; falls back to one-way flow (gotcha as code gen context) if no edit permission
+- See #281, ADR-010
 
 **4. Web App (GitHub Pages)**
 - Source: `app/web/src/index.html`
