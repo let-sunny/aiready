@@ -24,7 +24,7 @@
 - Data source: `gotcha-survey` MCP tool (requires canicode MCP server)
 - Workflow: calls gotcha-survey → presents questions to user → collects answers → writes `.claude/skills/canicode-gotchas/SKILL.md` in the user's project
 - Output: skill file with design gotcha Q&A pairs (nodeId, ruleId, severity, question, answer)
-- **How code generation consumes it**: The output skill file lives in `.claude/skills/` with a description field mentioning "code generation". Claude Code automatically scans skills and loads relevant ones based on description + conversation context. When a user asks "implement this design", the gotcha skill file is auto-loaded — no explicit wiring needed. This is the standard Figma MCP gotcha pattern (ADR-009).
+- **Code generation delivery**: Auto-discovery of a separate skill file cannot reach `figma-implement-design` (Figma skills only support explicit cross-references). The `canicode-roundtrip` orchestration skill (#277) connects analyze → gotcha survey → code generation in a single flow (ADR-009).
 
 **4. Web App (GitHub Pages)**
 - Source: `app/web/src/index.html`

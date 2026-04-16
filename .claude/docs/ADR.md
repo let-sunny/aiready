@@ -44,11 +44,18 @@ Core decisions that shape every session. For full history see [GitHub Wiki Decis
 **Why**: Ensures provenance, consistent build environment, and review gate.
 **Impact**: Local `npm publish` is blocked by safety hooks.
 
-## ADR-009: Gotcha delivery via Figma MCP skill auto-discovery
+## ADR-009: Gotcha delivery via orchestration skill
 
-**Decision**: Gotcha answers are written as a `.claude/skills/canicode-gotchas/SKILL.md` file in the user's project. No explicit wiring to code generation prompts or skills is needed.
-**Why**: Claude Code automatically scans `.claude/skills/` and loads relevant skills based on the `description` field and conversation context. When a user asks "implement this design", Claude Code finds the gotcha skill file (description: "Design gotcha answers for … — reference during code generation") and includes it in the code generation context. This is the standard Figma MCP pattern — gotchas are "debugging guides" that prevent AI from repeating mistakes (e.g., always making badges oval instead of circular). See [From Claude Code to Figma — and Back Again](https://fig-events.figma.com/claude-to-figma/).
-**Impact**: Do NOT add explicit gotcha references to code generation prompts, PROMPT.md, or other skills. The skill file with an appropriate description is the complete delivery mechanism. Adding explicit references would bypass the skill system's design and create maintenance coupling.
+**Decision**: Deliver gotcha answers to code generation via an orchestration skill (`canicode-roundtrip`), not via auto-discovery of a separate skill file.
+**Why**: Analysis of all 7 official Figma skills shows cross-skill references are **explicit links** (`[figma-use](../figma-use/SKILL.md)`), not auto-discovery. `figma-implement-design` is a built-in skill that cannot be modified to reference `canicode-gotchas`. Therefore, a single orchestration skill handles the full flow: analyze → gotcha survey → code generation with gotcha context. This follows the established pattern: `figma-generate-design` builds on `figma-use`, and community skill `bridge-ds` orchestrates 6 skills + a knowledge-base with a recipe system. See #277.
+**Impact**: `canicode-gotchas` (standalone survey) is preserved, but code generation delivery is handled by `canicode-roundtrip`. Do not rely on auto-discovery to connect separate skill files — Figma skills only support explicit references.
+**References**:
+- [Figma skills for MCP](https://help.figma.com/hc/en-us/articles/39166810751895-Figma-skills-for-MCP) — official skill structure
+- [Figma community skills](https://www.figma.com/community/skills) — third-party skill ecosystem
+- [figma/mcp-server-guide/skills](https://github.com/figma/mcp-server-guide/tree/main/skills) — 7 official skill sources, explicit cross-skill reference pattern
+- [figma/community-resources/agent_skills](https://github.com/figma/community-resources/tree/main/agent_skills) — community skills (bridge-ds: recipe system, ds-compliance-audit)
+- [noemuch/bridge](https://github.com/noemuch/bridge) — bridge-ds source, learning-from-corrections pattern
+- [From Claude Code to Figma — and Back Again](https://fig-events.figma.com/claude-to-figma/) — gotcha pattern (49:36–50:17), skill auto-loading (42:26–42:43)
 
 ## ADR-008: Calibration pipeline — explicit claude -p orchestration
 
