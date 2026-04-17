@@ -126,6 +126,19 @@ Matrix below is confirmed by Experiment 08 ([#290](https://github.com/let-sunny/
 | `fontSize`, `lineHeight`, `letterSpacing`, `paragraphSpacing` (TEXT) | ✅ | ✅ | |
 | `characters` (TEXT) | ✅ | ✅ STRING variable | |
 
+#### Annotation `properties` matrix
+
+Experiment 09 ([#290 follow-up](https://github.com/let-sunny/canicode/issues/290)) re-measured the full 33-value enum on a scene FRAME (`3077:9894`) and scene TEXT (`3077:9963`) in the Simple Design System fixture. The key finding: **the gate is node-type, not scene-vs-instance**. FRAMEs reject `fills`/`cornerRadius`/`opacity`/`maxWidth`/`effects` regardless of context. Instance children additionally lose `minWidth`/`minHeight`/`alignItems` on FRAMEs — these are instance-override restrictions layered on top.
+
+Each row below covers the full 33-value enum (`width`, `height`, `maxWidth`, `minWidth`, `maxHeight`, `minHeight`, `fills`, `strokes`, `effects`, `strokeWeight`, `cornerRadius`, `textStyleId`, `textAlignHorizontal`, `fontFamily`, `fontStyle`, `fontSize`, `fontWeight`, `lineHeight`, `letterSpacing`, `itemSpacing`, `padding`, `layoutMode`, `alignItems`, `opacity`, `mainComponent`, plus 8 grid props `gridRowGap`/`gridColumnGap`/`gridRowCount`/`gridColumnCount`/`gridRowAnchorIndex`/`gridColumnAnchorIndex`/`gridRowSpan`/`gridColumnSpan`):
+
+| Node type | Accepted (scene) | Additionally rejected on instance child | Rejected in all contexts |
+|-----------|------------------|-----------------------------------------|--------------------------|
+| FRAME | `width`, `height`, `minWidth`, `minHeight`, `itemSpacing`, `padding`, `layoutMode`, `alignItems` | `minWidth`, `minHeight`, `alignItems` | `maxWidth`, `maxHeight`, `fills`, `strokes`, `effects`, `strokeWeight`, `cornerRadius`, `opacity`, `mainComponent`, all 8 text props, all 8 grid props |
+| TEXT | `width`, `height`, `fills`, `textStyleId`, `fontFamily`, `fontStyle`, `fontSize`, `fontWeight`, `lineHeight` | not re-measured — Experiment 08 only probed `strokes`/`opacity`/`cornerRadius`/`effects`/`layoutMode`/`itemSpacing`/`padding` on instance-child TEXT, and all were rejected there too | `minWidth`, `maxWidth`, `minHeight`, `maxHeight`, `strokes`, `effects`, `strokeWeight`, `cornerRadius`, `opacity`, `textAlignHorizontal`, `letterSpacing`, `itemSpacing`, `padding`, `layoutMode`, `alignItems`, `mainComponent`, all 8 grid props |
+
+`upsertCanicodeAnnotation` wraps the write in `try/catch`: if `properties` fails node-type validation it retries without them, so the markdown body always survives. You can pass `properties` speculatively.
+
 **Three-tier write policy:**
 
 1. **Scene (instance) node** — `await figma.getNodeByIdAsync(question.nodeId)` and apply the write inside `try/catch`. Success → done (local change only). Mark result with ✅.
@@ -178,9 +191,10 @@ async function ensureCanicodeCategories() {
 // `labelMarkdown` (current format) and `label` (pre-D1 legacy entries) so reruns
 // across versions consolidate instead of accumulating.
 // categoryId: id from ensureCanicodeCategories().
-// properties: optional array like [{ type: "width" }] — only valid camelCase types,
-//   and only types the node supports (e.g. FRAME accepts width/height/layoutMode/
-//   itemSpacing/padding; TEXT accepts width/height/fills/fontSize/lineHeight/…).
+// properties: optional array like [{ type: "width" }] — see the matrix above for
+//   node-type gated values. Safe to pass speculatively: if the write rejects the
+//   `properties` entry (e.g. `fills` on a FRAME), the helper retries without them
+//   so the markdown body always persists.
 function upsertCanicodeAnnotation(node, { ruleId, markdown, categoryId, properties }) {
   if (!("annotations" in node)) return false;
   const prefix = `**[canicode] ${ruleId}**`;
@@ -194,8 +208,22 @@ function upsertCanicodeAnnotation(node, { ruleId, markdown, categoryId, properti
   );
   if (idx >= 0) existing[idx] = entry;
   else existing.push(entry);
-  node.annotations = existing;
-  return true;
+  try {
+    node.annotations = existing;
+    return true;
+  } catch (e) {
+    // Experiment 09: `properties` types are node-type-gated. The canonical
+    // error is "Invalid property X for a FRAME/TEXT node" — retry without
+    // `properties` only when the message matches, so unrelated errors
+    // (permission, read-only, API changes) still surface.
+    const msg = String(e?.message ?? e);
+    const isNodeTypeReject = /invalid property .+ for a .+ node/i.test(msg);
+    if (!entry.properties || !isNodeTypeReject) throw e;
+    delete entry.properties;
+    if (idx >= 0) existing[idx] = entry;
+    node.annotations = existing;
+    return true;
+  }
 }
 
 // ── Three-tier write policy with silent-ignore detection (B matrix finding).
