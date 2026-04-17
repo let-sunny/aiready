@@ -3,3 +3,4 @@
 export * from "./engine/rule-engine.js";
 export * from "./engine/scoring.js";
 export * from "./design-tree/index.js";
+export * from "./gotcha/resolve-apply-target.js";
