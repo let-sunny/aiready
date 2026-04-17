@@ -126,6 +126,17 @@ Matrix below is confirmed by Experiment 08 ([#290](https://github.com/let-sunny/
 | `fontSize`, `lineHeight`, `letterSpacing`, `paragraphSpacing` (TEXT) | ✅ | ✅ | |
 | `characters` (TEXT) | ✅ | ✅ STRING variable | |
 
+#### Annotation `properties` matrix
+
+Experiment 09 ([#290 follow-up](https://github.com/let-sunny/canicode/issues/290)) re-measured the full 32-value enum on a scene FRAME (`3077:9894`) and scene TEXT (`3077:9963`) in the Simple Design System fixture. The key finding: **the gate is node-type, not scene-vs-instance**. FRAMEs reject `fills`/`cornerRadius`/`opacity`/`maxWidth`/`effects` regardless of context. Instance children additionally lose `minWidth`/`minHeight`/`alignItems` on FRAMEs — these are instance-override restrictions layered on top.
+
+| Node type | Accepted (scene) | Additionally rejected on instance child | Rejected in all contexts |
+|-----------|------------------|-----------------------------------------|--------------------------|
+| FRAME | `width`, `height`, `minWidth`, `minHeight`, `itemSpacing`, `padding`, `layoutMode`, `alignItems` | `minWidth`, `minHeight`, `alignItems` | `maxWidth`, `maxHeight`, `fills`, `strokes`, `effects`, `strokeWeight`, `cornerRadius`, `opacity`, all text/grid props, `mainComponent` |
+| TEXT | `width`, `height`, `fills`, `textStyleId`, `fontFamily`, `fontStyle`, `fontSize`, `fontWeight`, `lineHeight` | none measured beyond the scene set | `textAlignHorizontal`, `letterSpacing`, `strokes`, `effects`, `cornerRadius`, `opacity`, all size-constraints, layout/grid props, `mainComponent` |
+
+`upsertCanicodeAnnotation` wraps the write in `try/catch`: if `properties` fails node-type validation it retries without them, so the markdown body always survives. You can pass `properties` speculatively.
+
 **Three-tier write policy:**
 
 1. **Scene (instance) node** — `await figma.getNodeByIdAsync(question.nodeId)` and apply the write inside `try/catch`. Success → done (local change only). Mark result with ✅.
@@ -178,9 +189,10 @@ async function ensureCanicodeCategories() {
 // `labelMarkdown` (current format) and `label` (pre-D1 legacy entries) so reruns
 // across versions consolidate instead of accumulating.
 // categoryId: id from ensureCanicodeCategories().
-// properties: optional array like [{ type: "width" }] — only valid camelCase types,
-//   and only types the node supports (e.g. FRAME accepts width/height/layoutMode/
-//   itemSpacing/padding; TEXT accepts width/height/fills/fontSize/lineHeight/…).
+// properties: optional array like [{ type: "width" }] — see the matrix above for
+//   node-type gated values. Safe to pass speculatively: if the write rejects the
+//   `properties` entry (e.g. `fills` on a FRAME), the helper retries without them
+//   so the markdown body always persists.
 function upsertCanicodeAnnotation(node, { ruleId, markdown, categoryId, properties }) {
   if (!("annotations" in node)) return false;
   const prefix = `**[canicode] ${ruleId}**`;
@@ -194,8 +206,19 @@ function upsertCanicodeAnnotation(node, { ruleId, markdown, categoryId, properti
   );
   if (idx >= 0) existing[idx] = entry;
   else existing.push(entry);
-  node.annotations = existing;
-  return true;
+  try {
+    node.annotations = existing;
+    return true;
+  } catch (e) {
+    // Experiment 09: `properties` types are node-type-gated
+    // ("Invalid property X for a FRAME/TEXT node"). Drop the hint and retry
+    // so the markdown body survives even when the speculative type is wrong.
+    if (!entry.properties) throw e;
+    delete entry.properties;
+    if (idx >= 0) existing[idx] = entry;
+    node.annotations = existing;
+    return true;
+  }
 }
 
 // ── Three-tier write policy with silent-ignore detection (B matrix finding).
