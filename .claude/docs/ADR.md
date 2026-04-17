@@ -107,4 +107,4 @@ Core decisions that shape every session. For full history see [GitHub Wiki Decis
 - Rename or demote `resolveGotchaApplyTarget.shouldPreferDefinitionForLayoutProps` to reflect opt-in semantics.
 - Add telemetry counter for skipped definition writes.
 
-**References**: ADR-010, ADR-011, #290 (Experiments 08/09/10), #286. See #295 for the full question list and design discussion.
+**References**: ADR-010, ADR-011, #290 (Experiments 08/09/10), #286, #305 (implementation follow-up). See #295 for the full question list and design discussion.
