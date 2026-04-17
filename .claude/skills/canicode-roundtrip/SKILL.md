@@ -139,7 +139,7 @@ Each row below covers the full 33-value enum (`width`, `height`, `maxWidth`, `mi
 
 `upsertCanicodeAnnotation` wraps the write in `try/catch`: if `properties` fails node-type validation it retries without them, so the markdown body always survives. You can pass `properties` speculatively.
 
-> **Note:** The write-policy default is **under review** in [#295](https://github.com/let-sunny/canicode/issues/295). The current three-tier policy routes to the source definition on override errors; the proposal in #295 flips the default to "instance override + annotation" so silent fan-out to all instances requires explicit opt-in per rule/run. The bundled helpers accept the current default but are structured so the switch becomes a config change, not a markdown rewrite.
+> **Note:** The write-policy default has been **decided** in ADR-012 (resolves [#295](https://github.com/let-sunny/canicode/issues/295)): **instance override + annotation by default; definition write becomes opt-in** via a per-run flag. The bundled helpers and the three-tier prose below still describe the previous default (definition write on override errors) — the opt-in flag wiring, the atomic SKILL.md prose flip, and the `resolveGotchaApplyTarget` rename ship in a follow-up issue tracked from ADR-012. Read the policy below as current behavior, not the target end-state.
 
 **Three-tier write policy:**
 
