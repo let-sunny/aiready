@@ -12,11 +12,22 @@ set +e
 
 [ -n "$DEVELOP_RUN_DIR" ] || exit 0
 
-FILE=$(node -e 'let s=""; process.stdin.on("data",c=>s+=c); process.stdin.on("end",()=>{try{const d=JSON.parse(s);process.stdout.write(d.file_path||"")}catch{}})' <<< "$TOOL_INPUT" 2>/dev/null)
-
-[ -n "$FILE" ] || exit 0
-
-TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-printf '{"t":"%s","file":"%s"}\n' "$TS" "$FILE" >> "$DEVELOP_RUN_DIR/implement-progress.jsonl" 2>/dev/null
+node -e '
+let s = "";
+process.stdin.on("data", (c) => (s += c));
+process.stdin.on("end", () => {
+  try {
+    const d = JSON.parse(s);
+    if (typeof d.file_path !== "string" || d.file_path.length === 0) return;
+    const line = JSON.stringify({
+      t: new Date().toISOString(),
+      file: d.file_path,
+    }) + "\n";
+    require("fs").appendFileSync(
+      require("path").join(process.env.DEVELOP_RUN_DIR, "implement-progress.jsonl"),
+      line,
+    );
+  } catch {}
+})' <<< "$TOOL_INPUT" 2>/dev/null
 
 exit 0

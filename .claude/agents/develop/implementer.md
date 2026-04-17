@@ -57,13 +57,20 @@ Write `$RUN_DIR/implement-log.json` BEFORE committing:
 
 The orchestrator reads `$RUN_DIR/implement-progress.jsonl` on timeout to synthesize a partial `implement-log.json` and decide whether to retry. File writes are tracked automatically by a PostToolUse hook — you do NOT need to log those.
 
-**Do this manually**: at the start of each task (before you read/edit files for that task), append one line to `$RUN_DIR/implement-progress.jsonl`:
+**Do this manually**: at the start of each task, BEFORE you read/edit any files for that task, append ONE line to `$RUN_DIR/implement-progress.jsonl`:
 
 ```
 {"t":"<ISO-timestamp>","taskId":<id>,"event":"task-start"}
 ```
 
-Use the `Bash` tool: `echo '{"t":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","taskId":2,"event":"task-start"}' >> "$RUN_DIR/implement-progress.jsonl"`. One line per task; no line for subtasks. If `$RUN_DIR` is not in env, skip silently (non-pipeline session).
+Use the `Bash` tool: `echo '{"t":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","taskId":2,"event":"task-start"}' >> "$RUN_DIR/implement-progress.jsonl"`.
+
+**Contract the orchestrator depends on** (do not deviate):
+- Emit exactly ONE `task-start` line per plan task, at the moment you begin that task.
+- `taskId` MUST match the numeric `id` field from `plan.json` tasks.
+- Tasks must be emitted in order — the orchestrator treats the LAST `taskId` seen as in-progress and every earlier one as completed. Emitting out-of-order will misattribute completion.
+- No line for subtasks or re-entries; if you revisit a task, do not re-emit.
+- If `$RUN_DIR` is not in env, skip silently (non-pipeline session).
 
 ## Rules
 
