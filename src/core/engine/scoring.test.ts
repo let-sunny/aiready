@@ -549,6 +549,7 @@ describe("buildResultJson", () => {
       ruleId: "raw-value",
       applyStrategy: "auto-fix",
       isInstanceChild: false,
+      annotationProperties: [{ type: "fills" }],
     });
     expect(issues[1]!["targetProperty"]).toBeUndefined();
 
