@@ -6,7 +6,7 @@ Core decisions that shape every session. ADRs are listed by ADR number; chronolo
 
 **Decision**: Use curated design-tree format for AI/codegen inputs. Do not feed raw Figma JSON into AI/codegen. Ingestion pipelines (loader, FigmaFileLoader) accept raw JSON and transform it into design-tree before any codegen use.
 **Why**: design-tree 94% vs raw 79% pixel accuracy with 5x fewer tokens. Information curation > information abundance.
-**Impact**: Downstream consumers of analysis output (calibration Converter, ablation experiments, and any external code-generation skill that picks up canicode's results — e.g. `figma-implement-design` after a `canicode-roundtrip` pass per ADR-013) consume design-tree, never raw Figma JSON. Raw JSON is only for ingestion/transformation inside canicode itself.
+**Impact**: Downstream consumers (calibration Converter, ablation experiments, and external code-generation skills like `figma-implement-design`) consume design-tree, never raw Figma JSON. The handoff to `figma-implement-design` happens after a `canicode-roundtrip` pass (ADR-013). Raw JSON stays inside canicode — only for ingestion and transformation.
 
 ## ADR-002: Ablation + visual-compare for calibration, not LLM self-report
 
