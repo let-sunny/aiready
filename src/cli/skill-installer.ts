@@ -61,6 +61,15 @@ export async function installSkills(rawOptions: InstallSkillsOptions): Promise<I
     targetDir,
   };
 
+  type Action = "install" | "force-overwrite" | "needs-decision";
+  interface Op {
+    src: string;
+    dest: string;
+    label: string;
+    action: Action;
+  }
+  const ops: Op[] = [];
+
   for (const skillName of SKILL_NAMES) {
     const srcSkillDir = join(sourceDir, skillName);
     if (!existsSync(srcSkillDir)) {
@@ -77,25 +86,37 @@ export async function installSkills(rawOptions: InstallSkillsOptions): Promise<I
       mkdirSync(dirname(dest), { recursive: true });
 
       const label = join(skillName, relPath);
-
+      let action: Action;
       if (!existsSync(dest)) {
-        copyFileSync(src, dest);
-        summary.installed.push(label);
-        continue;
-      }
-
-      if (options.force) {
-        copyFileSync(src, dest);
-        summary.overwritten.push(label);
-        continue;
-      }
-
-      const overwrite = await promptOverwrite(dest);
-      if (overwrite) {
-        copyFileSync(src, dest);
-        summary.overwritten.push(label);
+        action = "install";
+      } else if (options.force) {
+        action = "force-overwrite";
       } else {
-        summary.skipped.push(label);
+        action = "needs-decision";
+      }
+      ops.push({ src, dest, label, action });
+    }
+  }
+
+  const candidates = ops.filter(op => op.action === "needs-decision");
+  const decisions = candidates.length > 0
+    ? await promptOverwriteBatch(candidates.map(op => ({ label: op.label, dest: op.dest })))
+    : new Map<string, "overwrite" | "skip">();
+
+  for (const op of ops) {
+    if (op.action === "install") {
+      copyFileSync(op.src, op.dest);
+      summary.installed.push(op.label);
+    } else if (op.action === "force-overwrite") {
+      copyFileSync(op.src, op.dest);
+      summary.overwritten.push(op.label);
+    } else {
+      const decision = decisions.get(op.label) ?? "skip";
+      if (decision === "overwrite") {
+        copyFileSync(op.src, op.dest);
+        summary.overwritten.push(op.label);
+      } else {
+        summary.skipped.push(op.label);
       }
     }
   }
@@ -120,18 +141,50 @@ function listFilesRecursive(dir: string): string[] {
   return out;
 }
 
-async function promptOverwrite(destPath: string): Promise<boolean> {
+async function promptOverwriteBatch(
+  candidates: Array<{ label: string; dest: string }>,
+): Promise<Map<string, "overwrite" | "skip">> {
+  const decisions = new Map<string, "overwrite" | "skip">();
+
   // Non-interactive (CI, piped stdin): default to skip — safer than silently
   // clobbering a user-edited skill file. Users who want unattended overwrite
   // pass --force.
   if (!process.stdin.isTTY || !process.stdout.isTTY) {
-    return false;
+    for (const { label } of candidates) {
+      decisions.set(label, "skip");
+    }
+    return decisions;
   }
+
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   try {
-    const answer = await rl.question(`File exists: ${destPath}. Overwrite? [y/N] `);
-    return answer.trim().toLowerCase().startsWith("y");
+    let mode: "ask" | "all" | "none" = "ask";
+    for (const { label, dest } of candidates) {
+      if (mode === "all") {
+        decisions.set(label, "overwrite");
+        continue;
+      }
+      if (mode === "none") {
+        decisions.set(label, "skip");
+        continue;
+      }
+      const answer = (await rl.question(
+        `File exists: ${dest}. Overwrite? [y/N/a=all/s=skip-all] `,
+      )).trim().toLowerCase();
+      if (answer === "a") {
+        decisions.set(label, "overwrite");
+        mode = "all";
+      } else if (answer === "s") {
+        decisions.set(label, "skip");
+        mode = "none";
+      } else if (answer.startsWith("y")) {
+        decisions.set(label, "overwrite");
+      } else {
+        decisions.set(label, "skip");
+      }
+    }
   } finally {
     rl.close();
   }
+  return decisions;
 }
