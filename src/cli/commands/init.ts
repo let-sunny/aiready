@@ -37,6 +37,7 @@ export function registerInit(cli: CAC): void {
           console.log(`  Config saved: ${getConfigPath()}`);
           console.log(`  Reports will be saved to: ${getReportsDir()}/`);
 
+          let skillStepOk = true;
           if (options.skills !== false) {
             try {
               const summary = await installSkills({
@@ -55,10 +56,13 @@ export function registerInit(cli: CAC): void {
                 `\n  Skill install failed: ${skillError instanceof Error ? skillError.message : String(skillError)}`,
               );
               process.exitCode = 1;
+              skillStepOk = false;
             }
           }
 
-          console.log(`\n  Next: canicode analyze "https://www.figma.com/design/..."`);
+          if (skillStepOk) {
+            console.log(`\n  Next: canicode analyze "https://www.figma.com/design/..."`);
+          }
           return;
         }
 

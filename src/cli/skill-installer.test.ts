@@ -8,6 +8,34 @@ import { vi } from "vitest";
 
 import { installSkills } from "./skill-installer.js";
 
+vi.mock("node:readline/promises", () => ({
+  createInterface: vi.fn(),
+}));
+
+async function getCreateInterfaceMock(): Promise<ReturnType<typeof vi.fn>> {
+  const mod = await import("node:readline/promises");
+  return mod.createInterface as unknown as ReturnType<typeof vi.fn>;
+}
+
+function forceTty(): void {
+  Object.defineProperty(process.stdin, "isTTY", { value: true, configurable: true });
+  Object.defineProperty(process.stdout, "isTTY", { value: true, configurable: true });
+}
+
+function preCreateAllStaleSkills(cwd: string): string[] {
+  const staleFiles = [
+    join(cwd, ".claude", "skills", "canicode", "SKILL.md"),
+    join(cwd, ".claude", "skills", "canicode-gotchas", "SKILL.md"),
+    join(cwd, ".claude", "skills", "canicode-roundtrip", "SKILL.md"),
+    join(cwd, ".claude", "skills", "canicode-roundtrip", "helpers.js"),
+  ];
+  for (const p of staleFiles) {
+    mkdirSync(join(p, ".."), { recursive: true });
+    writeFileSync(p, "# stale\n", "utf-8");
+  }
+  return staleFiles;
+}
+
 let tempRoot: string;
 let sourceDir: string;
 let cwd: string;
@@ -42,6 +70,9 @@ afterEach(async () => {
   } else {
     process.env["HOME"] = originalHome;
   }
+  // Restore TTY state to vitest's default (undefined) after tests that forced it.
+  Object.defineProperty(process.stdin, "isTTY", { value: undefined, configurable: true });
+  Object.defineProperty(process.stdout, "isTTY", { value: undefined, configurable: true });
   vi.restoreAllMocks();
 });
 
@@ -134,5 +165,82 @@ describe("installSkills", () => {
         sourceDir: join(tempRoot, "does-not-exist"),
       }),
     ).rejects.toThrow(/Bundled skills directory not found/);
+  });
+
+  it("prompts per candidate when user answers 'y' to each", async () => {
+    const staleFiles = preCreateAllStaleSkills(cwd);
+    forceTty();
+
+    const question = vi.fn()
+      .mockResolvedValueOnce("y")
+      .mockResolvedValueOnce("y")
+      .mockResolvedValueOnce("y")
+      .mockResolvedValueOnce("y");
+    const close = vi.fn();
+    const createInterface = await getCreateInterfaceMock();
+    createInterface.mockReturnValue({ question, close });
+
+    const summary = await installSkills({
+      target: "project",
+      force: false,
+      cwd,
+      sourceDir,
+    });
+
+    expect(createInterface).toHaveBeenCalledTimes(1);
+    expect(question).toHaveBeenCalledTimes(staleFiles.length);
+    expect(summary.overwritten.length).toBe(staleFiles.length);
+    expect(summary.skipped).toEqual([]);
+    for (const p of staleFiles) {
+      expect(readFileSync(p, "utf-8")).not.toBe("# stale\n");
+    }
+  });
+
+  it("'a' short-circuits remaining decisions to overwrite", async () => {
+    const staleFiles = preCreateAllStaleSkills(cwd);
+    forceTty();
+
+    const question = vi.fn().mockResolvedValueOnce("a");
+    const close = vi.fn();
+    const createInterface = await getCreateInterfaceMock();
+    createInterface.mockReturnValue({ question, close });
+
+    const summary = await installSkills({
+      target: "project",
+      force: false,
+      cwd,
+      sourceDir,
+    });
+
+    expect(question).toHaveBeenCalledTimes(1);
+    expect(summary.overwritten.length).toBe(staleFiles.length);
+    expect(summary.skipped).toEqual([]);
+    for (const p of staleFiles) {
+      expect(readFileSync(p, "utf-8")).not.toBe("# stale\n");
+    }
+  });
+
+  it("'s' short-circuits remaining decisions to skip", async () => {
+    const staleFiles = preCreateAllStaleSkills(cwd);
+    forceTty();
+
+    const question = vi.fn().mockResolvedValueOnce("s");
+    const close = vi.fn();
+    const createInterface = await getCreateInterfaceMock();
+    createInterface.mockReturnValue({ question, close });
+
+    const summary = await installSkills({
+      target: "project",
+      force: false,
+      cwd,
+      sourceDir,
+    });
+
+    expect(question).toHaveBeenCalledTimes(1);
+    expect(summary.skipped.length).toBe(staleFiles.length);
+    expect(summary.overwritten).toEqual([]);
+    for (const p of staleFiles) {
+      expect(readFileSync(p, "utf-8")).toBe("# stale\n");
+    }
   });
 });
