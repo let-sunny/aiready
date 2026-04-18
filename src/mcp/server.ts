@@ -309,7 +309,18 @@ Get your token: Figma → Settings → Security → Personal access tokens → G
 claude mcp add canicode -e FIGMA_TOKEN=figd_xxxxxxxxxxxxx -- npx -y -p canicode canicode-mcp
 \`\`\`
 
-Requires FIGMA_TOKEN for live Figma URL analysis.`,
+Requires FIGMA_TOKEN for live Figma URL analysis.
+
+## CLI only (no MCP server)
+
+User-facing MCP tools have CLI equivalents with the same JSON shape, so skills and scripts can run without installing the canicode MCP server:
+
+\`\`\`bash
+npx canicode analyze <input>
+npx canicode gotcha-survey <input> --json
+\`\`\`
+
+The CLI spawns per call (slower than the long-running MCP server) but needs no extra setup beyond \`FIGMA_TOKEN\`.`,
 
       "visual-compare": `# Visual Compare
 
