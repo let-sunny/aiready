@@ -422,6 +422,9 @@ export function buildResultJson(
       ...(applyContext.targetProperty !== undefined
         ? { targetProperty: applyContext.targetProperty }
         : {}),
+      ...(applyContext.annotationProperties !== undefined
+        ? { annotationProperties: applyContext.annotationProperties }
+        : {}),
       ...(suggestedName !== undefined ? { suggestedName } : {}),
       isInstanceChild: applyContext.isInstanceChild,
       ...(applyContext.sourceChildId !== undefined
