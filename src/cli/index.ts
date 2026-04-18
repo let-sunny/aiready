@@ -18,6 +18,7 @@ import "../core/rules/index.js";
 
 // User-facing commands
 import { registerAnalyze } from "./commands/analyze.js";
+import { registerGotchaSurvey } from "./commands/gotcha-survey.js";
 import { registerDesignTree } from "./commands/design-tree.js";
 import { registerVisualCompare } from "./commands/visual-compare.js";
 import { registerInit } from "./commands/init.js";
@@ -69,6 +70,7 @@ process.on("beforeExit", () => {
 // User-facing commands
 // ============================================
 registerAnalyze(cli);
+registerGotchaSurvey(cli);
 registerDesignTree(cli);
 registerVisualCompare(cli);
 registerInit(cli);
@@ -136,6 +138,7 @@ cli.help((sections) => {
         `  $ canicode analyze "https://www.figma.com/design/..." --api`,
         `  $ canicode analyze "https://www.figma.com/design/..." --preset strict`,
         `  $ canicode analyze "https://www.figma.com/design/..." --config ./my-config.json`,
+        `  $ canicode gotcha-survey "https://www.figma.com/design/..." --json`,
       ].join("\n"),
     },
     {
