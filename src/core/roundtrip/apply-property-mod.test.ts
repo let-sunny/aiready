@@ -278,7 +278,8 @@ describe("applyPropertyMod", () => {
       { variable: "mobile-width" },
       { categories: CATEGORIES }
     );
-    // Binding succeeded — the throwing setter was never invoked.
+    // The ✅ result implies the throwing setter was not invoked — if it had
+    // been, applyWithInstanceFallback would route to 📝.
     expect(result).toEqual({ icon: "✅", label: "instance/scene" });
     expect(setBoundVariable).toHaveBeenCalledWith("minWidth", {
       id: "v-mobile",
