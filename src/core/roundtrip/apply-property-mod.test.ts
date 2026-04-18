@@ -247,6 +247,9 @@ describe("applyPropertyMod", () => {
   // message text.
   it("#309: variable-binding path runs before raw write — binds successfully even when the raw setter would throw the override error", async () => {
     const setBoundVariable = vi.fn();
+    const rawSetter = vi.fn(() => {
+      throw new Error("This property cannot be overridden in an instance");
+    });
     const target: FigmaNode = {
       id: "scene-1",
       name: "Scene",
@@ -255,9 +258,7 @@ describe("applyPropertyMod", () => {
     };
     Object.defineProperty(target, "minWidth", {
       get: () => 0,
-      set: () => {
-        throw new Error("This property cannot be overridden in an instance");
-      },
+      set: rawSetter,
       configurable: true,
       enumerable: true,
     });
@@ -278,13 +279,15 @@ describe("applyPropertyMod", () => {
       { variable: "mobile-width" },
       { categories: CATEGORIES }
     );
-    // The ✅ result implies the throwing setter was not invoked — if it had
-    // been, applyWithInstanceFallback would route to 📝.
     expect(result).toEqual({ icon: "✅", label: "instance/scene" });
     expect(setBoundVariable).toHaveBeenCalledWith("minWidth", {
       id: "v-mobile",
       name: "mobile-width",
     });
+    // Lock the ordering invariant: the raw setter must never run when the
+    // answer names a variable that resolves — otherwise a future refactor
+    // could silently swallow the throw and still yield ✅.
+    expect(rawSetter).not.toHaveBeenCalled();
   });
 
   it("binds a variable via target.setBoundVariable for non-paint props", async () => {
