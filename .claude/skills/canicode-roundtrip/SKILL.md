@@ -90,6 +90,12 @@ Build the message from the question fields. **If `question.instanceContext` is p
 _Instance note: This layer is inside an instance. Layout and size fixes may need to be applied on source component **{sourceComponentName or sourceComponentId or "unknown"}** (definition node `sourceNodeId`) and propagate to all instances — you will be asked to confirm before any definition-level write._
 ```
 
+**If `question.replicas` is present (#356 dedup)**, prepend a second line noting the answer applies to N instances:
+
+```
+_Replicas: This question represents **{replicas} instances** of the same source-component child sharing the same rule. Your single answer will be applied to all of them in Step 4 (one annotation/write per instance scene)._
+```
+
 Then the standard block:
 
 ```
@@ -131,6 +137,8 @@ Every gotcha-survey question (and every entry in `analyzeResult.issues[]`) carri
 | `isInstanceChild` | `boolean` | Whether the `nodeId` targets a node inside an INSTANCE subtree. |
 | `sourceChildId` | `string` \| (absent) | Definition node id inside the source component. Use directly with `figma.getNodeByIdAsync`. |
 | `instanceContext` | object \| (absent) | Survey questions only. `{ parentInstanceNodeId, sourceNodeId, sourceComponentId?, sourceComponentName? }` for the Step 3 user-facing note. |
+| `replicas` | `number` \| (absent) | Survey questions only (#356). Total instance count when this one question represents N instance-child issues sharing the same `(sourceComponentId, sourceNodeId, ruleId)` tuple. Absent for single-instance questions. |
+| `replicaNodeIds` | `string[]` \| (absent) | Survey questions only (#356). All OTHER instance scene node ids the answer should land on. The apply step iterates `[nodeId, ...replicaNodeIds]`. Absent when `replicas` is absent. |
 
 #### Instance-child property overridability (Plugin API)
 
@@ -203,6 +211,15 @@ Rules with `applyStrategy === "property-mod"`. Call the bundled helper — it br
 await CanICodeRoundtrip.applyPropertyMod(question, answerValue, { categories });
 ```
 
+**Replicas (#356)** — when `question.replicaNodeIds` is present, the same answer must land on every replica instance. Iterate the merged set so each scene gets its own per-node failure routing (under the ADR-012 default each replica annotates independently; with `allowDefinitionWrite: true` they share the one definition write because they share the source):
+
+```javascript
+const targets = [question.nodeId, ...(question.replicaNodeIds ?? [])];
+for (const nodeId of targets) {
+  await CanICodeRoundtrip.applyPropertyMod({ ...question, nodeId }, answerValue, { categories });
+}
+```
+
 Answer shape guide (LLM judgment — the user's answer is prose; parse accordingly):
 - **`non-semantic-name`**: string — the new node name.
 - **`irregular-spacing`**: number for gap (subType `gap`), or `{ paddingTop, paddingRight, paddingBottom, paddingLeft }` for padding.
@@ -244,18 +261,21 @@ If the user **declines** any structural modification, add an annotation instead 
 
 #### Strategy C: Annotation — record on the design for designer reference
 
-Rules with `applyStrategy === "annotation"` cannot be auto-fixed via Plugin API. Add the gotcha answer as a Figma annotation so designers see it in Dev Mode. Use the helper — it handles the D1 mutex, D2 in-place upsert, and D4 category assignment.
+Rules with `applyStrategy === "annotation"` cannot be auto-fixed via Plugin API. Add the gotcha answer as a Figma annotation so designers see it in Dev Mode. Use the helper — it handles the D1 mutex, D2 in-place upsert, and D4 category assignment. When `question.replicaNodeIds` is present (#356), iterate the merged set so every replica instance gets the annotation:
 
 ```javascript
-const scene = await figma.getNodeByIdAsync(question.nodeId);
-CanICodeRoundtrip.upsertCanicodeAnnotation(scene, {
-  ruleId: question.ruleId,
-  markdown: `**Q:** ${question.question}\n**A:** ${answer}`,
-  categoryId: categories.gotcha,
-  // Optional: surface live property values in Dev Mode alongside the note.
-  // Only include types the node supports (FRAME vs TEXT — see matrix above).
-  properties: question.annotationProperties,
-});
+const targets = [question.nodeId, ...(question.replicaNodeIds ?? [])];
+for (const nodeId of targets) {
+  const scene = await figma.getNodeByIdAsync(nodeId);
+  CanICodeRoundtrip.upsertCanicodeAnnotation(scene, {
+    ruleId: question.ruleId,
+    markdown: `**Q:** ${question.question}\n**A:** ${answer}`,
+    categoryId: categories.gotcha,
+    // Optional: surface live property values in Dev Mode alongside the note.
+    // Only include types the node supports (FRAME vs TEXT — see matrix above).
+    properties: question.annotationProperties,
+  });
+}
 ```
 
 Notes:
