@@ -14,3 +14,8 @@ export {
   extractAcknowledgmentsFromNode,
   readCanicodeAcknowledgments,
 } from "./read-acknowledgments.js";
+export { computeRoundtripTally } from "./compute-roundtrip-tally.js";
+export {
+  isCanicodeAnnotation,
+  removeCanicodeAnnotations,
+} from "./remove-canicode-annotations.js";

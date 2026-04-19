@@ -374,12 +374,60 @@ ${footer}`;
     }
   }
 
+  // src/core/roundtrip/compute-roundtrip-tally.ts
+  function computeRoundtripTally(args) {
+    const { stepFourReport, reanalyzeResponse } = args;
+    const { resolved, annotated, definitionWritten, skipped } = stepFourReport;
+    const { issueCount, acknowledgedCount } = reanalyzeResponse;
+    if (acknowledgedCount > issueCount) {
+      throw new Error(
+        `computeRoundtripTally: reanalyzeResponse.acknowledgedCount (${acknowledgedCount}) cannot exceed issueCount (${issueCount}). Acknowledged issues are a subset of remaining issues.`
+      );
+    }
+    return {
+      X: resolved,
+      Y: annotated,
+      Z: definitionWritten,
+      W: skipped,
+      N: resolved + annotated + definitionWritten + skipped,
+      V: issueCount,
+      V_ack: acknowledgedCount,
+      V_open: issueCount - acknowledgedCount
+    };
+  }
+
+  // src/core/roundtrip/remove-canicode-annotations.ts
+  var LEGACY_CANICODE_PREFIX = "**[canicode]";
+  function isCanicodeAnnotation(annotation, categories) {
+    const canicodeIds = new Set(
+      [
+        categories.gotcha,
+        categories.flag,
+        categories.fallback,
+        categories.legacyAutoFix
+      ].filter((id) => Boolean(id))
+    );
+    if (annotation.categoryId && canicodeIds.has(annotation.categoryId)) {
+      return true;
+    }
+    if (annotation.labelMarkdown?.startsWith(LEGACY_CANICODE_PREFIX)) {
+      return true;
+    }
+    return false;
+  }
+  function removeCanicodeAnnotations(annotations, categories) {
+    return annotations.filter((a) => !isCanicodeAnnotation(a, categories));
+  }
+
   exports.applyPropertyMod = applyPropertyMod;
   exports.applyWithInstanceFallback = applyWithInstanceFallback;
+  exports.computeRoundtripTally = computeRoundtripTally;
   exports.ensureCanicodeCategories = ensureCanicodeCategories;
   exports.extractAcknowledgmentsFromNode = extractAcknowledgmentsFromNode;
+  exports.isCanicodeAnnotation = isCanicodeAnnotation;
   exports.probeDefinitionWritability = probeDefinitionWritability;
   exports.readCanicodeAcknowledgments = readCanicodeAcknowledgments;
+  exports.removeCanicodeAnnotations = removeCanicodeAnnotations;
   exports.resolveVariableByName = resolveVariableByName;
   exports.stripAnnotations = stripAnnotations;
   exports.upsertCanicodeAnnotation = upsertCanicodeAnnotation;
