@@ -714,4 +714,360 @@ describe("generateGotchaSurvey", () => {
     const fGrade = generateGotchaSurvey(empty, makeScoreReport("F"));
     expect(fGrade.isReadyForCodeGen).toBe(false);
   });
+
+  // ============================================
+  // #356 source-component dedupe
+  // ============================================
+
+  describe("source-component dedupe (#356)", () => {
+    // Two parent-instance ids of the same source component (`C:1` →
+    // `Platform=Desktop`), each with the same definition node `2143:13799` as
+    // an instance child. Pre-#356 this surfaced as 2 separate questions; the
+    // new pass collapses them into 1 with `replicas: 2`.
+    const PLATFORM_DESKTOP_DOC: AnalysisNode = {
+      id: "0:1",
+      name: "Document",
+      type: "DOCUMENT",
+      visible: true,
+      children: [
+        {
+          id: "100:1",
+          name: "Card Instance A",
+          type: "INSTANCE",
+          visible: true,
+          componentId: "C:1",
+        },
+        {
+          id: "100:2",
+          name: "Card Instance B",
+          type: "INSTANCE",
+          visible: true,
+          componentId: "C:1",
+        },
+      ],
+    };
+    const PLATFORM_DESKTOP_COMPONENTS = {
+      "C:1": { key: "k1", name: "Platform=Desktop", description: "" },
+    };
+
+    it("collapses N instance-child questions sharing (sourceComponentId, sourceNodeId, ruleId) into one with replicas", () => {
+      const issues = [
+        makeIssue({
+          ruleId: "missing-size-constraint",
+          category: "responsive-critical",
+          severity: "risk",
+          nodeId: "I100:1;2143:13799",
+          nodePath: "Root > Card A > Title",
+          subType: "wrap",
+        }),
+        makeIssue({
+          ruleId: "missing-size-constraint",
+          category: "responsive-critical",
+          severity: "risk",
+          nodeId: "I100:2;2143:13799",
+          nodePath: "Root > Card B > Title",
+          subType: "wrap",
+        }),
+      ];
+
+      const survey = generateGotchaSurvey(
+        makeResult(issues, {
+          document: PLATFORM_DESKTOP_DOC,
+          components: PLATFORM_DESKTOP_COMPONENTS,
+        }),
+        makeScoreReport("D"),
+      );
+
+      expect(survey.questions).toHaveLength(1);
+      const q = survey.questions[0]!;
+      expect(q.nodeId).toBe("I100:1;2143:13799");
+      expect(q.replicas).toBe(2);
+      expect(q.replicaNodeIds).toEqual(["I100:2;2143:13799"]);
+      expect(q.nodeName).toBe("Platform=Desktop");
+    });
+
+    it("keeps separate questions for different sourceNodeIds even when sharing the same source component", () => {
+      // Different children of the source component (Title vs Input) — same
+      // sourceComponentId C:1 but different sourceNodeIds → dedupe key
+      // differs, both kept. Use different parent paths (Card A vs Card B) so
+      // the EXISTING Step 2 sibling dedupe doesn't collapse them first.
+      const issues = [
+        makeIssue({
+          ruleId: "missing-size-constraint",
+          category: "responsive-critical",
+          severity: "risk",
+          nodeId: "I100:1;2143:13799",
+          nodePath: "Root > Card A > Title",
+          subType: "wrap",
+        }),
+        makeIssue({
+          ruleId: "missing-size-constraint",
+          category: "responsive-critical",
+          severity: "risk",
+          nodeId: "I100:2;2143:99999",
+          nodePath: "Root > Card B > Input",
+          subType: "wrap",
+        }),
+      ];
+
+      const survey = generateGotchaSurvey(
+        makeResult(issues, {
+          document: PLATFORM_DESKTOP_DOC,
+          components: PLATFORM_DESKTOP_COMPONENTS,
+        }),
+        makeScoreReport("D"),
+      );
+
+      expect(survey.questions).toHaveLength(2);
+      expect(survey.questions[0]!.replicas).toBeUndefined();
+      expect(survey.questions[1]!.replicas).toBeUndefined();
+    });
+
+    it("keeps separate questions when source components differ (no cross-component dedupe)", () => {
+      const document: AnalysisNode = {
+        id: "0:1",
+        name: "Document",
+        type: "DOCUMENT",
+        visible: true,
+        children: [
+          {
+            id: "100:1",
+            name: "Card A",
+            type: "INSTANCE",
+            visible: true,
+            componentId: "C:1",
+          },
+          {
+            id: "200:1",
+            name: "Card B",
+            type: "INSTANCE",
+            visible: true,
+            componentId: "C:2",
+          },
+        ],
+      };
+      const components = {
+        "C:1": { key: "k1", name: "Platform=Desktop", description: "" },
+        "C:2": { key: "k2", name: "Platform=Mobile", description: "" },
+      };
+      const issues = [
+        makeIssue({
+          ruleId: "missing-size-constraint",
+          category: "responsive-critical",
+          severity: "risk",
+          nodeId: "I100:1;2143:13799",
+          nodePath: "Root > Card A > Title",
+          subType: "wrap",
+        }),
+        makeIssue({
+          ruleId: "missing-size-constraint",
+          category: "responsive-critical",
+          severity: "risk",
+          nodeId: "I200:1;2143:13799",
+          nodePath: "Root > Card B > Title",
+          subType: "wrap",
+        }),
+      ];
+
+      const survey = generateGotchaSurvey(
+        makeResult(issues, { document, components }),
+        makeScoreReport("D"),
+      );
+
+      // Different sourceComponentIds — must stay separate per #356 out-of-scope.
+      expect(survey.questions).toHaveLength(2);
+      expect(survey.questions[0]!.replicas).toBeUndefined();
+      expect(survey.questions[1]!.replicas).toBeUndefined();
+    });
+
+    it("does not collapse non-instance-child questions (no instanceContext)", () => {
+      const issues = [
+        makeIssue({
+          ruleId: "missing-size-constraint",
+          category: "responsive-critical",
+          severity: "risk",
+          nodeId: "1:1",
+          nodePath: "Root > A",
+          subType: "wrap",
+        }),
+        makeIssue({
+          ruleId: "missing-size-constraint",
+          category: "responsive-critical",
+          severity: "risk",
+          nodeId: "1:2",
+          nodePath: "Other > B",
+          subType: "wrap",
+        }),
+      ];
+
+      const survey = generateGotchaSurvey(
+        makeResult(issues),
+        makeScoreReport("D"),
+      );
+
+      // Non-instance-child issues with different parent-paths → both kept,
+      // neither carries replicas (existing parent-path dedupe already handles
+      // same-parent siblings — covered by the older test above).
+      expect(survey.questions).toHaveLength(2);
+      expect(survey.questions[0]!.replicas).toBeUndefined();
+      expect(survey.questions[1]!.replicas).toBeUndefined();
+    });
+
+    it("preserves the kept question's first nodeId so apply step targets a real node", () => {
+      const issues = [
+        makeIssue({
+          ruleId: "missing-size-constraint",
+          category: "responsive-critical",
+          severity: "risk",
+          nodeId: "I100:1;2143:13799",
+          nodePath: "Root > Card A > Title",
+          subType: "wrap",
+        }),
+        makeIssue({
+          ruleId: "missing-size-constraint",
+          category: "responsive-critical",
+          severity: "risk",
+          nodeId: "I100:2;2143:13799",
+          nodePath: "Root > Card B > Title",
+          subType: "wrap",
+        }),
+      ];
+
+      const survey = generateGotchaSurvey(
+        makeResult(issues, {
+          document: PLATFORM_DESKTOP_DOC,
+          components: PLATFORM_DESKTOP_COMPONENTS,
+        }),
+        makeScoreReport("D"),
+      );
+
+      const q = survey.questions[0]!;
+      // Apply iteration set: `[nodeId, ...replicaNodeIds]` should cover both.
+      const allTargets = [q.nodeId, ...(q.replicaNodeIds ?? [])];
+      expect(allTargets).toEqual(["I100:1;2143:13799", "I100:2;2143:13799"]);
+    });
+
+    it("rebuilds question text with the source component name when {nodeName} placeholder is used", () => {
+      const issues = [
+        makeIssue({
+          ruleId: "missing-size-constraint",
+          category: "responsive-critical",
+          severity: "risk",
+          nodeId: "I100:1;2143:13799",
+          nodePath: "Root > Card A > Title",
+          subType: "wrap",
+        }),
+        makeIssue({
+          ruleId: "missing-size-constraint",
+          category: "responsive-critical",
+          severity: "risk",
+          nodeId: "I100:2;2143:13799",
+          nodePath: "Root > Card B > Title",
+          subType: "wrap",
+        }),
+      ];
+
+      const survey = generateGotchaSurvey(
+        makeResult(issues, {
+          document: PLATFORM_DESKTOP_DOC,
+          components: PLATFORM_DESKTOP_COMPONENTS,
+        }),
+        makeScoreReport("D"),
+      );
+
+      // The question template carries `{nodeName}` so the user-facing text
+      // must read the source component name, not the first instance's name.
+      const q = survey.questions[0]!;
+      expect(q.question).toContain("Platform=Desktop");
+      expect(q.question).not.toContain("Title");
+    });
+
+    it("falls back to first-instance nodeName when source component name is unresolved", () => {
+      // Same dedup key (parent instances both reference C:1) but no entry
+      // in `file.components` for C:1 → sourceComponentName is undefined.
+      // Replicas still merge but the kept nodeName/question pass through.
+      const document: AnalysisNode = {
+        id: "0:1",
+        name: "Document",
+        type: "DOCUMENT",
+        visible: true,
+        children: [
+          {
+            id: "100:1",
+            name: "A",
+            type: "INSTANCE",
+            visible: true,
+            componentId: "C:1",
+          },
+          {
+            id: "100:2",
+            name: "B",
+            type: "INSTANCE",
+            visible: true,
+            componentId: "C:1",
+          },
+        ],
+      };
+      const issues = [
+        makeIssue({
+          ruleId: "missing-size-constraint",
+          category: "responsive-critical",
+          severity: "risk",
+          nodeId: "I100:1;2143:13799",
+          nodePath: "Root > A > Title",
+          subType: "wrap",
+        }),
+        makeIssue({
+          ruleId: "missing-size-constraint",
+          category: "responsive-critical",
+          severity: "risk",
+          nodeId: "I100:2;2143:13799",
+          nodePath: "Root > B > Title",
+          subType: "wrap",
+        }),
+      ];
+
+      const survey = generateGotchaSurvey(
+        makeResult(issues, { document, components: {} }),
+        makeScoreReport("D"),
+      );
+
+      expect(survey.questions).toHaveLength(1);
+      const q = survey.questions[0]!;
+      expect(q.replicas).toBe(2);
+      expect(q.nodeName).toBe("Title");
+    });
+
+    it("output with replicas + replicaNodeIds passes GotchaSurveySchema validation", () => {
+      const issues = [
+        makeIssue({
+          ruleId: "missing-size-constraint",
+          category: "responsive-critical",
+          severity: "risk",
+          nodeId: "I100:1;2143:13799",
+          nodePath: "Root > Card A > Title",
+          subType: "wrap",
+        }),
+        makeIssue({
+          ruleId: "missing-size-constraint",
+          category: "responsive-critical",
+          severity: "risk",
+          nodeId: "I100:2;2143:13799",
+          nodePath: "Root > Card B > Title",
+          subType: "wrap",
+        }),
+      ];
+
+      const survey = generateGotchaSurvey(
+        makeResult(issues, {
+          document: PLATFORM_DESKTOP_DOC,
+          components: PLATFORM_DESKTOP_COMPONENTS,
+        }),
+        makeScoreReport("D"),
+      );
+
+      const result = GotchaSurveySchema.safeParse(survey);
+      expect(result.success).toBe(true);
+    });
+  });
 });

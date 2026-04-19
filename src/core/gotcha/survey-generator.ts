@@ -40,9 +40,19 @@ export function generateGotchaSurvey(
   const sorted = stableSortBySeverity(deduped);
 
   // Step 4: Map to survey questions
-  const questions = sorted
+  const mapped = sorted
     .map((issue) => mapToQuestion(issue, result.file))
     .filter((q): q is GotchaSurveyQuestion => q !== null);
+
+  // Step 5 (#356): collapse N instance-child questions that share the same
+  // `(sourceComponentId, sourceNodeId, ruleId)` tuple into ONE question that
+  // names the source component. Apply step iterates the merged
+  // `replicaNodeIds` so every replica still gets the answer; this saves the
+  // user from answering the same question N times when the answer is single-
+  // valued (e.g. 7 FILL children of `Platform=Desktop` all need the same
+  // max-width). Cross-source-component dedupe is intentionally not done —
+  // different source components stay separate.
+  const questions = deduplicateBySourceComponent(mapped);
 
   return {
     designGrade: grade,
@@ -154,6 +164,83 @@ function mapToQuestion(
       ? { sourceChildId: applyContext.sourceChildId }
       : {}),
   };
+}
+
+/**
+ * Collapse questions that share the same `(sourceComponentId, sourceNodeId,
+ * ruleId)` tuple. When N instance-child questions all point at the same
+ * definition node inside the same source component for the same rule, the
+ * answer is single-valued by definition (FILL children of `Platform=Desktop`
+ * all need the same max-width) — so emit ONE question instead of N. The kept
+ * question is the FIRST in the input order; subsequent matches are dropped
+ * but their `nodeId`s are preserved on `replicaNodeIds` so the apply step can
+ * iterate every instance scene node and land the answer on all of them.
+ *
+ * Out of scope: cross-source-component dedupe (e.g. "Title" missing-size-
+ * constraint in 5 different components). Different sourceComponentIds always
+ * stay separate.
+ *
+ * Questions without an `instanceContext` (or without both `sourceComponentId`
+ * and `sourceNodeId`) are NOT touched — they pass through with no replicas
+ * fields. This keeps non-instance-child questions and any partial-context
+ * survivors behaving exactly as they did pre-#356.
+ */
+function deduplicateBySourceComponent(
+  questions: GotchaSurveyQuestion[],
+): GotchaSurveyQuestion[] {
+  const groups = new Map<string, GotchaSurveyQuestion[]>();
+  const order: string[] = [];
+  let uniqueCounter = 0;
+
+  for (const q of questions) {
+    const ic = q.instanceContext;
+    let key: string;
+    if (ic && ic.sourceComponentId && ic.sourceNodeId) {
+      key = `${ic.sourceComponentId}::${ic.sourceNodeId}::${q.ruleId}`;
+    } else {
+      // Non-deduplicable — assign a unique key so the question passes through
+      // unchanged. Using a counter keeps insertion order stable.
+      key = `__unique__${uniqueCounter++}`;
+    }
+    const bucket = groups.get(key);
+    if (bucket) {
+      bucket.push(q);
+    } else {
+      groups.set(key, [q]);
+      order.push(key);
+    }
+  }
+
+  return order.map((key) => {
+    const group = groups.get(key)!;
+    const first = group[0]!;
+    if (group.length === 1) return first;
+
+    const otherIds = group.slice(1).map((q) => q.nodeId);
+    const sourceComponentName = first.instanceContext?.sourceComponentName;
+
+    // Re-substitute `{nodeName}` with the source component name so the user-
+    // facing question reads "for Platform=Desktop" instead of "for Title"
+    // (the first instance's node name). Falls back silently when the source
+    // component name was not resolved (rare — happens when the parent
+    // instance's componentId is not in `file.components`).
+    const template = GOTCHA_QUESTIONS[first.ruleId as RuleId];
+    const renamed: GotchaSurveyQuestion = {
+      ...first,
+      replicas: group.length,
+      replicaNodeIds: otherIds,
+    };
+    if (sourceComponentName) {
+      renamed.nodeName = sourceComponentName;
+      if (template) {
+        renamed.question = template.question.replace(
+          "{nodeName}",
+          sourceComponentName,
+        );
+      }
+    }
+    return renamed;
+  });
 }
 
 /**

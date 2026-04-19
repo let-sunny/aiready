@@ -50,6 +50,14 @@ export const GotchaSurveyQuestionSchema = z.object({
   suggestedName: z.string().optional(),
   isInstanceChild: z.boolean(),
   sourceChildId: z.string().optional(),
+  // #356: when this question collapses N instance-child issues that share the
+  // same `(sourceComponentId, sourceNodeId, ruleId)` tuple, `replicas` is the
+  // total instance count (>=2) and `replicaNodeIds` lists every instance scene
+  // node id OTHER than the kept `nodeId`. Apply step iterates
+  // `[nodeId, ...replicaNodeIds]` so the same answer lands on every replica.
+  // Single-instance questions omit both fields.
+  replicas: z.number().int().min(2).optional(),
+  replicaNodeIds: z.array(z.string()).optional(),
 });
 
 export type GotchaSurveyQuestion = z.infer<typeof GotchaSurveyQuestionSchema>;
