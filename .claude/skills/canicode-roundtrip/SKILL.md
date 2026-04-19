@@ -18,6 +18,18 @@ Orchestrate the full design-to-code roundtrip: analyze a Figma design for readin
 
 ## Workflow
 
+### Step 0: Verify Figma MCP tools are loaded
+
+Before Step 1, verify that `use_figma` is callable in **this** session — not merely listed in `.mcp.json`. Newly registered MCP servers (e.g. via `claude mcp add -s project -t http figma https://mcp.figma.com/mcp`) require a Claude Code restart to load their tools; reading `.mcp.json` is not a substitute for checking the live tool list you have access to right now.
+
+If `use_figma` is unavailable in the current session, **Do NOT proceed to Step 1**. Steps 1 (analyze) and 3 (gotcha-survey) spend real Figma API calls and 5–15 minutes of human survey time before Step 4 would otherwise discover `use_figma` is missing. Halt immediately and tell the user:
+
+1. Confirm `.mcp.json` registers the Figma MCP entry (e.g. `figma` under `mcpServers`).
+2. Restart Claude Code so the newly registered tools load.
+3. Re-invoke `/canicode-roundtrip <url>`.
+
+See the Edge Case **No Figma MCP server** below for the one-way fallback when Figma MCP genuinely cannot be installed — the precheck above is for the common "installed but not restarted" case, not a replacement for that fallback.
+
 ### Step 1: Analyze the design
 
 If the `analyze` MCP tool is available, call it with the user's Figma URL:
