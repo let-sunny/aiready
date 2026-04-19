@@ -556,7 +556,8 @@ describe("buildResultJson", () => {
     expect(issues[2]).toMatchObject({
       ruleId: "missing-size-constraint",
       applyStrategy: "property-mod",
-      targetProperty: "minWidth",
+      // #374: every missing-size-constraint subType targets both bounds.
+      targetProperty: ["minWidth", "maxWidth"],
       isInstanceChild: false,
     });
   });

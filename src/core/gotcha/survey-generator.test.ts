@@ -523,7 +523,12 @@ describe("generateGotchaSurvey", () => {
       );
 
       expect(survey.questions[0]!.applyStrategy).toBe("property-mod");
-      expect(survey.questions[0]!.targetProperty).toBe("minWidth");
+      // #374: missing-size-constraint always returns both bounds so the
+      // `{ minWidth, maxWidth }` answer shape lands fully.
+      expect(survey.questions[0]!.targetProperty).toEqual([
+        "minWidth",
+        "maxWidth",
+      ]);
     });
 
     it("structural-mod rule carries strategy without targetProperty for deep-nesting", () => {

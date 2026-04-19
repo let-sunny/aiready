@@ -88,20 +88,23 @@ describe("computeApplyContext", () => {
       ).toEqual(["layoutSizingHorizontal", "layoutSizingVertical"]);
     });
 
-    it("missing-size-constraint wrap → minWidth", () => {
+    // #374: every missing-size-constraint subType returns BOTH bounds so the
+    // `{ minWidth, maxWidth }` answer shape lands fully (apply iterates each
+    // property in the array; missing keys in a partial answer are skipped).
+    it("missing-size-constraint wrap → minWidth + maxWidth (#374)", () => {
       expect(
         computeApplyContext(
           makeViolation("missing-size-constraint", { subType: "wrap" }),
         ).targetProperty,
-      ).toBe("minWidth");
+      ).toEqual(["minWidth", "maxWidth"]);
     });
 
-    it("missing-size-constraint max-width → maxWidth", () => {
+    it("missing-size-constraint max-width → minWidth + maxWidth (#374)", () => {
       expect(
         computeApplyContext(
           makeViolation("missing-size-constraint", { subType: "max-width" }),
         ).targetProperty,
-      ).toBe("maxWidth");
+      ).toEqual(["minWidth", "maxWidth"]);
     });
 
     it("missing-size-constraint grid → minWidth + maxWidth", () => {
