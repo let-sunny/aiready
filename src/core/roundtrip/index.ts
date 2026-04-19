@@ -8,3 +8,5 @@ export {
   applyPropertyMod,
   resolveVariableByName,
 } from "./apply-property-mod.js";
+export { probeDefinitionWritability } from "./probe-definition-writability.js";
+export type { DefinitionWritabilityProbe } from "./probe-definition-writability.js";

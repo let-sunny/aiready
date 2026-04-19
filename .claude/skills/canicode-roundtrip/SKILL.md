@@ -185,6 +185,51 @@ The helper walks the tiers in order; variable binding is an alternative writeFn 
 
 **Confirmation is a batch-level concern — and only needed when opting in.** A `use_figma` call runs one JavaScript batch and cannot pause mid-batch for user input. Under the ADR-012 default (`allowDefinitionWrite: false`), no propagation happens, so no confirmation is required — override-errors annotate and move on. The orchestrator sets `allowDefinitionWrite: true` only after enumerating the likely propagation set to the user up-front and collecting **one confirmation for the whole batch** that names the source component(s) and the affected instance set. When describing impact, note that the write reaches every **non-overridden** instance — any instance with a local override for the same property keeps its override. The helper below never prompts — it assumes that if the flag is on, confirmation already happened.
 
+**Pre-flight writability probe (#357).** Before showing the user the Definition write picker, call `CanICodeRoundtrip.probeDefinitionWritability(questions)` inside a small `use_figma` batch. The probe loads every distinct `sourceChildId` once and classifies it as writable or unwritable using the same detection as the runtime fallback (Experiment 10 `remote === true` and Experiment 11 unresolved-`null`). The result decides which version of the picker to show:
+
+```javascript
+// Inside a use_figma batch:
+const probe = await CanICodeRoundtrip.probeDefinitionWritability(questions);
+return { events: [], probe };
+```
+
+Branches on `probe`:
+
+- **`allUnwritable === true`** — every candidate source is in an external library (or unresolved). Opting in is structurally a no-op; every write would throw "Cannot write to internal and read-only node" and fall through to scene annotation anyway. Show the user a single-option picker:
+
+  ```
+  Definition write policy
+
+  This file's source components live in an external library and are
+  read-only from here ({unwritableSourceNames.join(", ")}). Tier 2
+  propagation cannot fire — every "opt-in" write would fall through
+  to a scene annotation regardless.
+
+  ❯ 1. Annotate only (only viable option for this file)
+    2. Cancel — duplicate the library locally first to enable propagation
+  ```
+
+  Skip the opt-in branch entirely and call the helpers with the default `allowDefinitionWrite: false`.
+
+- **`partiallyUnwritable === true`** — some sources are local, some remote. Surface the split:
+
+  ```
+  Definition write policy
+
+  {unwritableCount} of {totalCount} source components are remote
+  (read-only) and will fall through to annotation; the remaining
+  {totalCount - unwritableCount} are local and will propagate.
+  Remote sources: {unwritableSourceNames.join(", ")}.
+
+  Continue with allowDefinitionWrite: true?
+  ```
+
+  When confirmed, propagate to the local sources and let the helper's runtime fallback annotate the remote ones — the existing Experiment-10 retry path absorbs them without aborting the batch.
+
+- **`allUnwritable === false && partiallyUnwritable === false`** (the all-local / no-candidates case) — show the existing batch-level picker prose. No probe-driven adjustment needed.
+
+The probe is read-only and idempotent; running it before the picker adds one round-trip but saves the user a confusing "I opted in, why did I get annotations?" moment that #342 surfaced live on Simple Design System (Community).
+
 **Shared helpers (bundled)** — the deterministic helpers live in TypeScript at `src/core/roundtrip/*.ts` and are bundled to a single IIFE at `.claude/skills/canicode-roundtrip/helpers.js`. `use_figma` only accepts a self-contained JS string, so the source of truth is TypeScript (with vitest coverage) and the bundle is the delivery artifact.
 
 **Usage in a roundtrip session:**
@@ -198,6 +243,7 @@ The helper walks the tiers in order; variable binding is an alternative writeFn 
    - `applyWithInstanceFallback(question, writeFn, { categories, allowDefinitionWrite, telemetry })` — three-tier write policy with silent-ignore detection. `allowDefinitionWrite` defaults to `false` per ADR-012 — override-errors and silent-ignores annotate the scene naming the source component instead of writing the definition. Set `true` only after a batch-level confirmation. `telemetry` is an optional `(event, props) => void` callback fired when a definition write is skipped (wiring point for future Node-side opt-in usage data). The `writeFn` may return `false` to signal "write accepted but value unchanged" so the helper can route to the next tier.
    - `applyPropertyMod(question, answerValue, { categories, allowDefinitionWrite, telemetry })` — Strategy A entry point. Branches on `targetProperty` (single vs array) and answer shape (scalar, per-property object, `{ variable: "name" }` binding). Uses `setBoundVariableForPaint` for `fills` / `strokes` and `setBoundVariable` for scalar fields. Passes the full context through to `applyWithInstanceFallback`.
    - `resolveVariableByName(name)` — local-variable exact-name lookup; returns `null` for remote library variables not imported into this file.
+   - `probeDefinitionWritability(questions)` — async pre-flight (#357). Returns `{ totalCount, unwritableCount, unwritableSourceNames, allUnwritable, partiallyUnwritable }`. Use BEFORE the Definition write picker so the picker can drop the opt-in branch when every candidate is in an external library / unresolved (saves the user a wasted "I opted in, why did I get annotations?" decision). Read-only probe, dedupes by `sourceChildId`.
 
 Keep each `writeFn` small so a throw does not abort unrelated writes. Experiment 08 findings informed every branch in the bundled helpers, and the batch-level confirmation contract still applies *when opting in*: if the orchestrator passes `allowDefinitionWrite: true`, it must have already collected one confirmation covering every potential definition write in the batch. Under the default, no confirmation is needed — the helper annotates the scene instead of propagating.
 
@@ -467,4 +513,4 @@ Code: <files generated / next-step pointer from figma-implement-design>
 - **use_figma call fails for a node**: Report the error for that specific node, continue with other nodes. Failed property modifications become annotations so the context is not lost.
 - **Re-analyze shows new issues**: Only address issues from the original gotcha survey. New issues may appear due to structural changes — report them but do not re-enter the gotcha loop.
 - **Very large design (many gotchas)**: The gotcha survey already deduplicates sibling nodes and filters to blocking/risk severity only. If there are still many questions, ask the user if they want to focus on blocking issues only.
-- **External library components**: Applies only when the orchestrator has set `allowDefinitionWrite: true`. Experiment 10's observed case is `getMainComponentAsync()` resolving with `mainComponent.remote === true` — writes then throw *"Cannot write to internal and read-only node"*. The `mainComponent === null` case is documented in the Plugin API but was not reproduced live in Experiment 10; Experiment 11 (#309) unit-test-covers the helper's routing for that branch (override-error + no `sourceChildId` → annotate with `could not apply automatically:` markdown — see ADR-011 Verification), so the code path is regression-locked while live Figma reproduction remains a manual fixture-seeding follow-up. Under the default (`allowDefinitionWrite: false`), the definition write never fires and this throw cannot surface.
+- **External library components**: Applies only when the orchestrator has set `allowDefinitionWrite: true`. Experiment 10's observed case is `getMainComponentAsync()` resolving with `mainComponent.remote === true` — writes then throw *"Cannot write to internal and read-only node"*. The `mainComponent === null` case is documented in the Plugin API but was not reproduced live in Experiment 10; Experiment 11 (#309) unit-test-covers the helper's routing for that branch (override-error + no `sourceChildId` → annotate with `could not apply automatically:` markdown — see ADR-011 Verification), so the code path is regression-locked while live Figma reproduction remains a manual fixture-seeding follow-up. Under the default (`allowDefinitionWrite: false`), the definition write never fires and this throw cannot surface. **The pre-flight `probeDefinitionWritability` (#357) detects both branches up-front** so the Definition write picker can drop the opt-in option entirely when every candidate is unwritable, saving the user a wasted decision before the runtime fallback kicks in.

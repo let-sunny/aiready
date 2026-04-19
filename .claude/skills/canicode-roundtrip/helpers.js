@@ -262,9 +262,42 @@ ${footer}`;
     );
   }
 
+  // src/core/roundtrip/probe-definition-writability.ts
+  async function probeDefinitionWritability(questions) {
+    const verdict = /* @__PURE__ */ new Map();
+    const unwritableNames = [];
+    const seenName = /* @__PURE__ */ new Set();
+    for (const q of questions) {
+      const id = q.sourceChildId;
+      if (!id) continue;
+      if (verdict.has(id)) continue;
+      const node = await figma.getNodeByIdAsync(id);
+      const isUnwritable = node === null || node.remote === true;
+      verdict.set(id, isUnwritable ? "unwritable" : "writable");
+      if (isUnwritable) {
+        const name = typeof node?.name === "string" && node.name || q.instanceContext?.sourceComponentName || id;
+        if (!seenName.has(name)) {
+          seenName.add(name);
+          unwritableNames.push(name);
+        }
+      }
+    }
+    const totalCount = verdict.size;
+    let unwritableCount = 0;
+    for (const v of verdict.values()) if (v === "unwritable") unwritableCount++;
+    return {
+      totalCount,
+      unwritableCount,
+      unwritableSourceNames: unwritableNames,
+      allUnwritable: totalCount > 0 && unwritableCount === totalCount,
+      partiallyUnwritable: unwritableCount > 0 && unwritableCount < totalCount
+    };
+  }
+
   exports.applyPropertyMod = applyPropertyMod;
   exports.applyWithInstanceFallback = applyWithInstanceFallback;
   exports.ensureCanicodeCategories = ensureCanicodeCategories;
+  exports.probeDefinitionWritability = probeDefinitionWritability;
   exports.resolveVariableByName = resolveVariableByName;
   exports.stripAnnotations = stripAnnotations;
   exports.upsertCanicodeAnnotation = upsertCanicodeAnnotation;
