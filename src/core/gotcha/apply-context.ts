@@ -87,9 +87,15 @@ function resolveTargetProperty(
       // both-axes — write both axes
       return ["layoutSizingHorizontal", "layoutSizingVertical"];
     case "missing-size-constraint":
-      if (subType === "wrap") return "minWidth";
-      if (subType === "max-width") return "maxWidth";
-      // grid — both bounds
+      // #374: always return BOTH bounds so `applyPropertyMod`'s array branch
+      // iterates the full `{ minWidth, maxWidth }` answer shape. Pre-fix the
+      // `wrap` subType returned `"minWidth"` and `max-width` returned
+      // `"maxWidth"` as single strings — the user typically answered with
+      // both keys (the gotcha hint asks for both) and the apply step
+      // silently dropped half the intent because it only iterated the one
+      // property in `targetProperty`. Partial answers still work: the per-
+      // property lookup in `applyPropertyMod` returns `undefined` for the
+      // missing key and the helper skips it.
       return ["minWidth", "maxWidth"];
     case "irregular-spacing":
       if (subType === "gap") return "itemSpacing";
