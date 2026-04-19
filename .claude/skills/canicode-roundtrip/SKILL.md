@@ -166,9 +166,7 @@ Then proceed to **Step 4** to apply answers to the Figma design.
 
 ### Step 4: Apply gotcha answers to Figma design
 
-Extract the `fileKey` from the Figma URL (format: `figma.com/design/:fileKey/...`).
-
-For each answered gotcha (skip questions answered with "skip" or "n/a"), branch on the pre-computed `question.applyStrategy`. The routing table, target properties, and instance-child resolution are resolved server-side by `canicode` — do NOT re-derive them from the rule id.
+For each answered gotcha (skip questions answered with "skip" or "n/a"), branch on the pre-computed `question.applyStrategy`. The routing table, target properties, and instance-child resolution are resolved server-side by `canicode` — do NOT re-derive them from the rule id. The `fileKey` is not needed at this step — the bundled helpers operate on `nodeId` directly.
 
 Use the **`nodeId` from the answered question**. When `question.isInstanceChild` is `true`, treat layout and size-constraint changes as **high impact**: applying them on the source definition affects **every instance** of that component in the file. Ask for explicit user confirmation before writing to the definition node.
 
@@ -295,6 +293,7 @@ The probe is read-only and idempotent; running it before the picker adds one rou
    - `extractAcknowledgmentsFromNode(node, canicodeCategoryIds?)` — synchronous pure helper (#371). Reads one node's annotations and returns `{ nodeId, ruleId }[]` for entries gated by canicode `categoryId` plus a recognisable `— *<ruleId>*` footer (or legacy `**[canicode] <ruleId>**` prefix). When `canicodeCategoryIds` is omitted, footer-text matching alone is sufficient (test mode).
    - `readCanicodeAcknowledgments(rootNodeId, categories?)` — async tree walker (#371). Loads `rootNodeId` via `figma.getNodeByIdAsync`, recurses through `children`, and accumulates one acknowledgment per recognised entry. Used at the top of Step 5a to harvest the side channel that lets the analysis pipeline distinguish "still broken" from "the designer has a plan" — pass the result straight to `analyze({ acknowledgments })`. Errors on individual nodes are swallowed so locked / external nodes don't abort the sweep.
    - `computeRoundtripTally({ stepFourReport, reanalyzeResponse })` — pure helper (#383). Takes the structured Step 4 outcome counts (`{ resolved, annotated, definitionWritten, skipped }`) plus a narrowed re-analyze view (`{ issueCount, acknowledgedCount }`) and returns `{ X, Y, Z, W, N, V, V_ack, V_open }`. Replaces the LLM-side emoji-bullet re-counting in Step 5 — render the returned object directly into the wrap-up templates. Throws when `acknowledgedCount > issueCount` (impossible state).
+   - `removeCanicodeAnnotations(annotations, categories)` — pure filter. Returns `annotations` with every canicode-authored entry removed (gates on `categories.gotcha` / `flag` / `fallback` / `legacyAutoFix` plus the legacy `**[canicode]` body prefix). Use after `stripAnnotations` in the Step 5 cleanup loop — replaces the inline filter predicate the SKILL used to carry. `isCanicodeAnnotation(annotation, categories)` is the single-entry version, exported for callers that need the predicate alone.
 
 Keep each `writeFn` small so a throw does not abort unrelated writes. Experiment 08 findings informed every branch in the bundled helpers, and the batch-level confirmation contract still applies *when opting in*: if the orchestrator passes `allowDefinitionWrite: true`, it must have already collected one confirmation covering every potential definition write in the batch. Under the default, no confirmation is needed — the helper annotates the scene instead of propagating.
 
@@ -533,18 +532,15 @@ If Step 4 produced no `stepFourReport` (e.g. user skipped every question, or no 
 
   Grade: {oldGrade} → {newGrade}. Ready for code generation.
   ```
-- Clean up canicode annotations on fixed nodes via `use_figma`. Filter by **categoryId** (the durable canicode-side identifier — the body no longer carries a `[canicode]` prefix per #353). Include `legacyAutoFix` if `ensureCanicodeCategories` returned it, so pre-#355 `canicode:auto-fix` entries get swept too. The trailing `— *<ruleId>*` footer is kept as a secondary marker for legacy `[canicode]`-prefix entries that may exist on files that have not been re-roundtripped yet:
+- Clean up canicode annotations on fixed nodes via `use_figma`. Use the bundled `removeCanicodeAnnotations` helper — it gates on **categoryId** (the durable canicode-side identifier — the body no longer carries a `[canicode]` prefix per #353), includes `legacyAutoFix` if `ensureCanicodeCategories` returned it (pre-#355 `canicode:auto-fix` sweep), and also matches the legacy `**[canicode]` body prefix as a secondary marker for entries on files that have not been re-roundtripped yet. The match logic lives in `src/core/roundtrip/remove-canicode-annotations.ts` with vitest coverage so prose stays ADR-303-compliant (PR #303):
 ```javascript
-const canicodeIds = new Set(
-  [categories.gotcha, categories.flag, categories.fallback, categories.legacyAutoFix].filter(Boolean)
-);
 const nodeIds = ["id1", "id2"]; // nodes that now pass
 for (const id of nodeIds) {
   const node = await figma.getNodeByIdAsync(id);
   if (node && "annotations" in node) {
-    node.annotations = CanICodeRoundtrip.stripAnnotations(node.annotations).filter(
-      a => !(a.categoryId && canicodeIds.has(a.categoryId)) &&
-           !a.labelMarkdown?.startsWith("**[canicode]")
+    node.annotations = CanICodeRoundtrip.removeCanicodeAnnotations(
+      CanICodeRoundtrip.stripAnnotations(node.annotations),
+      categories,
     );
   }
 }

@@ -396,13 +396,38 @@ ${footer}`;
     };
   }
 
+  // src/core/roundtrip/remove-canicode-annotations.ts
+  var LEGACY_CANICODE_PREFIX = "**[canicode]";
+  function isCanicodeAnnotation(annotation, categories) {
+    const canicodeIds = new Set(
+      [
+        categories.gotcha,
+        categories.flag,
+        categories.fallback,
+        categories.legacyAutoFix
+      ].filter((id) => Boolean(id))
+    );
+    if (annotation.categoryId && canicodeIds.has(annotation.categoryId)) {
+      return true;
+    }
+    if (annotation.labelMarkdown?.startsWith(LEGACY_CANICODE_PREFIX)) {
+      return true;
+    }
+    return false;
+  }
+  function removeCanicodeAnnotations(annotations, categories) {
+    return annotations.filter((a) => !isCanicodeAnnotation(a, categories));
+  }
+
   exports.applyPropertyMod = applyPropertyMod;
   exports.applyWithInstanceFallback = applyWithInstanceFallback;
   exports.computeRoundtripTally = computeRoundtripTally;
   exports.ensureCanicodeCategories = ensureCanicodeCategories;
   exports.extractAcknowledgmentsFromNode = extractAcknowledgmentsFromNode;
+  exports.isCanicodeAnnotation = isCanicodeAnnotation;
   exports.probeDefinitionWritability = probeDefinitionWritability;
   exports.readCanicodeAcknowledgments = readCanicodeAcknowledgments;
+  exports.removeCanicodeAnnotations = removeCanicodeAnnotations;
   exports.resolveVariableByName = resolveVariableByName;
   exports.stripAnnotations = stripAnnotations;
   exports.upsertCanicodeAnnotation = upsertCanicodeAnnotation;
