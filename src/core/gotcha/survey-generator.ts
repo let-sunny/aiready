@@ -9,7 +9,10 @@ import type {
 import type { AnalysisFile, AnalysisNode } from "../contracts/figma-node.js";
 import type { RuleId } from "../contracts/rule.js";
 import { GOTCHA_QUESTIONS } from "../rules/gotcha-questions.js";
-import { parseInstanceChildNodeId } from "../adapters/instance-id-parser.js";
+import {
+  isInstanceChildNodeId,
+  parseInstanceChildNodeId,
+} from "../adapters/instance-id-parser.js";
 import { computeApplyContext } from "./apply-context.js";
 
 const NODE_PATH_SEPARATOR = " > ";
@@ -64,12 +67,26 @@ export function generateGotchaSurvey(
 /**
  * Deduplicate issues where the same ruleId fires on multiple children of the
  * same parent. Keeps the first occurrence (preserving traversal order).
+ *
+ * #373: skip instance-child issues here. They are routed to the
+ * source-component dedupe in Step 5, which preserves dropped scene ids on
+ * `replicaNodeIds` so the apply step can fan the answer out to every replica.
+ * The pre-#373 behaviour collapsed sibling instance children (e.g. `Title` +
+ * `Subtitle` on the same `Card` instance — different definition nodes, same
+ * `Card` parent path, same ruleId) into a single question and lost the
+ * dropped scenes entirely (no `replicaNodeIds`, no annotation, no write).
+ * Source-component dedupe naturally keeps different `sourceNodeId`s separate,
+ * so the previously-dropped siblings now surface as their own questions.
  */
 function deduplicateSiblingIssues(issues: AnalysisIssue[]): AnalysisIssue[] {
   const seen = new Set<string>();
   const result: AnalysisIssue[] = [];
 
   for (const issue of issues) {
+    if (isInstanceChildNodeId(issue.violation.nodeId)) {
+      result.push(issue);
+      continue;
+    }
     const parentPath = getParentPath(issue.violation.nodePath);
     const key = `${parentPath}||${issue.violation.ruleId}`;
 
