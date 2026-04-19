@@ -404,7 +404,6 @@ Notes:
 
 The gotcha survey covers only blocking/risk severity. Lower-severity rules appear in `analyzeResult.issues[]` without a survey question. Each issue carries the same pre-computed fields (`applyStrategy`, `targetProperty`, `annotationProperties`, `suggestedName`, `isInstanceChild`, `sourceChildId`). The bundled helper handles the loop, the filter (`applyStrategy === "auto-fix"`), the naming-vs-annotation branch, and the per-issue outcome accumulator in one call:
 
-<!-- adr-016-ack: in-flight extraction tracked by #386 (Strategy D auto-fix loop + per-question outcome accumulator). Remove this ACK when the helper lands. -->
 ```javascript
 const outcomes = await CanICodeRoundtrip.applyAutoFixes(analyzeResult.issues, { categories });
 ```
