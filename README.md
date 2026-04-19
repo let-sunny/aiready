@@ -57,7 +57,7 @@ Rule scores aren't guesswork. The calibration pipeline converts real Figma desig
 
 ```bash
 # 1. Save your Figma token AND install the /canicode-roundtrip skill
-canicode init --token figd_xxxxxxxxxxxxx
+npx canicode init --token figd_xxxxxxxxxxxxx
 
 # 2. Run the roundtrip on a Figma URL
 /canicode-roundtrip https://www.figma.com/design/ABC123/MyDesign?node-id=1-234
@@ -116,7 +116,7 @@ Each issue is classified: **Blocking** > **Risk** > **Missing Info** > **Suggest
 npx canicode analyze "https://www.figma.com/design/ABC123/MyDesign?node-id=1-234"
 ```
 
-Setup: `canicode init --token figd_xxxxxxxxxxxxx` — saves the token AND installs the Claude Code skills (see below).
+Setup: `npx canicode init --token figd_xxxxxxxxxxxxx` — saves the token AND installs the Claude Code skills (see below).
 
 > **Get your token:** Figma → Settings → Security → Personal access tokens → Generate new token
 
@@ -157,7 +157,7 @@ For Cursor / Claude Desktop config, see [`docs/CUSTOMIZATION.md`](docs/CUSTOMIZA
 <summary><strong>Claude Code Skills</strong> (lightweight, no MCP install)</summary>
 
 ```bash
-canicode init --token figd_xxxxxxxxxxxxx
+npx canicode init --token figd_xxxxxxxxxxxxx
 ```
 
 Saves your Figma token AND installs three skills into `./.claude/skills/`:
