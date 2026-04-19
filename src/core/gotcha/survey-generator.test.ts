@@ -1038,6 +1038,183 @@ describe("generateGotchaSurvey", () => {
       expect(q.nodeName).toBe("Title");
     });
 
+    // #373 regression: pre-fix the parent-path sibling dedupe ran BEFORE
+    // source-component dedupe and dropped instance-child siblings (e.g.
+    // `Title` + `Subtitle` on the same `Card` instance — different
+    // sourceNodeIds but the same parent path) without preserving them on
+    // `replicaNodeIds`. The dropped scenes received neither a write nor an
+    // annotation. The fix routes instance-child issues straight to the
+    // source-component dedupe; siblings with different sourceNodeIds now
+    // remain separate questions and siblings sharing the same sourceNodeId
+    // (the cross-instance dedupe target) collapse with replicaNodeIds.
+    it("does NOT collapse instance-child siblings with different sourceNodeIds (#373)", () => {
+      const document: AnalysisNode = {
+        id: "0:1",
+        name: "Document",
+        type: "DOCUMENT",
+        visible: true,
+        children: [
+          {
+            id: "100:1",
+            name: "Card",
+            type: "INSTANCE",
+            visible: true,
+            componentId: "C:1",
+          },
+        ],
+      };
+      const components = {
+        "C:1": { key: "k1", name: "Card", description: "" },
+      };
+      const issues = [
+        // Two siblings on the SAME parent instance (same parent path "Root >
+        // Card") but different definition node ids → must stay separate per
+        // #373.
+        makeIssue({
+          ruleId: "missing-size-constraint",
+          category: "responsive-critical",
+          severity: "risk",
+          nodeId: "I100:1;2143:13799",
+          nodePath: "Root > Card > Title",
+          subType: "wrap",
+        }),
+        makeIssue({
+          ruleId: "missing-size-constraint",
+          category: "responsive-critical",
+          severity: "risk",
+          nodeId: "I100:1;2143:99999",
+          nodePath: "Root > Card > Subtitle",
+          subType: "wrap",
+        }),
+      ];
+
+      const survey = generateGotchaSurvey(
+        makeResult(issues, { document, components }),
+        makeScoreReport("D"),
+      );
+
+      expect(survey.questions).toHaveLength(2);
+      expect(survey.questions[0]!.replicas).toBeUndefined();
+      expect(survey.questions[1]!.replicas).toBeUndefined();
+    });
+
+    it("collapses instance-child issues across instances even when on different scene parents (#373)", () => {
+      // Pre-fix the sibling dedupe could have dropped same-source siblings
+      // before source-dedupe saw them. Now source-dedupe owns it: same
+      // sourceComponentId + sourceNodeId + ruleId → one question with the
+      // others on `replicaNodeIds`.
+      const document: AnalysisNode = {
+        id: "0:1",
+        name: "Document",
+        type: "DOCUMENT",
+        visible: true,
+        children: [
+          {
+            id: "100:1",
+            name: "Card A",
+            type: "INSTANCE",
+            visible: true,
+            componentId: "C:1",
+          },
+          {
+            id: "100:2",
+            name: "Card B",
+            type: "INSTANCE",
+            visible: true,
+            componentId: "C:1",
+          },
+          {
+            id: "100:3",
+            name: "Card C",
+            type: "INSTANCE",
+            visible: true,
+            componentId: "C:1",
+          },
+        ],
+      };
+      const components = {
+        "C:1": { key: "k1", name: "Platform=Desktop", description: "" },
+      };
+      // Three instances of the same source component each render two source
+      // children that fail the same rule (Title at 2143:13799 and Subtitle
+      // at 2143:99999). Pre-#373 sibling dedupe dropped one of each pair;
+      // now source-dedupe collapses the three Title issues and the three
+      // Subtitle issues into two questions each carrying replicaNodeIds.
+      const issues = [
+        makeIssue({
+          ruleId: "missing-size-constraint",
+          category: "responsive-critical",
+          severity: "risk",
+          nodeId: "I100:1;2143:13799",
+          nodePath: "Root > Card A > Title",
+          subType: "wrap",
+        }),
+        makeIssue({
+          ruleId: "missing-size-constraint",
+          category: "responsive-critical",
+          severity: "risk",
+          nodeId: "I100:1;2143:99999",
+          nodePath: "Root > Card A > Subtitle",
+          subType: "wrap",
+        }),
+        makeIssue({
+          ruleId: "missing-size-constraint",
+          category: "responsive-critical",
+          severity: "risk",
+          nodeId: "I100:2;2143:13799",
+          nodePath: "Root > Card B > Title",
+          subType: "wrap",
+        }),
+        makeIssue({
+          ruleId: "missing-size-constraint",
+          category: "responsive-critical",
+          severity: "risk",
+          nodeId: "I100:2;2143:99999",
+          nodePath: "Root > Card B > Subtitle",
+          subType: "wrap",
+        }),
+        makeIssue({
+          ruleId: "missing-size-constraint",
+          category: "responsive-critical",
+          severity: "risk",
+          nodeId: "I100:3;2143:13799",
+          nodePath: "Root > Card C > Title",
+          subType: "wrap",
+        }),
+        makeIssue({
+          ruleId: "missing-size-constraint",
+          category: "responsive-critical",
+          severity: "risk",
+          nodeId: "I100:3;2143:99999",
+          nodePath: "Root > Card C > Subtitle",
+          subType: "wrap",
+        }),
+      ];
+
+      const survey = generateGotchaSurvey(
+        makeResult(issues, { document, components }),
+        makeScoreReport("D"),
+      );
+
+      expect(survey.questions).toHaveLength(2);
+      const titleQ = survey.questions.find(
+        (q) => q.nodeId === "I100:1;2143:13799",
+      )!;
+      const subtitleQ = survey.questions.find(
+        (q) => q.nodeId === "I100:1;2143:99999",
+      )!;
+      expect(titleQ.replicas).toBe(3);
+      expect(titleQ.replicaNodeIds).toEqual([
+        "I100:2;2143:13799",
+        "I100:3;2143:13799",
+      ]);
+      expect(subtitleQ.replicas).toBe(3);
+      expect(subtitleQ.replicaNodeIds).toEqual([
+        "I100:2;2143:99999",
+        "I100:3;2143:99999",
+      ]);
+    });
+
     it("output with replicas + replicaNodeIds passes GotchaSurveySchema validation", () => {
       const issues = [
         makeIssue({
