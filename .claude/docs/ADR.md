@@ -152,7 +152,7 @@ Core decisions that shape every session. ADRs are listed by ADR number; chronolo
 
 **References**: ADR-009 (skill auto-discovery clarification), ADR-013 (scope boundary), #318 (implementation — CLI, build, README, bundled skill files), [README install section](https://github.com/let-sunny/canicode#installation), [Wiki Setup](https://github.com/let-sunny/canicode/wiki/Setup).
 
-## ADR-016: Gotchas SKILL.md lifecycle — workflow at top, accumulating per-design sections
+## ADR-015: Gotchas SKILL.md lifecycle — workflow at top, accumulating per-design sections
 
 **Decision**: `.claude/skills/canicode-gotchas/SKILL.md` is a single file with two regions separated by the `# Collected Gotchas` heading. Everything above that heading (YAML frontmatter + workflow prose, installed by `canicode init`) is the skill loader contract — written once and never modified by `/canicode-gotchas` or `/canicode-roundtrip` runs. Per-design gotcha answers live in numbered sections below the heading, identified by a `Design key` bullet (`<fileKey>#<nodeId>` for Figma URLs; absolute fixture path otherwise). Re-running on the same design replaces that section in place (preserving its `#NNN` number); a different design appends a new section. No auto-prune — history grows until a user manually edits it.
 
