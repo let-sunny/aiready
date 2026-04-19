@@ -374,8 +374,31 @@ ${footer}`;
     }
   }
 
+  // src/core/roundtrip/compute-roundtrip-tally.ts
+  function computeRoundtripTally(args) {
+    const { stepFourReport, reanalyzeResponse } = args;
+    const { resolved, annotated, definitionWritten, skipped } = stepFourReport;
+    const { issueCount, acknowledgedCount } = reanalyzeResponse;
+    if (acknowledgedCount > issueCount) {
+      throw new Error(
+        `computeRoundtripTally: reanalyzeResponse.acknowledgedCount (${acknowledgedCount}) cannot exceed issueCount (${issueCount}). Acknowledged issues are a subset of remaining issues.`
+      );
+    }
+    return {
+      X: resolved,
+      Y: annotated,
+      Z: definitionWritten,
+      W: skipped,
+      N: resolved + annotated + definitionWritten + skipped,
+      V: issueCount,
+      V_ack: acknowledgedCount,
+      V_open: issueCount - acknowledgedCount
+    };
+  }
+
   exports.applyPropertyMod = applyPropertyMod;
   exports.applyWithInstanceFallback = applyWithInstanceFallback;
+  exports.computeRoundtripTally = computeRoundtripTally;
   exports.ensureCanicodeCategories = ensureCanicodeCategories;
   exports.extractAcknowledgmentsFromNode = extractAcknowledgmentsFromNode;
   exports.probeDefinitionWritability = probeDefinitionWritability;

@@ -160,7 +160,7 @@ Wait for the user's answer before moving to the next batch. For each batch, the 
 
 When applying the batched answer, expand back to per-question records before storing — the gotcha section format and Step 4 apply loop both expect one record per `nodeId`.
 
-After all questions are answered, **upsert this design's gotcha section** into `.claude/skills/canicode-gotchas/SKILL.md` in the user's project. Read the existing file, then either replace the section whose `Design key` matches this run (same Figma URL → fileKey+nodeId) or append a new numbered section under `# Collected Gotchas`. Never modify anything above the `# Collected Gotchas` heading — the region above it (frontmatter + workflow prose) is the skill loader contract installed by `canicode init`. See the `/canicode-gotchas` skill's "Upsert the gotcha section" step (Step 4) for the exact section format and matching rule.
+After all questions are answered, **upsert this design's gotcha section** into `.claude/skills/canicode-gotchas/SKILL.md` in the user's project. Read the existing file, then either replace the section whose `Design key` matches `survey.designKey` (the canonical identifier the gotcha-survey response carries — see `/canicode-gotchas` Step 4a) or append a new numbered section under `# Collected Gotchas`. Never modify anything above the `# Collected Gotchas` heading — the region above it (frontmatter + workflow prose) is the skill loader contract installed by `canicode init`. See the `/canicode-gotchas` skill's "Upsert the gotcha section" step (Step 4) for the exact section format and matching rule.
 
 Then proceed to **Step 4** to apply answers to the Figma design.
 
@@ -294,6 +294,7 @@ The probe is read-only and idempotent; running it before the picker adds one rou
    - `probeDefinitionWritability(questions)` — async pre-flight (#357). Returns `{ totalCount, unwritableCount, unwritableSourceNames, allUnwritable, partiallyUnwritable }`. Use BEFORE the Definition write picker so the picker can drop the opt-in branch when every candidate is in an external library / unresolved (saves the user a wasted "I opted in, why did I get annotations?" decision). Read-only probe, dedupes by `sourceChildId`.
    - `extractAcknowledgmentsFromNode(node, canicodeCategoryIds?)` — synchronous pure helper (#371). Reads one node's annotations and returns `{ nodeId, ruleId }[]` for entries gated by canicode `categoryId` plus a recognisable `— *<ruleId>*` footer (or legacy `**[canicode] <ruleId>**` prefix). When `canicodeCategoryIds` is omitted, footer-text matching alone is sufficient (test mode).
    - `readCanicodeAcknowledgments(rootNodeId, categories?)` — async tree walker (#371). Loads `rootNodeId` via `figma.getNodeByIdAsync`, recurses through `children`, and accumulates one acknowledgment per recognised entry. Used at the top of Step 5a to harvest the side channel that lets the analysis pipeline distinguish "still broken" from "the designer has a plan" — pass the result straight to `analyze({ acknowledgments })`. Errors on individual nodes are swallowed so locked / external nodes don't abort the sweep.
+   - `computeRoundtripTally({ stepFourReport, reanalyzeResponse })` — pure helper (#383). Takes the structured Step 4 outcome counts (`{ resolved, annotated, definitionWritten, skipped }`) plus a narrowed re-analyze view (`{ issueCount, acknowledgedCount }`) and returns `{ X, Y, Z, W, N, V, V_ack, V_open }`. Replaces the LLM-side emoji-bullet re-counting in Step 5 — render the returned object directly into the wrap-up templates. Throws when `acknowledgedCount > issueCount` (impossible state).
 
 Keep each `writeFn` small so a throw does not abort unrelated writes. Experiment 08 findings informed every branch in the bundled helpers, and the batch-level confirmation contract still applies *when opting in*: if the orchestrator passes `allowDefinitionWrite: true`, it must have already collected one confirmation covering every potential definition write in the batch. Under the default, no confirmation is needed — the helper annotates the scene instead of propagating.
 
@@ -440,7 +441,7 @@ for (const issue of analyzeResult.issues) {
 3. **Batch all annotations** (Strategy C + declined structural mods) into a single `use_figma` call — use `categories.gotcha` for the category id.
 4. **Batch all auto-fixes and annotations for lower-severity issues** (Strategy D) — use `categories.flag` for annotated ones (renamed from `autoFix` per #355 — the category means "flagged for designer attention", not "fixed"), `categories.fallback` is reserved for errors surfaced by `applyWithInstanceFallback` itself.
 
-After applying, report what was done:
+After applying, **emit a structured `stepFourReport`** alongside the human-readable per-question lines. Step 5 reads from this object — it does **not** re-parse the per-question lines (per ADR-303 / PR #303). Increment each counter as Strategy A/B/C/D complete:
 
 ```
 Applied {N} changes to the Figma design:
@@ -452,7 +453,16 @@ Applied {N} changes to the Figma design:
 - 📝 {nodeName}: annotation added to canicode:gotcha (absolute-position-in-auto-layout)
 - 🔧 {nodeName}: auto-fixed to "Hover" (non-standard-naming)
 - 📝 {nodeName}: annotation added to canicode:flag — raw color needs token binding (raw-value)
+
+stepFourReport = {
+  resolved: <count of ✅ + 🔧 + 🔗 lines>,        // scene writes, auto-fix renames, variable bindings
+  annotated: <count of 📝 lines>,                 // including ⏭️ declines that fell back to annotation
+  definitionWritten: <count of 🌐 lines>,         // only non-zero with allowDefinitionWrite: true
+  skipped: <count of ⏭️ lines + Step 3 skip/n/a>  // user-declined questions
+}
 ```
+
+Hold `stepFourReport` in scope through Step 5 — it is the input to `CanICodeRoundtrip.computeRoundtripTally` below.
 
 ### Step 5: Re-analyze and report what the roundtrip addressed
 
@@ -495,17 +505,19 @@ The response now carries:
 
 Under ADR-012's annotate-by-default policy, most instance-child gotchas route to 📝 annotations and do **not** move the numeric grade — but the half-weight density now produces a small visible movement when annotations are recognised. The headline for this step remains the **issues-delta** (what the roundtrip captured); grade movement is a secondary signal.
 
-**Tally inputs** — derive the counts from the data you already have:
-- `X` (✅ resolved): count of ✅ + 🔧 + 🔗 markers from the Step 4 report block you just emitted (scene/instance-child writes, auto-fix renames, and variable bindings all successfully landed the value).
-- `Y` (📝 annotated): count of 📝 markers from Step 4 — gotcha answers captured as Figma annotations for code-gen reference.
-- `Z` (🌐 definition writes): count of 🌐 markers from Step 4 — only non-zero when the orchestrator opted in with `allowDefinitionWrite: true` (helper context option, not a CLI flag).
-- `W` (⏭️ skipped): count of ⏭️ markers from Step 4 plus any Step 3 questions the user answered with `skip` or `n/a`.
-- `V` (remaining): `issues.length` from the re-analyze response — unresolved gotchas plus non-actionable rules still flagged by the design.
-- `V_ack` (acknowledged remaining): `acknowledgedCount` from the same response — issues that the design still surfaces but that carry a canicode annotation per Step 5a.
-- `V_open` (unaddressed remaining): `V - V_ack` — issues with no canicode annotation; the user's actual follow-up backlog.
-- `N` (addressed) = `X + Y + Z + W`.
+**Tally** — call `CanICodeRoundtrip.computeRoundtripTally` with the structured `stepFourReport` you assembled in Step 4 and the re-analyze response from Step 5b. The helper handles every count derivation (`N = X + Y + Z + W`, `V_open = V - V_ack`) and validates that `acknowledgedCount` cannot exceed `issueCount`. Render the returned `{ X, Y, Z, W, N, V, V_ack, V_open }` straight into the templates below — do **not** re-derive any of these from the Step 4 prose:
 
-If Step 4 produced no report block (e.g. user skipped every question, or no gotcha survey ran), all four counts are zero, `V_ack = 0`, and `V_open = V` — report the breakdown with zeros rather than treating it as an error. (Skipping Step 5a and passing no `acknowledgments` argument is also valid in this case — the response simply has `acknowledgedCount: 0`.)
+```javascript
+const tally = CanICodeRoundtrip.computeRoundtripTally({
+  stepFourReport,                  // the object emitted at the end of Step 4
+  reanalyzeResponse: {             // narrowed view of the re-analyze response
+    issueCount: response.issueCount,
+    acknowledgedCount: response.acknowledgedCount,
+  },
+});
+```
+
+If Step 4 produced no `stepFourReport` (e.g. user skipped every question, or no gotcha survey ran), pass an all-zero object — `tally.N === 0`, `tally.V_open === tally.V`, and the templates below render the breakdown with zeros rather than treating it as an error. (Skipping Step 5a and passing no `acknowledgments` argument is also valid in this case — the response simply has `acknowledgedCount: 0`.)
 
 **All gotcha issues resolved** (`V == 0`, i.e. re-analyze surfaces no remaining issues — note this is mostly independent of grade since ADR-012 annotations only move the score by the half-weight reduction enabled in Step 5b):
 - Tell the user (fill in the counts from the tally above):
@@ -589,7 +601,7 @@ Follow the **figma-implement-design** skill workflow to generate code from the F
 - Gotchas with severity **blocking** MUST be addressed — the design cannot be implemented correctly without this information
 - Gotchas with severity **risk** SHOULD be addressed — they indicate potential issues that will surface later
 - Reference the specific node IDs from gotcha answers to locate the affected elements in the design
-- Pass the Figma URL (or `designKey` = `<fileKey>#<nodeId>`) to `figma-implement-design` so it can grep the matching `## #NNN — …` section in `.claude/skills/canicode-gotchas/SKILL.md` instead of reading the whole accumulated file
+- Pass the Figma URL or `survey.designKey` to `figma-implement-design` so it can grep the matching `## #NNN — …` section in `.claude/skills/canicode-gotchas/SKILL.md` instead of reading the whole accumulated file
 
 **If all issues were resolved in Steps 4-5**, no additional gotcha context is needed — the design speaks for itself.
 
