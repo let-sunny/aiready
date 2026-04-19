@@ -2,7 +2,7 @@
  * Deterministic helpers for the `canicode-gotchas` SKILL Step 4b — file-state
  * detection and `## #NNN — ...` section walking under `# Collected Gotchas`.
  *
- * Per ADR-303 / PR #303, deterministic markdown parsing + arithmetic must
+ * Per ADR-016, deterministic markdown parsing + arithmetic must
  * live in TypeScript with vitest coverage rather than being re-derived from
  * SKILL.md prose on every run. The previous prose described two interacting
  * state machines (4-way file state + monotonic section numbering with
