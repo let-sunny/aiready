@@ -106,7 +106,7 @@ Wait for the user's answer before moving to the next question. The user may:
 - Say "skip" to skip a question
 - Say "n/a" if the question is not applicable
 
-After all questions are answered, **upsert this design's gotcha section** into `.claude/skills/canicode-gotchas/SKILL.md` in the user's project. Read the existing file, then either replace the section whose `Design key` matches this run (same Figma URL → fileKey+nodeId) or append a new numbered section under `# Collected Gotchas`. Never modify the `# Workflow` region at the top. See the `/canicode-gotchas` skill's "Upsert the gotcha section" step (Step 4) for the exact section format and matching rule.
+After all questions are answered, **upsert this design's gotcha section** into `.claude/skills/canicode-gotchas/SKILL.md` in the user's project. Read the existing file, then either replace the section whose `Design key` matches this run (same Figma URL → fileKey+nodeId) or append a new numbered section under `# Collected Gotchas`. Never modify anything above the `# Collected Gotchas` heading — the region above it (frontmatter + workflow prose) is the skill loader contract installed by `canicode init`. See the `/canicode-gotchas` skill's "Upsert the gotcha section" step (Step 4) for the exact section format and matching rule.
 
 Then proceed to **Step 4** to apply answers to the Figma design.
 

@@ -81,9 +81,12 @@ Do **not** use the raw survey input URL as the key: trailing query parameters (`
 #### Step 4b: Read the existing file and locate the target section
 
 1. Read `.claude/skills/canicode-gotchas/SKILL.md` if it exists.
-2. If the file is missing, OR it has a `# Workflow` heading but no `# Collected Gotchas` heading (e.g. a fresh `canicode init` with no prior survey), preserve the Workflow region unchanged and create a new `# Collected Gotchas` heading at the bottom before proceeding.
-3. If the file has neither a `# Workflow` heading nor the frontmatter above (a pre-#340 single-design clobber), **do not attempt to reconstruct the Workflow region inline**. Tell the user: "Your gotchas SKILL.md looks like the pre-#340 single-design format. Run `canicode init --force` to restore the Workflow region, then re-run this survey — your answers will land in a clean numbered section." Stop here.
-4. Walk the existing `## #NNN — ...` sections under `# Collected Gotchas` and look for one whose `- **Design key**:` bullet matches the `designKey` from Step 4a. Substring match against the bullet value is sufficient.
+2. Detect the file's state using the two structural markers that uniquely identify each case — the YAML frontmatter (present on every `canicode init` install) and the `# Collected Gotchas` heading (present on every post-#340 install):
+   - **File missing** → tell the user to run `canicode init` first, then re-invoke this skill. Stop here.
+   - **File has YAML frontmatter AND a `# Collected Gotchas` heading** (the default shipped shape since #340) → proceed to step 3 below.
+   - **File has YAML frontmatter but no `# Collected Gotchas` heading** (an older workflow install, or a user-edited workflow that dropped the trailing heading) → preserve everything above unchanged and append a new `# Collected Gotchas` heading at the bottom, then proceed to step 3.
+   - **File missing the YAML frontmatter** (a pre-#340 single-design clobber — the old overwrite rewrote the frontmatter's `description` to the per-design variant, so a well-formed canicode frontmatter is the cleanest discriminator) → **do not attempt to reconstruct the workflow inline**. Tell the user: "Your gotchas SKILL.md looks like the pre-#340 single-design format. Run `canicode init --force` to restore the workflow, then re-run this survey — your answers will land in a clean numbered section." Stop here.
+3. Walk the existing `## #NNN — ...` sections under `# Collected Gotchas` and look for one whose `- **Design key**:` bullet matches the `designKey` from Step 4a. Substring match against the bullet value is sufficient.
    - **Found** → replace that section in place. **Preserve its `#NNN` number** so external references (downstream skills, user notes) remain stable.
    - **Not found** → append a new section at the bottom of the region. `#NNN = (highest existing number) + 1`, zero-padded to three digits. Never reuse a number that appeared earlier and was deleted; numbering is monotonic.
 
@@ -149,7 +152,7 @@ This ensures the code generation agent knows the gotcha exists even if no answer
 - **Re-run on the same design**: Replace that design's section in place (matched by `Design key`) — preserve the original `#NNN` number. Do NOT append a duplicate.
 - **Re-run on a different design**: Append a new section with the next `#NNN`. Prior designs' sections are untouched.
 - **Workflow region**: Never modified. If you notice the Workflow region has been edited by the user, leave their edits alone — only the `# Collected Gotchas` region is under skill control.
-- **Pre-#340 clobbered file** (no `# Workflow` heading, single-design content from an old roundtrip): tell the user to run `canicode init --force` to restore the Workflow region, then re-run the survey. The prior single-design content cannot be automatically migrated into a `## #001` section — the user re-runs and gets a clean section.
+- **Pre-#340 clobbered file** (the YAML frontmatter was rewritten to a per-design variant, so the canonical `canicode-gotchas` frontmatter is missing): tell the user to run `canicode init --force` to restore the workflow, then re-run the survey. The prior single-design content cannot be automatically migrated into a `## #001` section — the user re-runs and gets a clean section.
 - **MCP tool not available**: Fall back to `npx canicode gotcha-survey <input> --json` — the CLI returns the same `GotchaSurvey` shape. If the CLI is also unavailable (e.g. no node runtime), tell the user to install the canicode MCP server or the `canicode` npm package (see Prerequisites).
 - **Partial answers**: If the user stops mid-survey, upsert the section with answers collected so far. Mark remaining questions as _(skipped)_.
 - **Manual section deletion**: If the user deletes a middle section by hand, do not renumber existing sections. The next new section still gets `(highest existing number) + 1`; numeric gaps are acceptable (same pattern as `.claude/docs/ADR.md`).
