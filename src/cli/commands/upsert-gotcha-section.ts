@@ -8,7 +8,7 @@ import { renderUpsertedFile } from "../../core/gotcha/upsert-gotcha-section.js";
  * Atomic read → upsert → write of the per-design gotcha section into the
  * `canicode-gotchas` SKILL.md. Owns the deterministic markdown parsing
  * the SKILL used to inline as prose (file-state detection, `## #NNN — ...`
- * walking, monotonic numbering) — see ADR-303 / PR #303 and #385.
+ * walking, monotonic numbering) — see ADR-016 and #385.
  *
  * Inputs:
  * - `--file <path>`: the SKILL.md path. Required.

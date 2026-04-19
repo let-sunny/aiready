@@ -205,7 +205,7 @@ export async function applyAutoFix(
  * Step 4 report alongside Strategies A/B/C without a separate accumulator.
  *
  * The SKILL Step 4 prose used to inline the filter + branch + ad-hoc
- * question shaping. Per ADR-303 / PR #303 that arithmetic now lives here
+ * question shaping. Per ADR-016 that arithmetic now lives here
  * with vitest coverage.
  */
 export async function applyAutoFixes(

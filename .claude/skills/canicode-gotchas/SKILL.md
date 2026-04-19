@@ -110,7 +110,7 @@ The `core/contracts/design-key.ts` helper (`computeDesignKey`) handles every sha
 
 #### Step 4b: Upsert via the canicode CLI
 
-File-state detection (4-way: missing / valid / missing-heading / clobbered) and section walking (find existing `## #NNN — ...` by `Design key` substring, otherwise compute the next monotonic zero-padded NNN) are deterministic markdown operations and live in `core/gotcha/upsert-gotcha-section.ts` with vitest coverage — the SKILL never re-implements them in prose (per ADR-303 / PR #303).
+File-state detection (4-way: missing / valid / missing-heading / clobbered) and section walking (find existing `## #NNN — ...` by `Design key` substring, otherwise compute the next monotonic zero-padded NNN) are deterministic markdown operations and live in `core/gotcha/upsert-gotcha-section.ts` with vitest coverage — the SKILL never re-implements them in prose (per ADR-016).
 
 Render the per-design section markdown using the **Output Template** below with the literal string `{{SECTION_NUMBER}}` in the header (the CLI substitutes the right NNN for you — preserves it on replace, computes the next monotonic value on append). Then invoke:
 
