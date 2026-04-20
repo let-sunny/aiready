@@ -24,12 +24,15 @@
 - Data source: `gotcha-survey` MCP tool OR `npx canicode gotcha-survey --json` CLI fallback (canicode MCP server is optional)
 - Workflow: calls gotcha-survey → presents questions to user → collects answers → writes `.claude/skills/canicode-gotchas/SKILL.md` in the user's project
 - Output: skill file with design gotcha Q&A pairs (nodeId, ruleId, severity, question, answer)
+- Purpose: collect implementation context that Figma cannot encode natively and persist it as annotation-ready gotcha answers for downstream `figma-implement-design`
+- Trigger model: rules run as rule-based best-practice detection, and gotcha is emitted as annotation output from the same detection pass. Triggering rules may be violation rules (score-primary) or info-collection rules (annotation-primary), per ADR-017
 - **Augmentation handoff**: Auto-discovery of a separate skill file cannot reach `figma-implement-design` (Figma skills only support explicit cross-references). The `canicode-roundtrip` orchestration skill (#277) connects analyze → gotcha survey → apply to Figma in a single flow; the user then invokes `figma-implement-design` for code generation (ADR-009, ADR-013).
 
 **3b. Claude Code Skill (`/canicode-roundtrip`)**
 - Location: `.claude/skills/canicode-roundtrip/SKILL.md` (copy to any project)
 - Data source: `analyze` + `gotcha-survey` MCP tools OR `npx canicode analyze/gotcha-survey --json` CLI fallback (canicode MCP server is optional). Figma MCP (`get_design_context`, `get_screenshot`, `use_figma`) is still REQUIRED — there is no CLI fallback for `use_figma`.
 - Workflow: analyze → gate on `isReadyForCodeGen` → gotcha survey (if needed) → **apply fixes to Figma via `use_figma`** → re-analyze → ready for `figma-implement-design`
+- Scope note: analysis scope (page/screen vs standalone component) directly changes rule evaluation intent and therefore which gotcha prompts appear; scope-sensitive behavior is architecture-owned (see #404)
 - True roundtrip: gotcha answers are applied back to the Figma design (property modification, structural modification with confirmation, or annotations for unfixable issues) so the design itself improves. Code generation is the user-driven downstream step (ADR-013) — canicode hands off once the re-analyze passes.
 - Requires Figma Full seat + file edit permission for `use_figma`; falls back to one-way flow (gotcha answers stay as a separate skill file the user can reference) if no edit permission
 - See #281, ADR-010

@@ -24,7 +24,7 @@ Core decisions that shape every session. ADRs are listed by ADR number; chronolo
 
 **Decision**: Analysis score predicts how many gotchas (manual annotations) a design needs for correct implementation.
 **Why**: Roundtrip pivot — canicode diagnoses, then elicits gotchas from users. S-grade = no gotchas needed, D-grade = many needed.
-**Impact**: Score/lint framing should always connect to gotcha burden. See [Round-Trip Integration wiki](https://github.com/let-sunny/canicode/wiki/Round-Trip-Integration).
+**Impact**: Score/lint framing should always connect to gotcha burden. Rule results and gotcha annotations are parallel outputs from the same detection pass (formalized in ADR-017): score captures best-practice risk, gotcha captures missing implementation context. See [Round-Trip Integration wiki](https://github.com/let-sunny/canicode/wiki/Round-Trip-Integration).
 
 ## ADR-005: Platform standards cover web + app
 
@@ -197,3 +197,25 @@ This rule was originally established in [PR #303](https://github.com/let-sunny/c
 **Verification**: This is a process / coding-standard ADR, not an empirical one — there is no experiment to cite. The supporting evidence is the regression record cited under **Why** above (six known violations across two SKILL files, all caught only by manual audit, all with the same root cause). The rule's automated enforcement is split across two follow-ups (#389 grep CI, #390 PR template / audit cadence), each with its own test plan.
 
 **References**: PR #303 (origin of the rule), PR #381 (response-field channel pattern: `groupedQuestions`), PR #387 (helpers.js channel + half-extraction lesson: `computeRoundtripTally`, `removeCanicodeAnnotations`), PR #391 (`upsertGotchaSection` extraction, closes [#385](https://github.com/let-sunny/canicode/issues/385)), PR #392 (`applyAutoFix` Strategy D extraction, closes [#386](https://github.com/let-sunny/canicode/issues/386)), [#388](https://github.com/let-sunny/canicode/issues/388) (this ADR), [#389](https://github.com/let-sunny/canicode/issues/389) (grep CI), [#390](https://github.com/let-sunny/canicode/issues/390) (PR template + audit cadence).
+
+## ADR-017: Rule/Gotcha output channels — rule-based best-practice detection; gotcha as annotation output
+
+**Decision**: Define rules as a rule-based best-practice detection layer, with gotcha as annotation output from the same detection pass. Keep gotchas rule-triggered, and make output channels explicit. A rule firing on a node emits two independent outputs:
+- **Rule output (score channel)**: best-practice signal for readiness scoring
+- **Gotcha output (annotation channel)**: missing context that Figma cannot encode natively, written for downstream implementation
+
+Rules split into two subtypes by primary purpose:
+- **Violation rule**: gotcha-trigger + score-primary. Node is violating a best-practice expectation (typical score range: -3 to -10).
+- **Info-collection rule**: annotation-primary. Node is not necessarily "wrong," but implementation-critical context is absent from Figma (typical score: -1 or 0).
+
+Gotcha answers do not retroactively erase the rule score. Scores represent design best-practice state; gotcha answers represent annotation completeness. They are correlated but not the same mechanism.
+
+**Why**: Prior docs used "rules trigger gotchas" correctly but blurred the purpose boundary, making low-severity information-collection behavior look like weak violation detection. The explicit two-channel model keeps rule evaluation coherent while acknowledging that some checks exist mainly to collect annotation context (for example interaction intent/state) rather than to penalize design quality.
+
+**Impact**:
+- Rule authors can classify intent explicitly (violation vs info-collection) without changing the core "rules trigger gotchas" invariant.
+- Scoring remains meaningful: severe violations still dominate readiness penalties; info-collection checks stay low-penalty while still producing required gotcha prompts.
+- Gotcha persistence/dedupe policy can vary by subtype in follow-up architecture work (annotation continuity matters more for info-collection checks).
+- Documentation and skills should frame gotchas as annotation completion for `figma-implement-design`, not only as violation remediation prompts.
+
+**References**: ADR-004 (score framing), ADR-013 (scope boundary), [Round-Trip Integration wiki](https://github.com/let-sunny/canicode/wiki/Round-Trip-Integration), #402, #405, #406.
