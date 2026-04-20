@@ -49,10 +49,19 @@ describe("gotcha-questions", () => {
     }
   });
 
+  it("each entry marks annotation channel semantics explicitly (#402)", () => {
+    for (const entry of Object.values(GOTCHA_QUESTIONS)) {
+      expect(entry.detection).toBe("rule-based");
+      expect(entry.outputChannel).toBe("annotation");
+      expect(entry.persistenceIntent).toBe("durable");
+    }
+  });
+
   describe("getGotchaQuestion", () => {
     it("returns the correct entry for a given ruleId", () => {
       const result = getGotchaQuestion("no-auto-layout");
       expect(result.ruleId).toBe("no-auto-layout");
+      expect(result.outputChannel).toBe("annotation");
       expect(result.question).toContain("{nodeName}");
     });
   });

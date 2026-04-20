@@ -438,6 +438,9 @@ export function buildResultJson(
     const suggestedName = issue.violation.suggestedName;
     return {
       ruleId: issue.violation.ruleId,
+      detection: "rule-based" as const,
+      outputChannel: "score" as const,
+      persistenceIntent: "transient" as const,
       ...(issue.violation.subType && { subType: issue.violation.subType }),
       severity: issue.config.severity,
       nodeId: issue.violation.nodeId,

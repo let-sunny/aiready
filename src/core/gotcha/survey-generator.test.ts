@@ -367,6 +367,29 @@ describe("generateGotchaSurvey", () => {
     );
   });
 
+  it("surfaces gotcha output-channel metadata on each question (#402)", () => {
+    const issues = [
+      makeIssue({
+        ruleId: "no-auto-layout",
+        category: "pixel-critical",
+        severity: "blocking",
+        nodeId: "1:1",
+        nodePath: "Root > MyFrame",
+      }),
+    ];
+
+    const survey = generateGotchaSurvey(
+      makeResult(issues),
+      makeScoreReport("D"),
+    );
+
+    expect(survey.questions[0]).toMatchObject({
+      detection: "rule-based",
+      outputChannel: "annotation",
+      persistenceIntent: "durable",
+    });
+  });
+
   it("output passes GotchaSurveySchema validation", () => {
     const issues = [
       makeIssue({
