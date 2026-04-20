@@ -146,10 +146,6 @@ const GOTCHA_QUESTION_CONTENT: Record<RuleId, GotchaQuestionContent> = {
   },
 };
 
-const GOTCHA_DETECTION: GotchaQuestion["detection"] = "rule-based";
-const GOTCHA_OUTPUT_CHANNEL: GotchaQuestion["outputChannel"] = "annotation";
-const GOTCHA_PERSISTENCE_INTENT: GotchaQuestion["persistenceIntent"] = "durable";
-
 /**
  * #402: Keep 1:1 rule-keying for generation, but make the gotcha channel
  * semantics explicit in the registry itself.
@@ -159,9 +155,9 @@ export const GOTCHA_QUESTIONS: Record<RuleId, GotchaQuestion> = Object.fromEntri
     ruleId,
     {
       ...content,
-      detection: GOTCHA_DETECTION,
-      outputChannel: GOTCHA_OUTPUT_CHANNEL,
-      persistenceIntent: GOTCHA_PERSISTENCE_INTENT,
+      detection: "rule-based",
+      outputChannel: "annotation",
+      persistenceIntent: "durable",
     },
   ]),
 ) as Record<RuleId, GotchaQuestion>;

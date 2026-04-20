@@ -1,5 +1,10 @@
 import { z } from "zod";
 import { SeveritySchema } from "./severity.js";
+import {
+  DetectionSchema,
+  OutputChannelSchema,
+  PersistenceIntentSchema,
+} from "./channels.js";
 
 const GradeSchema = z.enum(["S", "A+", "A", "B+", "B", "C+", "C", "D", "F"]);
 
@@ -40,9 +45,13 @@ export const AnnotationPropertySchema = z.object({ type: z.string() });
  * to the annotation channel (not the score channel). Answers are durable
  * context intended to survive beyond a single re-analysis cycle.
  */
-export const GotchaDetectionSchema = z.literal("rule-based");
-export const GotchaOutputChannelSchema = z.literal("annotation");
-export const GotchaPersistenceIntentSchema = z.literal("durable");
+export const GotchaDetectionSchema = DetectionSchema;
+export const GotchaOutputChannelSchema = OutputChannelSchema.extract([
+  "annotation",
+]);
+export const GotchaPersistenceIntentSchema = PersistenceIntentSchema.extract([
+  "durable",
+]);
 
 export const GotchaSurveyQuestionSchema = z.object({
   nodeId: z.string(),

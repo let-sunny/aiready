@@ -1,6 +1,7 @@
 // Contracts module - Type definitions and Zod schemas
 
 export * from "./severity.js";
+export * from "./channels.js";
 export * from "./category.js";
 export * from "./figma-node.js";
 export * from "./rule.js";

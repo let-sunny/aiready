@@ -1,6 +1,11 @@
 import { z } from "zod";
 import { SeveritySchema } from "./severity.js";
 import { CategorySchema } from "./category.js";
+import {
+  DetectionSchema,
+  OutputChannelSchema,
+  PersistenceIntentSchema,
+} from "./channels.js";
 
 const GradeSchema = z.enum(["S", "A+", "A", "B+", "B", "C+", "C", "D", "F"]);
 
@@ -24,9 +29,9 @@ const CategoryScoreResultSchema = z.object({
 
 const McpIssueSchema = z.object({
   ruleId: z.string(),
-  detection: z.literal("rule-based"),
-  outputChannel: z.literal("score"),
-  persistenceIntent: z.literal("transient"),
+  detection: DetectionSchema,
+  outputChannel: OutputChannelSchema.extract(["score"]),
+  persistenceIntent: PersistenceIntentSchema.extract(["transient"]),
   subType: z.string().optional(),
   severity: SeveritySchema,
   nodeId: z.string(),
