@@ -494,6 +494,9 @@ describe("buildResultJson", () => {
     expect(issues).toHaveLength(2);
     expect(issues[0]).toMatchObject({
       ruleId: "no-auto-layout",
+      detection: "rule-based",
+      outputChannel: "score",
+      persistenceIntent: "transient",
       severity: "blocking",
       nodeId: expect.any(String),
       nodePath: expect.any(String),

@@ -24,6 +24,9 @@ const CategoryScoreResultSchema = z.object({
 
 const McpIssueSchema = z.object({
   ruleId: z.string(),
+  detection: z.literal("rule-based"),
+  outputChannel: z.literal("score"),
+  persistenceIntent: z.literal("transient"),
   subType: z.string().optional(),
   severity: SeveritySchema,
   nodeId: z.string(),

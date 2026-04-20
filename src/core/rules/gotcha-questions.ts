@@ -11,6 +11,9 @@ import type { RuleId } from "../contracts/rule.js";
  */
 export const GotchaQuestionSchema = z.object({
   ruleId: z.string(),
+  detection: z.literal("rule-based"),
+  outputChannel: z.literal("annotation"),
+  persistenceIntent: z.literal("durable"),
   question: z.string(),
   hint: z.string(),
   example: z.string(),
@@ -22,7 +25,12 @@ export type GotchaQuestion = z.infer<typeof GotchaQuestionSchema>;
  * Gotcha question mapping for all 16 rules.
  * Keyed by ruleId for O(1) lookup during survey generation.
  */
-export const GOTCHA_QUESTIONS: Record<RuleId, GotchaQuestion> = {
+type GotchaQuestionContent = Omit<
+  GotchaQuestion,
+  "detection" | "outputChannel" | "persistenceIntent"
+>;
+
+const GOTCHA_QUESTION_CONTENT: Record<RuleId, GotchaQuestionContent> = {
   // ── Pixel Critical (blocking) ──
 
   "no-auto-layout": {
@@ -137,6 +145,26 @@ export const GOTCHA_QUESTIONS: Record<RuleId, GotchaQuestion> = {
     example: "Use PascalCase for all component layers (e.g., CardTitle, CardBody)",
   },
 };
+
+const GOTCHA_DETECTION: GotchaQuestion["detection"] = "rule-based";
+const GOTCHA_OUTPUT_CHANNEL: GotchaQuestion["outputChannel"] = "annotation";
+const GOTCHA_PERSISTENCE_INTENT: GotchaQuestion["persistenceIntent"] = "durable";
+
+/**
+ * #402: Keep 1:1 rule-keying for generation, but make the gotcha channel
+ * semantics explicit in the registry itself.
+ */
+export const GOTCHA_QUESTIONS: Record<RuleId, GotchaQuestion> = Object.fromEntries(
+  Object.entries(GOTCHA_QUESTION_CONTENT).map(([ruleId, content]) => [
+    ruleId,
+    {
+      ...content,
+      detection: GOTCHA_DETECTION,
+      outputChannel: GOTCHA_OUTPUT_CHANNEL,
+      persistenceIntent: GOTCHA_PERSISTENCE_INTENT,
+    },
+  ]),
+) as Record<RuleId, GotchaQuestion>;
 
 /**
  * Get the gotcha question for a specific rule.
