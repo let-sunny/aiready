@@ -189,6 +189,8 @@ Rules are classified into 4 severity levels:
 - **missing-info**: Information is absent, forcing developers to guess.
 - **suggestion**: Not immediately problematic, but improves systemization.
 
+Severity labels describe user impact, while rule purpose may differ (ADR-017): rules are first-class gotcha triggers, and score is a secondary readiness signal. Violation rules remain score-primary best-practice checks; info-collection rules are annotation-primary checks for context Figma cannot encode. In practice, info-collection rules should usually stay in low-penalty ranges (commonly `missing-info` or `suggestion` severity, depending on implementation risk).
+
 ## Adjustable Rule Config
 
 All rule scores, severity, and thresholds are managed in `rules/rule-config.ts`.
