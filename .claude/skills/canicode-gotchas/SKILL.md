@@ -121,7 +121,7 @@ Render the per-design section markdown using the **Output Template** below with 
 npx canicode upsert-gotcha-section \
   --file .claude/skills/canicode-gotchas/SKILL.md \
   --design-key "<designKey from Step 4a>" \
-  --section -   # then pipe the rendered section markdown through stdin
+  --section=-   # then pipe the rendered section markdown through stdin
 ```
 
 The CLI prints a JSON result `{ state, action, sectionNumber, wrote, userMessage }`:
