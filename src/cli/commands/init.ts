@@ -50,6 +50,7 @@ export function formatNextSteps(opts: {
         "  Next:",
         "    1. Restart Cursor or reload MCP (so skills + MCP tools load in a fresh session)",
         "    2. In Agent chat, @ canicode-roundtrip with your Figma URL (or @ canicode-gotchas for survey-only)",
+        "    • Optional — faster canicode MCP than `npx`: add `canicode-mcp` per https://github.com/let-sunny/canicode/blob/main/docs/CUSTOMIZATION.md#cursor-mcp-canicode (project `.cursor/mcp.json`), then reload MCP; otherwise skills keep using `npx canicode …` (#433).",
       ].join("\n");
     }
     return [
@@ -57,6 +58,7 @@ export function formatNextSteps(opts: {
       "  Next:",
       "    1. Restart Claude Code (the newly installed skills only load on a fresh session)",
       "    2. Run /canicode-roundtrip <figma-url>",
+      "    • Optional — faster canicode MCP than `npx`: `claude mcp add canicode -- npx --yes --package=canicode canicode-mcp`, then restart Claude Code so `analyze` / `gotcha-survey` tools load — otherwise skills shell out to `npx canicode …` (#433).",
     ].join("\n");
   }
 
@@ -67,6 +69,7 @@ export function formatNextSteps(opts: {
       "    1. Add Figma MCP to .cursor/mcp.json (see https://github.com/let-sunny/canicode/blob/main/docs/CUSTOMIZATION.md#cursor-mcp-canicode and Figma MCP docs)",
       "    2. Restart Cursor so Figma tools (e.g. use_figma) load",
       "    3. @ canicode-roundtrip with your Figma URL for full roundtrip",
+      "    • Optional — faster canicode MCP than `npx`: add `canicode-mcp` per the Customization guide (`#cursor-mcp-canicode`), then reload MCP; otherwise skills keep using `npx canicode …` (#433).",
     ].join("\n");
   }
 
@@ -77,6 +80,7 @@ export function formatNextSteps(opts: {
     "         claude mcp add -s project -t http figma https://mcp.figma.com/mcp",
     "    2. Restart Claude Code (so the new skills + Figma MCP tools both load)",
     "    3. Run /canicode-roundtrip <figma-url>",
+    "    • Optional — faster canicode MCP than `npx`: `claude mcp add canicode -- npx --yes --package=canicode canicode-mcp`, then restart Claude Code so MCP tools load — otherwise skills shell out to `npx canicode …` (#433).",
   ].join("\n");
 }
 

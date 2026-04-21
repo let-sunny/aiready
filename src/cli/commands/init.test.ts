@@ -72,14 +72,16 @@ describe("formatNextSteps", () => {
     expect(out).toContain("claude mcp add -s project -t http figma https://mcp.figma.com/mcp");
     expect(out).toContain("Restart Claude Code");
     expect(out).toContain("/canicode-roundtrip <figma-url>");
+    expect(out).toContain("Optional — faster canicode MCP");
     expect(out).not.toContain("canicode analyze");
   });
 
   it("prints a 2-step checklist (no MCP install) when Figma MCP already registered", () => {
     const out = formatNextSteps({ figmaMcpPresent: true, skillsInstalled: true });
-    expect(out).not.toContain("claude mcp add");
+    expect(out).not.toContain("claude mcp add -s project -t http figma");
     expect(out).toContain("Restart Claude Code");
     expect(out).toContain("/canicode-roundtrip <figma-url>");
+    expect(out).toContain("Optional — faster canicode MCP");
     expect(out).not.toContain("canicode analyze");
   });
 
@@ -88,12 +90,14 @@ describe("formatNextSteps", () => {
     expect(out).toContain(`Next: canicode analyze "https://www.figma.com/design/..."`);
     expect(out).not.toContain("Restart Claude Code");
     expect(out).not.toContain("/canicode-roundtrip");
+    expect(out).not.toContain("Optional — faster canicode MCP");
   });
 
   it("falls back to the analyze hint when --no-skills was passed even if Figma MCP is present", () => {
     const out = formatNextSteps({ figmaMcpPresent: true, skillsInstalled: false });
     expect(out).toContain(`Next: canicode analyze`);
     expect(out).not.toContain("Restart Claude Code");
+    expect(out).not.toContain("Optional — faster canicode MCP");
   });
 
   it("when cursorSkillsInstalled, omits Claude slash commands and mentions @ canicode-roundtrip", () => {
@@ -105,6 +109,7 @@ describe("formatNextSteps", () => {
     expect(out).toContain("@ canicode-roundtrip");
     expect(out).not.toContain("/canicode-roundtrip");
     expect(out).not.toContain("Claude Code");
+    expect(out).toContain("Optional — faster canicode MCP");
   });
 
   it("when cursorSkillsInstalled and Figma MCP missing, points at .cursor/mcp.json", () => {
@@ -115,6 +120,7 @@ describe("formatNextSteps", () => {
     });
     expect(out).toContain(".cursor/mcp.json");
     expect(out).not.toContain("claude mcp add");
+    expect(out).toContain("Optional — faster canicode MCP");
   });
 });
 

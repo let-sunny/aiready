@@ -215,7 +215,7 @@ Cursor may show an MCP **server id** in the UI that is **not** literally the key
 - [ ] MCP: Cursor shows `canicode` connected and the tools list includes `gotcha-survey` (and `analyze` if testing roundtrip Step 1).
 - [ ] Figma MCP: `use_figma` is available when testing **roundtrip** (install + restart host if tools are missing).
 - [ ] Calling `gotcha-survey` with a local fixture path returns JSON with `designGrade` and `questions` / `isReadyForCodeGen`.
-- [ ] After the Q&A loop, `npx canicode upsert-gotcha-section …` succeeds and updates `.claude/skills/canicode-gotchas/SKILL.md`.
+- [ ] After the Q&A loop, `npx canicode upsert-gotcha-section --file … --design-key … --input=-` (JSON payload on stdin per `canicode-gotchas` Step 4b) succeeds and updates `.claude/skills/canicode-gotchas/SKILL.md`.
 - [ ] Optional: @ **canicode-roundtrip** — Step 4 reads `helpers.js` from `.cursor/skills/canicode-roundtrip/helpers.js` after `canicode init --cursor-skills`.
 
 ---

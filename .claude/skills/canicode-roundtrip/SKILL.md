@@ -30,6 +30,8 @@ If `use_figma` is unavailable in the current session, **Do NOT proceed to Step 1
 
 See the Edge Case **No Figma MCP server** below for the one-way fallback when Figma MCP genuinely cannot be installed — the precheck above is for the common "installed but not restarted" case, not a replacement for that fallback.
 
+**canicode MCP (same cold-session pattern):** If `analyze` / `gotcha-survey` MCP tools are missing but `.mcp.json` lists canicode, you are on the `npx canicode …` fallback. Tell the user to restart the host or reload MCP after `claude mcp add canicode …` (or the Cursor equivalent) so the canicode tools appear — same communication fix as #433; the CLI path is not an error.
+
 ### Step 1: Analyze the design
 
 If the `analyze` MCP tool is available, call it with the user's Figma URL:
@@ -160,7 +162,7 @@ Wait for the user's answer before moving to the next batch. For each batch, the 
 
 When applying the batched answer, expand back to per-question records before storing — the gotcha section format and Step 4 apply loop both expect one record per `nodeId`.
 
-After all questions are answered, **upsert this design's gotcha section** into `.claude/skills/canicode-gotchas/SKILL.md` in the user's project. Read the existing file, then either replace the section whose `Design key` matches `survey.designKey` (the canonical identifier the gotcha-survey response carries — see `/canicode-gotchas` Step 4a) or append a new numbered section under `# Collected Gotchas`. Never modify anything above the `# Collected Gotchas` heading — the region above it (frontmatter + workflow prose) is the skill loader contract installed by `canicode init`. See the `/canicode-gotchas` skill's "Upsert the gotcha section" step (Step 4) for the exact section format and matching rule.
+After all questions are answered, upsert via the same **`npx canicode upsert-gotcha-section`** JSON path as `/canicode-gotchas` Step 4b: pass `{ survey: { designKey, designGrade, questions }, answers, designName, figmaUrl, analyzedAt, today }` on stdin with `--input=-` — the CLI renders the section from survey JSON (#439); do not author `## #NNN` markdown in prose. `--file .claude/skills/canicode-gotchas/SKILL.md` and `--design-key` must match `survey.designKey`. Never modify anything above `# Collected Gotchas`.
 
 Then proceed to **Step 4** to apply answers to the Figma design.
 
