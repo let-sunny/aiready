@@ -140,6 +140,73 @@ describe("extractAcknowledgmentsFromNode", () => {
       extractAcknowledgmentsFromNode(node, new Set([CATEGORIES.gotcha]))
     ).toEqual([{ nodeId: "7:7", ruleId: "irregular-spacing" }]);
   });
+
+  it("ignores fenced JSON when its ruleId does not match the footer (#444)", () => {
+    const fence = [
+      "```canicode-json",
+      JSON.stringify({
+        v: 1,
+        ruleId: "wrong-rule",
+        intent: { field: "x", value: "y", scope: "instance" },
+        sceneWriteOutcome: { result: "unknown" },
+      }),
+      "```",
+      "",
+      "— *fixed-size-in-auto-layout*",
+    ].join("\n");
+    const node = makeNode("1:1", [
+      { labelMarkdown: fence, categoryId: "cat-fallback" },
+    ]);
+    expect(extractAcknowledgmentsFromNode(node, new Set([CATEGORIES.fallback]))).toEqual([
+      { nodeId: "1:1", ruleId: "fixed-size-in-auto-layout" },
+    ]);
+  });
+
+  it("merges ADR-019 canicode-json fence into the acknowledgment (#444)", () => {
+    const fence = [
+      "**User answered:** `FILL` for **layoutSizingHorizontal** (scope: instance).",
+      "",
+      "```canicode-json",
+      JSON.stringify({
+        v: 1,
+        ruleId: "fixed-size-in-auto-layout",
+        nodeId: "1:1",
+        intent: {
+          field: "layoutSizingHorizontal",
+          value: "FILL",
+          scope: "instance",
+        },
+        sceneWriteOutcome: {
+          result: "user-declined-propagation",
+          reason: "adr-012-opt-in-disabled",
+        },
+        codegenDirective: "When generating code for node 1:1, set layoutSizingHorizontal to \"FILL\"",
+      }),
+      "```",
+      "",
+      "— *fixed-size-in-auto-layout*",
+    ].join("\n");
+    const node = makeNode("1:1", [
+      { labelMarkdown: fence, categoryId: "cat-fallback" },
+    ]);
+    expect(extractAcknowledgmentsFromNode(node, new Set([CATEGORIES.fallback]))).toEqual([
+      {
+        nodeId: "1:1",
+        ruleId: "fixed-size-in-auto-layout",
+        intent: {
+          field: "layoutSizingHorizontal",
+          value: "FILL",
+          scope: "instance",
+        },
+        sceneWriteOutcome: {
+          result: "user-declined-propagation",
+          reason: "adr-012-opt-in-disabled",
+        },
+        codegenDirective:
+          "When generating code for node 1:1, set layoutSizingHorizontal to \"FILL\"",
+      },
+    ]);
+  });
 });
 
 describe("readCanicodeAcknowledgments", () => {

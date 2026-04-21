@@ -1,4 +1,5 @@
 import type { Acknowledgment } from "../contracts/acknowledgment.js";
+import { parseCanicodeJsonPayloadFromMarkdown } from "./annotation-payload.js";
 import type {
   AnnotationEntry,
   CanicodeCategories,
@@ -23,8 +24,10 @@ const FOOTER_RE = /—\s+\*([A-Za-z0-9-]+)\*\s*$/;
 const LEGACY_PREFIX_RE = /^\*\*\[canicode\]\s+([A-Za-z0-9-]+)\*\*/;
 
 /**
- * Pure synchronous helper. Inspects one node's annotations and returns the
- * `(nodeId, ruleId)` pairs that look like canicode-authored acknowledgments.
+ * Pure synchronous helper. Inspects one node's annotations and returns
+ * acknowledgments that look canicode-authored: always `nodeId` + `ruleId`
+ * (footer or legacy prefix); when a canicode-json fenced block is present
+ * (ADR-019), also merges `intent`, `sceneWriteOutcome`, and `codegenDirective`.
  *
  * Behaviour:
  * - When `canicodeCategoryIds` is provided, an entry must BOTH carry a
@@ -64,7 +67,19 @@ export function extractAcknowledgmentsFromNode(
     const ruleId = extractRuleId(text);
     if (!ruleId) continue;
 
-    out.push({ nodeId: node.id, ruleId });
+    const payload = parseCanicodeJsonPayloadFromMarkdown(text);
+    const payloadAligned = payload && payload.ruleId === ruleId;
+    out.push({
+      nodeId: node.id,
+      ruleId,
+      ...(payloadAligned && payload.intent ? { intent: payload.intent } : {}),
+      ...(payloadAligned && payload.sceneWriteOutcome
+        ? { sceneWriteOutcome: payload.sceneWriteOutcome }
+        : {}),
+      ...(payloadAligned && payload.codegenDirective
+        ? { codegenDirective: payload.codegenDirective }
+        : {}),
+    });
   }
   return out;
 }
@@ -80,7 +95,8 @@ function extractRuleId(text: string): string | null {
 /**
  * Async tree walker — runs INSIDE a `use_figma` batch. Loads the root node
  * via `figma.getNodeByIdAsync`, recurses through `children`, and accumulates
- * one `(nodeId, ruleId)` per recognised canicode annotation.
+ * one acknowledgment per recognised canicode annotation (see
+ * `extractAcknowledgmentsFromNode` for optional ADR-019 fields).
  *
  * Pass the categories from `ensureCanicodeCategories()` so the walker can
  * gate on `categoryId` instead of footer text alone — see the pure helper

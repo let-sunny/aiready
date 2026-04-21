@@ -1,3 +1,9 @@
+import {
+  buildDefinitionTierFailureBody,
+  buildDefinitionWriteSkippedBody,
+  buildNoDefinitionFallbackBody,
+  type RoundtripIntentPayload,
+} from "./annotation-payload.js";
 import { upsertCanicodeAnnotation } from "./annotations.js";
 import type {
   CanicodeCategories,
@@ -24,11 +30,15 @@ export interface ApplyWithInstanceFallbackContext {
   // routes to a scene-level annotation naming the source component instead
   // of propagating the write to the definition.
   allowDefinitionWrite?: boolean;
+  /** ADR-019 / #444: gotcha answer — survives in annotations when scene write fails. */
+  roundtripIntent?: RoundtripIntentPayload;
   // Fires once per skipped definition write so a Node-side orchestrator can
   // track opt-in usage (ADR-012 Q5 data). Callback is optional; stays undefined
   // inside the Figma Plugin sandbox where `fetch`/PostHog is unavailable.
   telemetry?: (event: string, props?: Record<string, unknown>) => void;
 }
+
+export type { RoundtripIntentPayload } from "./annotation-payload.js";
 
 interface RouteContext {
   question: RoundtripQuestion;
@@ -40,37 +50,30 @@ interface RouteContext {
   telemetry:
     | ((event: string, props?: Record<string, unknown>) => void)
     | undefined;
+  roundtripIntent?: RoundtripIntentPayload;
 }
 
 /**
- * ADR-012 default path: scene annotation when the orchestrator has not opted
- * into definition writes. Names the cause (silent-ignore vs override-error),
- * explains why definition writes are gated, and warns that
- * `allowDefinitionWrite` is fan-out — not a neutral retry (#443).
+ * Dev Mode `categoryId` for annotations from this helper:
+ * - `fallback` — ADR-012 only: a source definition existed and could have been
+ *   written, but `allowDefinitionWrite: false`, so we annotate the scene
+ *   instead of propagating. Do not use for "no definition" or pure errors
+ *   (#444 — avoids a misleading "fallback" tag when nothing was fallen back from).
+ * - `gotcha` — `roundtripIntent` is set (survey answer) on a non-ADR-012 path.
+ * - `flag` — annotate-only failure with no captured intent.
  */
-function formatDefinitionWriteSkippedMarkdown(args: {
-  componentName: string;
-  reason: "silent-ignore" | "override-error";
-  errorMessage?: string;
-  replicaCount?: number;
-}): string {
-  const { componentName, reason, errorMessage, replicaCount } = args;
-
-  const cause =
-    reason === "silent-ignore"
-      ? "The write ran, but the property value did not change on this instance (silent-ignore)."
-      : `Figma rejected an instance-level change${errorMessage ? `: ${errorMessage}` : ""}.`;
-
-  const fanOutHint =
-    typeof replicaCount === "number" && replicaCount >= 2
-      ? ` This batched question covers ${replicaCount} instance scenes — changing **${componentName}** at the definition still affects every inheriting instance, not just one row in the batch.`
-      : "";
-
-  return (
-    `${cause} Canicode's safer default (ADR-012) is to skip writing the source component **${componentName}** without explicit opt-in, because that write propagates to every non-overridden instance of **${componentName}** in the file.${fanOutHint} ` +
-    `Prefer a manual override on **this** instance when you only need a local fix. ` +
-    `Use \`allowDefinitionWrite: true\` only when you intend to change **${componentName}** for all inheriting instances — it is not a neutral shortcut for a single-instance tweak.`
-  );
+function categoryIdForAnnotate(
+  categories: CanicodeCategories,
+  kind: "adr012-definition-skipped" | "other-failure",
+  roundtripIntent: RoundtripIntentPayload | undefined
+): string {
+  if (kind === "adr012-definition-skipped") {
+    return categories.fallback;
+  }
+  if (roundtripIntent !== undefined) {
+    return categories.gotcha;
+  }
+  return categories.flag;
 }
 
 function resolveSourceComponentName(
@@ -114,19 +117,26 @@ async function routeToDefinitionOrAnnotate(
         ? ctx.question.replicas
         : undefined;
     if (ctx.categories) {
-      const markdownArgs: Parameters<typeof formatDefinitionWriteSkippedMarkdown>[0] =
-        {
+      upsertCanicodeAnnotation(ctx.scene, {
+        ruleId: ctx.question.ruleId,
+        markdown: buildDefinitionWriteSkippedBody({
+          ruleId: ctx.question.ruleId,
+          sceneNodeId: ctx.scene.id,
           componentName,
           reason: ctx.reason,
           ...(ctx.errorMessage !== undefined
             ? { errorMessage: ctx.errorMessage }
             : {}),
           ...(replicaCount !== undefined ? { replicaCount } : {}),
-        };
-      upsertCanicodeAnnotation(ctx.scene, {
-        ruleId: ctx.question.ruleId,
-        markdown: formatDefinitionWriteSkippedMarkdown(markdownArgs),
-        categoryId: ctx.categories.fallback,
+          ...(ctx.roundtripIntent !== undefined
+            ? { intent: ctx.roundtripIntent }
+            : {}),
+        }),
+        categoryId: categoryIdForAnnotate(
+          ctx.categories,
+          "adr012-definition-skipped",
+          ctx.roundtripIntent
+        ),
       });
     }
     ctx.telemetry?.(DEFINITION_WRITE_SKIPPED_EVENT, {
@@ -141,16 +151,25 @@ async function routeToDefinitionOrAnnotate(
 
   if (!definition) {
     if (ctx.categories) {
-      const markdown =
-        ctx.reason === "silent-ignore"
-          ? "write accepted but value unchanged; no definition available"
-          : ctx.reason === "override-error"
-            ? `could not apply automatically: ${ctx.errorMessage ?? ""}`
-            : `could not apply automatically: ${ctx.errorMessage ?? ""}`;
+      const markdown = buildNoDefinitionFallbackBody({
+        ruleId: ctx.question.ruleId,
+        sceneNodeId: ctx.scene.id,
+        reason: ctx.reason,
+        ...(ctx.errorMessage !== undefined
+          ? { errorMessage: ctx.errorMessage }
+          : {}),
+        ...(ctx.roundtripIntent !== undefined
+          ? { intent: ctx.roundtripIntent }
+          : {}),
+      });
       upsertCanicodeAnnotation(ctx.scene, {
         ruleId: ctx.question.ruleId,
         markdown,
-        categoryId: ctx.categories.fallback,
+        categoryId: categoryIdForAnnotate(
+          ctx.categories,
+          "other-failure",
+          ctx.roundtripIntent
+        ),
       });
     }
     return ctx.reason === "silent-ignore"
@@ -177,10 +196,20 @@ async function routeToDefinitionOrAnnotate(
     if (ctx.categories) {
       upsertCanicodeAnnotation(ctx.scene, {
         ruleId: ctx.question.ruleId,
-        markdown: isRemoteReadOnly
-          ? "source component lives in an external library and is read-only from this file — apply the fix in the library file itself."
-          : `could not apply at source definition: ${defMsg}`,
-        categoryId: ctx.categories.fallback,
+        markdown: buildDefinitionTierFailureBody({
+          ruleId: ctx.question.ruleId,
+          sceneNodeId: ctx.scene.id,
+          ...(ctx.roundtripIntent !== undefined
+            ? { intent: ctx.roundtripIntent }
+            : {}),
+          kind: isRemoteReadOnly ? "read-only-library" : "definition-error",
+          errorMessage: defMsg,
+        }),
+        categoryId: categoryIdForAnnotate(
+          ctx.categories,
+          "other-failure",
+          ctx.roundtripIntent
+        ),
       });
     }
     return {
@@ -204,7 +233,8 @@ export async function applyWithInstanceFallback(
   writeFn: WriteFn,
   context: ApplyWithInstanceFallbackContext = {}
 ): Promise<RoundtripResult> {
-  const { categories, allowDefinitionWrite = false, telemetry } = context;
+  const { categories, allowDefinitionWrite = false, telemetry, roundtripIntent } =
+    context;
   const scene = await figma.getNodeByIdAsync(question.nodeId);
   if (!scene) return { icon: "📝", label: "missing node" };
 
@@ -222,6 +252,7 @@ export async function applyWithInstanceFallback(
         reason: "silent-ignore",
         allowDefinitionWrite,
         telemetry,
+        ...(roundtripIntent !== undefined ? { roundtripIntent } : {}),
       });
     }
     return { icon: "✅", label: "instance/scene" };
@@ -244,6 +275,7 @@ export async function applyWithInstanceFallback(
         errorMessage: msg,
         allowDefinitionWrite,
         telemetry,
+        ...(roundtripIntent !== undefined ? { roundtripIntent } : {}),
       });
     }
     return routeToDefinitionOrAnnotate(definition, writeFn, {
@@ -254,6 +286,7 @@ export async function applyWithInstanceFallback(
       errorMessage: msg,
       allowDefinitionWrite,
       telemetry,
+      ...(roundtripIntent !== undefined ? { roundtripIntent } : {}),
     });
   }
 }
