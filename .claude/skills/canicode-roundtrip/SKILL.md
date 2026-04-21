@@ -192,6 +192,8 @@ Most production nodes sit under `INSTANCE` subtrees. `canicode` flags these via 
 
 Matrix below is confirmed by Experiment 08 ([#290](https://github.com/let-sunny/canicode/issues/290)) probes on shallow + deep instance-child FRAMEs in the Simple Design System fixture. `✅` = raw-value write accepted, `❌` = throws *"cannot be overridden in an instance"*, `⚠️` = no error but value silently unchanged (must detect with before/after compare).
 
+**Per-file caveat:** Cells reflect what Experiment 08 observed on that fixture — another file or component can still land on silent-ignore (`⚠️`) or scene annotation (ADR-012 default) for a property marked `✅` here. Treat the matrix as empirical guidance, not a guarantee for every design.
+
 | Property | Raw-value write on instance child | Variable binding | Notes |
 |----------|----------------------------------|------------------|-------|
 | `node.name` | ✅ | — | Prefer scene node first. |
