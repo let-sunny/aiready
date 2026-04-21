@@ -3,7 +3,12 @@ import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { runUpsertGotchaSection } from "./upsert-gotcha-section.js";
+import cac from "cac";
+
+import {
+  registerUpsertGotchaSection,
+  runUpsertGotchaSection,
+} from "./upsert-gotcha-section.js";
 
 let tempRoot: string;
 
@@ -92,6 +97,32 @@ describe("runUpsertGotchaSection", () => {
     expect(readFileSync(file, "utf-8")).toBe(
       "# Single-design content\n\n- **Design key**: x\n",
     );
+  });
+
+  it("parses --section=- through cac (SKILL.md invocation shape)", () => {
+    // Regression guard for #420: the skill's documented invocation uses
+    // `--section=-` (not `--section -`) because cac treats a bare `-` as
+    // the start of another flag and drops the sentinel value. This test
+    // exercises the actual argv parser so the SKILL.md shape is covered.
+    const cli = cac("canicode");
+    registerUpsertGotchaSection(cli);
+    const parsed = cli.parse(
+      [
+        "node",
+        "canicode",
+        "upsert-gotcha-section",
+        "--file",
+        "/tmp/does-not-matter.md",
+        "--design-key",
+        "abc#1:1",
+        "--section=-",
+      ],
+      { run: false },
+    );
+
+    expect(parsed.options.section).toBe("-");
+    expect(parsed.options.file).toBe("/tmp/does-not-matter.md");
+    expect(parsed.options.designKey).toBe("abc#1:1");
   });
 
   it("preserves NNN on replace by Design key match", async () => {
