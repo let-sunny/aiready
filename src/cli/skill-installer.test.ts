@@ -6,7 +6,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { vi } from "vitest";
 
-import { installSkills } from "./skill-installer.js";
+import {
+  installSkills,
+  installClaudeGotchasSkillOnly,
+  installCursorBundledSkills,
+} from "./skill-installer.js";
 
 vi.mock("node:readline/promises", () => ({
   createInterface: vi.fn(),
@@ -242,5 +246,51 @@ describe("installSkills", () => {
     for (const p of staleFiles) {
       expect(readFileSync(p, "utf-8")).toBe("# stale\n");
     }
+  });
+});
+
+describe("installClaudeGotchasSkillOnly", () => {
+  it("copies only canicode-gotchas into ./.claude/skills/", async () => {
+    const summary = await installClaudeGotchasSkillOnly({
+      force: false,
+      cwd,
+      sourceDir,
+    });
+
+    expect(summary.targetDir).toBe(join(cwd, ".claude", "skills"));
+    expect(summary.installed).toEqual([join("canicode-gotchas", "SKILL.md")]);
+    expect(existsSync(join(cwd, ".claude", "skills", "canicode", "SKILL.md"))).toBe(false);
+    expect(readFileSync(join(summary.targetDir, "canicode-gotchas", "SKILL.md"), "utf-8"))
+      .toBe("# canicode-gotchas\nfresh\n");
+  });
+});
+
+describe("installCursorBundledSkills", () => {
+  it("copies every directory under skills/cursor into the target skills root", async () => {
+    const cursorBundle = join(tempRoot, "cursor-bundle");
+    for (const name of ["canicode", "canicode-gotchas"]) {
+      const dir = join(cursorBundle, name);
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(join(dir, "SKILL.md"), `# ${name}\n`, "utf-8");
+    }
+    mkdirSync(join(cursorBundle, "canicode-roundtrip"), { recursive: true });
+    writeFileSync(join(cursorBundle, "canicode-roundtrip", "helpers.js"), "// h\n", "utf-8");
+    writeFileSync(join(cursorBundle, "canicode-roundtrip", "SKILL.md"), "# rt\n", "utf-8");
+
+    const targetSkillsRoot = join(cwd, "cursor-skill-target");
+    const summary = await installCursorBundledSkills({
+      force: false,
+      cwd,
+      sourceRoot: cursorBundle,
+      targetSkillsRoot,
+    });
+
+    expect(summary.targetDir).toBe(targetSkillsRoot);
+    expect(summary.installed.sort()).toEqual([
+      join("canicode", "SKILL.md"),
+      join("canicode-gotchas", "SKILL.md"),
+      join("canicode-roundtrip", "SKILL.md"),
+      join("canicode-roundtrip", "helpers.js"),
+    ].sort());
   });
 });

@@ -35,6 +35,138 @@ function defaultSourceDir(): string {
   return fileURLToPath(new URL("../../skills/", import.meta.url));
 }
 
+/** Bundled Cursor skills under `skills/cursor/<name>/` (see `scripts/bundle-skills.sh`). */
+function defaultCursorBundleRoot(): string {
+  return fileURLToPath(new URL("../../skills/cursor", import.meta.url));
+}
+
+type Action = "install" | "force-overwrite" | "needs-decision";
+interface CopyOp {
+  src: string;
+  dest: string;
+  label: string;
+  action: Action;
+}
+
+async function copySkillTree(
+  skillName: string,
+  srcSkillDir: string,
+  destSkillDir: string,
+  force: boolean,
+): Promise<{ installed: string[]; overwritten: string[]; skipped: string[] }> {
+  if (!existsSync(srcSkillDir)) {
+    throw new Error(`Bundled skill directory missing: ${srcSkillDir}`);
+  }
+
+  mkdirSync(destSkillDir, { recursive: true });
+
+  const ops: CopyOp[] = [];
+  const files = listFilesRecursive(srcSkillDir);
+  for (const relPath of files) {
+    const src = join(srcSkillDir, relPath);
+    const dest = join(destSkillDir, relPath);
+    mkdirSync(dirname(dest), { recursive: true });
+
+    const label = join(skillName, relPath);
+    let action: Action;
+    if (!existsSync(dest)) {
+      action = "install";
+    } else if (force) {
+      action = "force-overwrite";
+    } else {
+      action = "needs-decision";
+    }
+    ops.push({ src, dest, label, action });
+  }
+
+  const candidates = ops.filter(op => op.action === "needs-decision");
+  const decisions = candidates.length > 0
+    ? await promptOverwriteBatch(candidates.map(op => ({ label: op.label, dest: op.dest })))
+    : new Map<string, "overwrite" | "skip">();
+
+  const installed: string[] = [];
+  const overwritten: string[] = [];
+  const skipped: string[] = [];
+
+  for (const op of ops) {
+    if (op.action === "install") {
+      copyFileSync(op.src, op.dest);
+      installed.push(op.label);
+    } else if (op.action === "force-overwrite") {
+      copyFileSync(op.src, op.dest);
+      overwritten.push(op.label);
+    } else {
+      const decision = decisions.get(op.label) ?? "skip";
+      if (decision === "overwrite") {
+        copyFileSync(op.src, op.dest);
+        overwritten.push(op.label);
+      } else {
+        skipped.push(op.label);
+      }
+    }
+  }
+
+  return { installed, overwritten, skipped };
+}
+
+/**
+ * Copy several skill directories with a single overwrite prompt batch (same UX as `installSkills`).
+ */
+async function copyMultipleSkillTrees(
+  entries: Array<{ skillName: string; srcSkillDir: string; destSkillDir: string }>,
+  force: boolean,
+): Promise<{ installed: string[]; overwritten: string[]; skipped: string[] }> {
+  const ops: CopyOp[] = [];
+  for (const { skillName, srcSkillDir, destSkillDir } of entries) {
+    mkdirSync(destSkillDir, { recursive: true });
+    const files = listFilesRecursive(srcSkillDir);
+    for (const relPath of files) {
+      const src = join(srcSkillDir, relPath);
+      const dest = join(destSkillDir, relPath);
+      mkdirSync(dirname(dest), { recursive: true });
+      const label = join(skillName, relPath);
+      let action: Action;
+      if (!existsSync(dest)) {
+        action = "install";
+      } else if (force) {
+        action = "force-overwrite";
+      } else {
+        action = "needs-decision";
+      }
+      ops.push({ src, dest, label, action });
+    }
+  }
+
+  const candidates = ops.filter(op => op.action === "needs-decision");
+  const decisions = candidates.length > 0
+    ? await promptOverwriteBatch(candidates.map(op => ({ label: op.label, dest: op.dest })))
+    : new Map<string, "overwrite" | "skip">();
+
+  const installed: string[] = [];
+  const overwritten: string[] = [];
+  const skipped: string[] = [];
+
+  for (const op of ops) {
+    if (op.action === "install") {
+      copyFileSync(op.src, op.dest);
+      installed.push(op.label);
+    } else if (op.action === "force-overwrite") {
+      copyFileSync(op.src, op.dest);
+      overwritten.push(op.label);
+    } else {
+      const decision = decisions.get(op.label) ?? "skip";
+      if (decision === "overwrite") {
+        copyFileSync(op.src, op.dest);
+        overwritten.push(op.label);
+      } else {
+        skipped.push(op.label);
+      }
+    }
+  }
+
+  return { installed, overwritten, skipped };
+}
+
 export async function installSkills(rawOptions: InstallSkillsOptions): Promise<InstallSummary> {
   const options = InstallSkillsOptionsSchema.parse(rawOptions);
   const sourceDir = options.sourceDir ?? defaultSourceDir();
@@ -61,14 +193,7 @@ export async function installSkills(rawOptions: InstallSkillsOptions): Promise<I
     targetDir,
   };
 
-  type Action = "install" | "force-overwrite" | "needs-decision";
-  interface Op {
-    src: string;
-    dest: string;
-    label: string;
-    action: Action;
-  }
-  const ops: Op[] = [];
+  const ops: CopyOp[] = [];
 
   for (const skillName of SKILL_NAMES) {
     const srcSkillDir = join(sourceDir, skillName);
@@ -122,6 +247,103 @@ export async function installSkills(rawOptions: InstallSkillsOptions): Promise<I
   }
 
   return summary;
+}
+
+const InstallClaudeGotchasOnlySchema = z.object({
+  force: z.boolean(),
+  cwd: z.string().optional(),
+  sourceDir: z.string().optional(),
+});
+
+/**
+ * Install only `canicode-gotchas` into `.claude/skills/` (shared gotcha store for upsert-gotcha-section).
+ * Used when `--no-skills --cursor-skills` so Cursor users still get the on-disk SKILL.md target.
+ */
+export async function installClaudeGotchasSkillOnly(
+  rawOptions: z.input<typeof InstallClaudeGotchasOnlySchema>,
+): Promise<InstallSummary> {
+  const options = InstallClaudeGotchasOnlySchema.parse(rawOptions);
+  const sourceDir = options.sourceDir ?? defaultSourceDir();
+  const skillName = "canicode-gotchas";
+  const srcSkillDir = join(sourceDir, skillName);
+  const cwd = options.cwd ?? process.cwd();
+  const targetDir = join(cwd, ".claude", "skills");
+  const destSkillDir = join(targetDir, skillName);
+
+  if (!existsSync(sourceDir)) {
+    throw new Error(
+      `Bundled skills directory not found: ${sourceDir}\n` +
+      `If you are developing canicode, run 'pnpm build' first.\n` +
+      `If you installed canicode from npm, please file a bug report — the tarball is missing skills/.`,
+    );
+  }
+
+  mkdirSync(targetDir, { recursive: true });
+  const part = await copySkillTree(skillName, srcSkillDir, destSkillDir, options.force);
+
+  return {
+    installed: part.installed,
+    overwritten: part.overwritten,
+    skipped: part.skipped,
+    targetDir,
+  };
+}
+
+const InstallCursorBundledSchema = z.object({
+  force: z.boolean(),
+  cwd: z.string().optional(),
+  /** Defaults to bundled `skills/cursor/` (build output). */
+  sourceRoot: z.string().optional(),
+  /**
+   * Parent of per-skill dirs (defaults to `<cwd>/.cursor/skills`).
+   * Tests may use a non-`.cursor` path when the runner blocks hidden directories.
+   */
+  targetSkillsRoot: z.string().optional(),
+});
+
+/**
+ * Install all skills from `skills/cursor/` into `.cursor/skills/` — canicode, canicode-gotchas (stripped), canicode-roundtrip (+ helpers.js). Issue #407.
+ */
+export async function installCursorBundledSkills(
+  rawOptions: z.input<typeof InstallCursorBundledSchema>,
+): Promise<InstallSummary> {
+  const options = InstallCursorBundledSchema.parse(rawOptions);
+  const sourceRoot = options.sourceRoot ?? defaultCursorBundleRoot();
+  const cwd = options.cwd ?? process.cwd();
+  const targetDir = options.targetSkillsRoot ?? join(cwd, ".cursor", "skills");
+
+  if (!existsSync(sourceRoot)) {
+    throw new Error(
+      `Bundled Cursor skills directory not found: ${sourceRoot}\n` +
+      `If you are developing canicode, run 'pnpm build' first (bundle populates skills/cursor/).\n` +
+      `If you installed canicode from npm, please file a bug report — the tarball is missing skills/cursor/.`,
+    );
+  }
+
+  mkdirSync(targetDir, { recursive: true });
+
+  const skillNames = readdirSync(sourceRoot)
+    .filter((name) => statSync(join(sourceRoot, name)).isDirectory())
+    .sort();
+
+  if (skillNames.length === 0) {
+    throw new Error(`No skill directories under: ${sourceRoot}`);
+  }
+
+  const entries = skillNames.map((skillName) => ({
+    skillName,
+    srcSkillDir: join(sourceRoot, skillName),
+    destSkillDir: join(targetDir, skillName),
+  }));
+
+  const part = await copyMultipleSkillTrees(entries, options.force);
+
+  return {
+    installed: part.installed,
+    overwritten: part.overwritten,
+    skipped: part.skipped,
+    targetDir,
+  };
 }
 
 function listFilesRecursive(dir: string): string[] {

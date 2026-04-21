@@ -176,6 +176,42 @@ Override score, severity, or enable/disable individual rules:
 
 ---
 
+## Cursor MCP (canicode)
+
+Configure the canicode MCP server so Cursor exposes `analyze`, `gotcha-survey`, and other tools.
+
+### Project config (`.cursor/mcp.json`)
+
+Create or merge into `.cursor/mcp.json` in your repository root:
+
+```json
+{
+  "mcpServers": {
+    "canicode": {
+      "command": "npx",
+      "args": ["-y", "--package=canicode", "canicode-mcp"]
+    }
+  }
+}
+```
+
+Use long-form `--package` (short `-p` can confuse some parsers). Set your Figma token once with `npx canicode init --token figd_…` — the MCP server reads `~/.canicode/config.json`; you do not need `FIGMA_TOKEN` in the MCP block unless your team prefers env injection.
+
+### Gotcha survey in Cursor
+
+1. Add the MCP config above and restart Cursor (or reload MCP).
+2. Run `npx canicode init --token … --cursor-skills` to install **canicode**, **canicode-gotchas**, and **canicode-roundtrip** (with `helpers.js`) under `.cursor/skills/`, and ensure the shared answer file exists at `.claude/skills/canicode-gotchas/SKILL.md` when needed (or run full `canicode init` and add `--cursor-skills`). Authoring is single-source under `.claude/skills/` in the repo; the npm build writes `skills/cursor/` (gotchas strip `# Collected Gotchas`; other skills are full copies).
+3. In chat, @-mention **canicode**, **canicode-gotchas**, or **canicode-roundtrip** as needed. For roundtrip, the Figma MCP must expose **`use_figma`** in the session — same requirement as Claude Code.
+
+### Manual test checklist (#407)
+
+- [ ] MCP: Cursor shows `canicode` connected and the tools list includes `gotcha-survey` (and `analyze` if testing roundtrip Step 1).
+- [ ] Figma MCP: `use_figma` is available when testing **roundtrip** (install + restart host if tools are missing).
+- [ ] Calling `gotcha-survey` with a local fixture path returns JSON with `designGrade` and `questions` / `isReadyForCodeGen`.
+- [ ] After the Q&A loop, `npx canicode upsert-gotcha-section …` succeeds and updates `.claude/skills/canicode-gotchas/SKILL.md`.
+- [ ] Optional: @ **canicode-roundtrip** — Step 4 reads `helpers.js` from `.cursor/skills/canicode-roundtrip/helpers.js` after `canicode init --cursor-skills`.
+
+---
 
 ## Telemetry
 
