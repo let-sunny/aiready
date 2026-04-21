@@ -5,6 +5,8 @@ description: Gotcha survey (Claude Code or Cursor) — Q&A workflow; answers acc
 
 # CanICode Gotchas — Design Gotcha Survey
 
+**Channel contrast:** **`canicode-gotchas`** (**this skill**) persists answers **only** in **local** `.claude/skills/canicode-gotchas/SKILL.md` — **memo-only**, no Plugin write to Figma. **`canicode-roundtrip`** writes to the **canvas**. Use gotchas when you want Q&A captured for code-gen context without mutating the file.
+
 Run a gotcha survey on a Figma design to collect implementation context that Figma cannot encode natively, capture developer/designer answers, and upsert them into **`.claude/skills/canicode-gotchas/SKILL.md`** so downstream `figma-implement-design` runs have annotation-ready context. In this model, rules do rule-based best-practice detection, and gotcha is the annotation output from that detection. Some gotchas come from violation rules (what is wrong and how to resolve it); others come from info-collection rules (neutral context Figma cannot represent, like interaction intent/state).
 
 **Install location:** The workflow prose may live under `.claude/skills/canicode-gotchas/SKILL.md` (default `canicode init`) or be copied to `.cursor/skills/canicode-gotchas/SKILL.md` (`canicode init --cursor-skills`). The **authoritative gotcha store** is always **`.claude/skills/canicode-gotchas/SKILL.md`** — the CLI `upsert-gotcha-section` writes there only. In the `.claude` copy, this file has two regions: the **Workflow** below (installed by `canicode init`, never overwritten manually) and the **Collected Gotchas** region at the bottom (one numbered section per design, replaced in place on re-runs).
