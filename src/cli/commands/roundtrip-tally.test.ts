@@ -16,7 +16,7 @@ afterEach(async () => {
 });
 
 describe("computeRoundtripTallyFromSavedFiles", () => {
-  it("matches computeRoundtripTally for analyze + step4 JSON (#427)", async () => {
+  it("matches computeRoundtripTally for analyze + step4 JSON", async () => {
     const analyzePath = join(tempRoot, "analyze.json");
     const step4Path = join(tempRoot, "step4.json");
 
@@ -103,7 +103,7 @@ describe("computeRoundtripTallyFromSavedFiles", () => {
     ).rejects.toThrow(/--analyze must include issueCount/);
   });
 
-  it("rejects malformed JSON", async () => {
+  it("rejects malformed JSON in --analyze file", async () => {
     const analyzePath = join(tempRoot, "analyze.json");
     const step4Path = join(tempRoot, "step4.json");
 
@@ -113,5 +113,41 @@ describe("computeRoundtripTallyFromSavedFiles", () => {
     await expect(
       computeRoundtripTallyFromSavedFiles({ analyzePath, step4Path }),
     ).rejects.toThrow(/--analyze/);
+  });
+
+  it("rejects malformed JSON in --step4 file", async () => {
+    const analyzePath = join(tempRoot, "analyze.json");
+    const step4Path = join(tempRoot, "step4.json");
+
+    writeFileSync(
+      analyzePath,
+      JSON.stringify({ issueCount: 1, acknowledgedCount: 0 }),
+      "utf-8",
+    );
+    writeFileSync(step4Path, "{ not json", "utf-8");
+
+    await expect(
+      computeRoundtripTallyFromSavedFiles({ analyzePath, step4Path }),
+    ).rejects.toThrow(/--step4/);
+  });
+
+  it("surfaces readable errors when an input file is missing", async () => {
+    const analyzePath = join(tempRoot, "missing-analyze.json");
+    const step4Path = join(tempRoot, "step4.json");
+
+    writeFileSync(
+      step4Path,
+      JSON.stringify({
+        resolved: 0,
+        annotated: 0,
+        definitionWritten: 0,
+        skipped: 0,
+      }),
+      "utf-8",
+    );
+
+    await expect(
+      computeRoundtripTallyFromSavedFiles({ analyzePath, step4Path }),
+    ).rejects.toThrow(/cannot read --analyze/);
   });
 });
