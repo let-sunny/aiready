@@ -20,7 +20,8 @@ import { renderUpsertedFile } from "../../core/gotcha/upsert-gotcha-section.js";
  *   command substitutes with either the preserved existing NNN (replace)
  *   or the next monotonic NNN (append). If the placeholder is absent the
  *   section markdown is written verbatim. Either pass via `--section` or
- *   pipe through stdin (`--section -`).
+ *   pipe through stdin (`--section=-`). Note: cac parses a bare `-` as the
+ *   start of a flag, so the `=` form is required for the stdin sentinel.
  *
  * Outputs (stdout, JSON):
  * ```
@@ -40,7 +41,9 @@ import { renderUpsertedFile } from "../../core/gotcha/upsert-gotcha-section.js";
 const UpsertOptionsSchema = z.object({
   file: z.string().min(1, "--file is required"),
   designKey: z.string().min(1, "--design-key is required"),
-  section: z.string().min(1, "--section is required (use '-' to read stdin)"),
+  section: z
+    .string()
+    .min(1, "--section is required (use '--section=-' to read stdin)"),
 });
 
 type UpsertOptions = z.infer<typeof UpsertOptionsSchema>;
@@ -117,7 +120,7 @@ export function registerUpsertGotchaSection(cli: CAC): void {
     )
     .option(
       "--section <markdown>",
-      "Already-rendered per-design section markdown. Use '-' to read from stdin.",
+      "Already-rendered per-design section markdown. Use '--section=-' to read from stdin (cac parses a bare '-' as a flag, so the '=' form is required).",
     )
     .action(async (rawOptions: Record<string, unknown>) => {
       const parseResult = UpsertOptionsSchema.safeParse(rawOptions);
