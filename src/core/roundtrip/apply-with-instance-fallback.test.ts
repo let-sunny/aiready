@@ -95,7 +95,7 @@ describe("applyWithInstanceFallback", () => {
     const annotations = scene.annotations as AnnotationEntry[];
     expect(annotations).toHaveLength(1);
     expect(annotations[0]?.labelMarkdown).toContain("external library");
-    expect(annotations[0]?.categoryId).toBe("cat-fallback");
+    expect(annotations[0]?.categoryId).toBe("cat-flag");
   });
 
   it("annotates and returns 📝 when silent-ignore AND definition throws a non-read-only error AND allowDefinitionWrite: true", async () => {
@@ -129,7 +129,10 @@ describe("applyWithInstanceFallback", () => {
       label: "silent-ignore, annotated",
     });
     const annotations = scene.annotations as AnnotationEntry[];
-    expect(annotations[0]?.labelMarkdown).toContain("no definition available");
+    expect(annotations[0]?.labelMarkdown).toContain(
+      "No source definition was available to escalate"
+    );
+    expect(annotations[0]?.categoryId).toBe("cat-flag");
   });
 
   it("routes to definition and returns 🌐 when scene throws an override error AND allowDefinitionWrite: true", async () => {
@@ -180,8 +183,9 @@ describe("applyWithInstanceFallback", () => {
     expect(writeFn).toHaveBeenCalledTimes(1);
     const annotations = scene.annotations as AnnotationEntry[];
     expect(annotations[0]?.labelMarkdown).toContain(
-      "could not apply automatically"
+      "Could not apply automatically"
     );
+    expect(annotations[0]?.categoryId).toBe("cat-flag");
   });
 
   // #309 / ADR-011 Experiment 11: the `mainComponent === null` live case
@@ -211,13 +215,35 @@ describe("applyWithInstanceFallback", () => {
     expect(writeFn).toHaveBeenCalledTimes(1);
     const annotations = scene.annotations as AnnotationEntry[];
     expect(annotations).toHaveLength(1);
+    expect(annotations[0]?.labelMarkdown).toContain("Figma rejected");
     expect(annotations[0]?.labelMarkdown).toContain(
-      "could not apply automatically"
+      "No source definition was available to escalate"
     );
     // NOT the ADR-012 Q3 markdown — there is no source component to name.
     expect(annotations[0]?.labelMarkdown).not.toContain(
       "Apply this fix on the source component"
     );
+    expect(annotations[0]?.categoryId).toBe("cat-flag");
+  });
+
+  it("#444: no definition + roundtripIntent uses gotcha category (not fallback)", async () => {
+    const question: RoundtripQuestion = {
+      nodeId: "scene-1",
+      ruleId: "fixed-size-in-auto-layout",
+    };
+    const writeFn = vi.fn().mockRejectedValueOnce(
+      new Error("This property cannot be overridden in an instance")
+    );
+    await applyWithInstanceFallback(question, writeFn, {
+      categories: CATEGORIES,
+      roundtripIntent: {
+        field: "layoutSizingHorizontal",
+        value: "FILL",
+        scope: "instance",
+      },
+    });
+    const annotations = scene.annotations as AnnotationEntry[];
+    expect(annotations[0]?.categoryId).toBe("cat-gotcha");
   });
 
   it("returns 📝 missing node when the scene id doesn't resolve", async () => {
@@ -269,6 +295,29 @@ describe("applyWithInstanceFallback", () => {
       expect(annotations[0]?.labelMarkdown).toContain("rejected an instance-level");
       expect(annotations[0]?.labelMarkdown).toContain("ADR-012");
       expect(annotations[0]?.labelMarkdown).toContain("allowDefinitionWrite: true");
+      expect(annotations[0]?.categoryId).toBe("cat-fallback");
+    });
+
+    it("ADR-019: roundtripIntent → User answered headline + canicode-json fence (#444)", async () => {
+      const writeFn = vi
+        .fn()
+        .mockRejectedValueOnce(
+          new Error("This property cannot be overridden in an instance")
+        );
+      const result = await applyWithInstanceFallback(QUESTION, writeFn, {
+        categories: CATEGORIES,
+        roundtripIntent: {
+          field: "layoutSizingHorizontal",
+          value: "FILL",
+          scope: "instance",
+        },
+      });
+      expect(result.label).toBe("definition write skipped (opt-in disabled)");
+      const annotations = scene.annotations as AnnotationEntry[];
+      expect(annotations[0]?.labelMarkdown).toMatch(/^\*\*User answered:\*\*/);
+      expect(annotations[0]?.labelMarkdown).toContain("```canicode-json");
+      expect(annotations[0]?.labelMarkdown).toContain('"layoutSizingHorizontal"');
+      expect(annotations[0]?.labelMarkdown).toContain("FILL");
       expect(annotations[0]?.categoryId).toBe("cat-fallback");
     });
 

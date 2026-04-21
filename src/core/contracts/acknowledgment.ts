@@ -15,10 +15,40 @@ import { z } from "zod";
  * It is produced by the Plugin-API helper
  * `extractAcknowledgmentsFromNode` / `readCanicodeAcknowledgments`
  * (see `src/core/roundtrip/read-acknowledgments.ts`).
+ *
+ * ADR-019 / #444: optional `intent`, `sceneWriteOutcome`, and `codegenDirective`
+ * are read from a fenced canicode-json block when present; legacy annotations
+ * omit them and remain valid for density scoring.
  */
+export const AcknowledgmentIntentSchema = z.object({
+  field: z.string(),
+  value: z.unknown(),
+  scope: z.enum(["instance", "definition"]),
+});
+
+export type AcknowledgmentIntent = z.infer<typeof AcknowledgmentIntentSchema>;
+
+export const AcknowledgmentSceneWriteOutcomeSchema = z.object({
+  result: z.enum([
+    "succeeded",
+    "silent-ignored",
+    "api-rejected",
+    "user-declined-propagation",
+    "unknown",
+  ]),
+  reason: z.string().optional(),
+});
+
+export type AcknowledgmentSceneWriteOutcome = z.infer<
+  typeof AcknowledgmentSceneWriteOutcomeSchema
+>;
+
 export const AcknowledgmentSchema = z.object({
   nodeId: z.string(),
   ruleId: z.string(),
+  intent: AcknowledgmentIntentSchema.optional(),
+  sceneWriteOutcome: AcknowledgmentSceneWriteOutcomeSchema.optional(),
+  codegenDirective: z.string().optional(),
 });
 
 export type Acknowledgment = z.infer<typeof AcknowledgmentSchema>;

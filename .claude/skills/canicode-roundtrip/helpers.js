@@ -78,13 +78,188 @@ ${footer}`;
     }
   }
 
+  // src/core/roundtrip/annotation-payload.ts
+  var CANICODE_JSON_FENCE = "```canicode-json";
+  function formatIntentValueForDisplay(value) {
+    if (value === void 0) return "undefined";
+    if (value === null) return "null";
+    if (typeof value === "object") {
+      try {
+        return `\`${JSON.stringify(value)}\``;
+      } catch {
+        return String(value);
+      }
+    }
+    return `\`${String(value)}\``;
+  }
+  function buildCodegenDirective(args) {
+    const { sceneNodeId, intent } = args;
+    const val = intent.value === void 0 ? "undefined" : JSON.stringify(intent.value);
+    return `When generating code for node ${sceneNodeId}, set ${intent.field} to ${val} (user intent, scope: ${intent.scope}). Prefer this over the current Figma scene value when they disagree.`;
+  }
+  function sceneOutcomeToAck(result, reason) {
+    return reason !== void 0 ? { result, reason } : { result };
+  }
+  function buildOutcomeHumanLine(args) {
+    if (args.skippedDefinitionDueToAdr012) {
+      const adrHint = " Canicode skipped writing the source component without `allowDefinitionWrite: true` (ADR-012 safer default). The instance-level change did not apply as intended in the scene.";
+      if (args.reason === "silent-ignore") {
+        return "**Scene write outcome:** The write ran, but the property value did not change on this instance (silent-ignore)." + adrHint;
+      }
+      return "**Scene write outcome:** Figma rejected an instance-level change" + (args.errorMessage ? `: ${args.errorMessage}` : "") + "." + adrHint;
+    }
+    if (args.reason === "silent-ignore") {
+      return "**Scene write outcome:** The write ran, but the property value did not change on this instance (silent-ignore). No source definition was available to escalate.";
+    }
+    if (args.reason === "override-error") {
+      return "**Scene write outcome:** Figma rejected an instance-level change" + (args.errorMessage ? `: ${args.errorMessage}` : "") + ". No source definition was available to escalate.";
+    }
+    return "**Scene write outcome:** Could not apply automatically" + (args.errorMessage ? `: ${args.errorMessage}` : "") + ".";
+  }
+  function buildAdr012PropagationParagraph(args) {
+    const { componentName, replicaCount } = args;
+    const fanOutHint = typeof replicaCount === "number" && replicaCount >= 2 ? ` This batched question covers ${replicaCount} instance scenes \u2014 changing **${componentName}** at the definition still affects every inheriting instance, not just one row in the batch.` : "";
+    return `Canicode's safer default (ADR-012) is to skip writing the source component **${componentName}** without explicit opt-in, because that write propagates to every non-overridden instance of **${componentName}** in the file.${fanOutHint} Prefer a manual override on **this** instance when you only need a local fix. Use \`allowDefinitionWrite: true\` only when you intend to change **${componentName}** for all inheriting instances \u2014 it is not a neutral shortcut for a single-instance tweak.`;
+  }
+  function buildDefinitionWriteSkippedBody(args) {
+    const {
+      ruleId,
+      sceneNodeId,
+      componentName,
+      reason,
+      errorMessage,
+      replicaCount,
+      intent
+    } = args;
+    const ackIntent = intent ? {
+      field: intent.field,
+      value: intent.value,
+      scope: intent.scope
+    } : void 0;
+    const sceneWriteOutcome = sceneOutcomeToAck("user-declined-propagation", "adr-012-opt-in-disabled");
+    const codegenDirective = intent !== void 0 ? buildCodegenDirective({ sceneNodeId, intent }) : void 0;
+    const jsonBlock = {
+      v: 1,
+      ruleId,
+      nodeId: sceneNodeId,
+      ...ackIntent ? { intent: ackIntent } : {},
+      sceneWriteOutcome,
+      ...codegenDirective ? { codegenDirective } : {}
+    };
+    const userAnswerLine = intent !== void 0 ? `**User answered:** ${formatIntentValueForDisplay(intent.value)} for **${intent.field}** (scope: ${intent.scope}).` : null;
+    const outcomeLine = buildOutcomeHumanLine({
+      reason,
+      ...errorMessage !== void 0 ? { errorMessage } : {},
+      skippedDefinitionDueToAdr012: true
+    });
+    const adrBlock = buildAdr012PropagationParagraph({
+      componentName,
+      ...replicaCount !== void 0 ? { replicaCount } : {}
+    });
+    const proseParts = [userAnswerLine, outcomeLine, adrBlock].filter(
+      (p) => p !== null
+    );
+    const prose = proseParts.join("\n\n");
+    return appendJsonFenceAndFooter(prose, jsonBlock, ruleId);
+  }
+  function buildNoDefinitionFallbackBody(args) {
+    const { ruleId, sceneNodeId, reason, errorMessage, intent } = args;
+    const ackIntent = intent ? { field: intent.field, value: intent.value, scope: intent.scope } : void 0;
+    const outcomeResult = reason === "silent-ignore" ? "silent-ignored" : reason === "override-error" ? "api-rejected" : "api-rejected";
+    const sceneWriteOutcome = sceneOutcomeToAck(
+      outcomeResult,
+      reason === "silent-ignore" ? "silent-ignore-no-definition" : "no-definition-escalation"
+    );
+    const codegenDirective = intent !== void 0 ? buildCodegenDirective({ sceneNodeId, intent }) : void 0;
+    const jsonBlock = {
+      v: 1,
+      ruleId,
+      nodeId: sceneNodeId,
+      ...ackIntent ? { intent: ackIntent } : {},
+      sceneWriteOutcome,
+      ...codegenDirective ? { codegenDirective } : {}
+    };
+    const userAnswerLine = intent !== void 0 ? `**User answered:** ${formatIntentValueForDisplay(intent.value)} for **${intent.field}** (scope: ${intent.scope}).` : null;
+    const outcomeLine = buildOutcomeHumanLine({
+      reason,
+      ...errorMessage !== void 0 ? { errorMessage } : {},
+      skippedDefinitionDueToAdr012: false
+    });
+    const prose = [userAnswerLine, outcomeLine].filter((p) => p !== null).join("\n\n");
+    return appendJsonFenceAndFooter(prose, jsonBlock, ruleId);
+  }
+  function buildDefinitionTierFailureBody(args) {
+    const { ruleId, sceneNodeId, intent, kind, errorMessage } = args;
+    const sceneWriteOutcome = sceneOutcomeToAck(
+      kind === "read-only-library" ? "api-rejected" : "api-rejected",
+      kind === "read-only-library" ? "definition-read-only" : "definition-write-failed"
+    );
+    const codegenDirective = intent !== void 0 ? buildCodegenDirective({ sceneNodeId, intent }) : void 0;
+    const jsonBlock = {
+      v: 1,
+      ruleId,
+      nodeId: sceneNodeId,
+      ...intent ? {
+        intent: {
+          field: intent.field,
+          value: intent.value,
+          scope: intent.scope
+        }
+      } : {},
+      sceneWriteOutcome,
+      ...codegenDirective ? { codegenDirective } : {}
+    };
+    const human = kind === "read-only-library" ? "source component lives in an external library and is read-only from this file \u2014 apply the fix in the library file itself." : `could not apply at source definition: ${errorMessage}`;
+    const userAnswerLine = intent !== void 0 ? `**User answered:** ${formatIntentValueForDisplay(intent.value)} for **${intent.field}** (scope: ${intent.scope}).` : null;
+    const outcomeLine = `**Scene write outcome:** ${human}`;
+    const prose = [userAnswerLine, outcomeLine].filter((p) => p !== null).join("\n\n");
+    return appendJsonFenceAndFooter(prose, jsonBlock, ruleId);
+  }
+  function appendJsonFenceAndFooter(prose, jsonBlock, ruleId) {
+    const footer = `\u2014 *${ruleId}*`;
+    const hasIntent = jsonBlock.intent !== void 0;
+    if (!hasIntent) {
+      return `${prose}
+
+${footer}`;
+    }
+    const jsonText = JSON.stringify(jsonBlock, null, 0);
+    return `${prose}
+
+${CANICODE_JSON_FENCE}
+${jsonText}
+\`\`\`
+
+${footer}`;
+  }
+  var FENCED_JSON_RE = new RegExp(
+    `${CANICODE_JSON_FENCE.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*([\\s\\S]*?)\\s*\`\`\``,
+    "m"
+  );
+  function parseCanicodeJsonPayloadFromMarkdown(text) {
+    const m = FENCED_JSON_RE.exec(text);
+    if (!m?.[1]) return void 0;
+    try {
+      const raw = JSON.parse(m[1].trim());
+      if (!raw || typeof raw !== "object") return void 0;
+      const o = raw;
+      if (o.v !== 1 || typeof o.ruleId !== "string") return void 0;
+      return raw;
+    } catch {
+      return void 0;
+    }
+  }
+
   // src/core/roundtrip/apply-with-instance-fallback.ts
   var DEFINITION_WRITE_SKIPPED_EVENT = "cic_roundtrip_definition_write_skipped";
-  function formatDefinitionWriteSkippedMarkdown(args) {
-    const { componentName, reason, errorMessage, replicaCount } = args;
-    const cause = reason === "silent-ignore" ? "The write ran, but the property value did not change on this instance (silent-ignore)." : `Figma rejected an instance-level change${errorMessage ? `: ${errorMessage}` : ""}.`;
-    const fanOutHint = typeof replicaCount === "number" && replicaCount >= 2 ? ` This batched question covers ${replicaCount} instance scenes \u2014 changing **${componentName}** at the definition still affects every inheriting instance, not just one row in the batch.` : "";
-    return `${cause} Canicode's safer default (ADR-012) is to skip writing the source component **${componentName}** without explicit opt-in, because that write propagates to every non-overridden instance of **${componentName}** in the file.${fanOutHint} Prefer a manual override on **this** instance when you only need a local fix. Use \`allowDefinitionWrite: true\` only when you intend to change **${componentName}** for all inheriting instances \u2014 it is not a neutral shortcut for a single-instance tweak.`;
+  function categoryIdForAnnotate(categories, kind, roundtripIntent) {
+    if (kind === "adr012-definition-skipped") {
+      return categories.fallback;
+    }
+    if (roundtripIntent !== void 0) {
+      return categories.gotcha;
+    }
+    return categories.flag;
   }
   function resolveSourceComponentName(definition, question) {
     if (definition && typeof definition.name === "string" && definition.name) {
@@ -101,16 +276,22 @@ ${footer}`;
       const componentName = resolveSourceComponentName(definition, ctx.question);
       const replicaCount = typeof ctx.question.replicas === "number" && Number.isInteger(ctx.question.replicas) ? ctx.question.replicas : void 0;
       if (ctx.categories) {
-        const markdownArgs = {
-          componentName,
-          reason: ctx.reason,
-          ...ctx.errorMessage !== void 0 ? { errorMessage: ctx.errorMessage } : {},
-          ...replicaCount !== void 0 ? { replicaCount } : {}
-        };
         upsertCanicodeAnnotation(ctx.scene, {
           ruleId: ctx.question.ruleId,
-          markdown: formatDefinitionWriteSkippedMarkdown(markdownArgs),
-          categoryId: ctx.categories.fallback
+          markdown: buildDefinitionWriteSkippedBody({
+            ruleId: ctx.question.ruleId,
+            sceneNodeId: ctx.scene.id,
+            componentName,
+            reason: ctx.reason,
+            ...ctx.errorMessage !== void 0 ? { errorMessage: ctx.errorMessage } : {},
+            ...replicaCount !== void 0 ? { replicaCount } : {},
+            ...ctx.roundtripIntent !== void 0 ? { intent: ctx.roundtripIntent } : {}
+          }),
+          categoryId: categoryIdForAnnotate(
+            ctx.categories,
+            "adr012-definition-skipped",
+            ctx.roundtripIntent
+          )
         });
       }
       ctx.telemetry?.(DEFINITION_WRITE_SKIPPED_EVENT, {
@@ -124,11 +305,21 @@ ${footer}`;
     }
     if (!definition) {
       if (ctx.categories) {
-        const markdown = ctx.reason === "silent-ignore" ? "write accepted but value unchanged; no definition available" : ctx.reason === "override-error" ? `could not apply automatically: ${ctx.errorMessage ?? ""}` : `could not apply automatically: ${ctx.errorMessage ?? ""}`;
+        const markdown = buildNoDefinitionFallbackBody({
+          ruleId: ctx.question.ruleId,
+          sceneNodeId: ctx.scene.id,
+          reason: ctx.reason,
+          ...ctx.errorMessage !== void 0 ? { errorMessage: ctx.errorMessage } : {},
+          ...ctx.roundtripIntent !== void 0 ? { intent: ctx.roundtripIntent } : {}
+        });
         upsertCanicodeAnnotation(ctx.scene, {
           ruleId: ctx.question.ruleId,
           markdown,
-          categoryId: ctx.categories.fallback
+          categoryId: categoryIdForAnnotate(
+            ctx.categories,
+            "other-failure",
+            ctx.roundtripIntent
+          )
         });
       }
       return ctx.reason === "silent-ignore" ? { icon: "\u{1F4DD}", label: "silent-ignore, annotated" } : { icon: "\u{1F4DD}", label: `error: ${ctx.errorMessage ?? ""}` };
@@ -145,8 +336,18 @@ ${footer}`;
       if (ctx.categories) {
         upsertCanicodeAnnotation(ctx.scene, {
           ruleId: ctx.question.ruleId,
-          markdown: isRemoteReadOnly ? "source component lives in an external library and is read-only from this file \u2014 apply the fix in the library file itself." : `could not apply at source definition: ${defMsg}`,
-          categoryId: ctx.categories.fallback
+          markdown: buildDefinitionTierFailureBody({
+            ruleId: ctx.question.ruleId,
+            sceneNodeId: ctx.scene.id,
+            ...ctx.roundtripIntent !== void 0 ? { intent: ctx.roundtripIntent } : {},
+            kind: isRemoteReadOnly ? "read-only-library" : "definition-error",
+            errorMessage: defMsg
+          }),
+          categoryId: categoryIdForAnnotate(
+            ctx.categories,
+            "other-failure",
+            ctx.roundtripIntent
+          )
         });
       }
       return {
@@ -156,7 +357,7 @@ ${footer}`;
     }
   }
   async function applyWithInstanceFallback(question, writeFn, context = {}) {
-    const { categories, allowDefinitionWrite = false, telemetry } = context;
+    const { categories, allowDefinitionWrite = false, telemetry, roundtripIntent } = context;
     const scene = await figma.getNodeByIdAsync(question.nodeId);
     if (!scene) return { icon: "\u{1F4DD}", label: "missing node" };
     const definition = question.sourceChildId ? await figma.getNodeByIdAsync(question.sourceChildId) : null;
@@ -169,7 +370,8 @@ ${footer}`;
           categories,
           reason: "silent-ignore",
           allowDefinitionWrite,
-          telemetry
+          telemetry,
+          ...roundtripIntent !== void 0 ? { roundtripIntent } : {}
         });
       }
       return { icon: "\u2705", label: "instance/scene" };
@@ -184,7 +386,8 @@ ${footer}`;
           reason: "non-override-error",
           errorMessage: msg,
           allowDefinitionWrite,
-          telemetry
+          telemetry,
+          ...roundtripIntent !== void 0 ? { roundtripIntent } : {}
         });
       }
       return routeToDefinitionOrAnnotate(definition, writeFn, {
@@ -194,7 +397,8 @@ ${footer}`;
         reason: "override-error",
         errorMessage: msg,
         allowDefinitionWrite,
-        telemetry
+        telemetry,
+        ...roundtripIntent !== void 0 ? { roundtripIntent } : {}
       });
     }
   }
@@ -233,6 +437,39 @@ ${footer}`;
     target.setBoundVariable(prop, variable);
     return true;
   }
+  function buildRoundtripIntentFromPropertyAnswer(question, answerValue) {
+    const raw = question.targetProperty;
+    if (raw === void 0) return void 0;
+    const props = Array.isArray(raw) ? raw : [raw];
+    if (props.length === 0) return void 0;
+    if (props.length === 1) {
+      const prop = props[0];
+      const perProp = answerValue && typeof answerValue === "object" && !("variable" in answerValue) && !Array.isArray(answerValue) ? answerValue[prop] : answerValue;
+      const parsed = parseValueForIntent(perProp);
+      if (parsed === void 0) return void 0;
+      return { field: prop, value: parsed, scope: "instance" };
+    }
+    const obj = answerValue && typeof answerValue === "object" && !("variable" in answerValue) && !Array.isArray(answerValue) ? answerValue : void 0;
+    const picked = {};
+    for (const p of props) {
+      if (obj && p in obj && obj[p] !== void 0) picked[p] = obj[p];
+    }
+    if (Object.keys(picked).length === 0) return void 0;
+    return {
+      field: props.join(", "),
+      value: picked,
+      scope: "instance"
+    };
+  }
+  function parseValueForIntent(raw) {
+    if (raw && typeof raw === "object" && "variable" in raw) {
+      return { variable: raw.variable };
+    }
+    if (raw && typeof raw === "object" && "fallback" in raw) {
+      return raw.fallback;
+    }
+    return raw;
+  }
   function applyPropertyScalar(target, prop, scalar) {
     const rec = target;
     const before = rec[prop];
@@ -241,6 +478,10 @@ ${footer}`;
     return true;
   }
   async function applyPropertyMod(question, answerValue, context = {}) {
+    const roundtripIntent = buildRoundtripIntentFromPropertyAnswer(
+      question,
+      answerValue
+    );
     const props = Array.isArray(question.targetProperty) ? question.targetProperty : question.targetProperty !== void 0 ? [question.targetProperty] : [];
     return applyWithInstanceFallback(
       question,
@@ -271,7 +512,10 @@ ${footer}`;
         }
         return changed;
       },
-      context
+      {
+        ...context,
+        ...roundtripIntent !== void 0 ? { roundtripIntent } : {}
+      }
     );
   }
 
@@ -347,7 +591,15 @@ ${footer}`;
       }
       const ruleId = extractRuleId(text);
       if (!ruleId) continue;
-      out.push({ nodeId: node.id, ruleId });
+      const payload = parseCanicodeJsonPayloadFromMarkdown(text);
+      const payloadAligned = payload && payload.ruleId === ruleId;
+      out.push({
+        nodeId: node.id,
+        ruleId,
+        ...payloadAligned && payload.intent ? { intent: payload.intent } : {},
+        ...payloadAligned && payload.sceneWriteOutcome ? { sceneWriteOutcome: payload.sceneWriteOutcome } : {},
+        ...payloadAligned && payload.codegenDirective ? { codegenDirective: payload.codegenDirective } : {}
+      });
     }
     return out;
   }

@@ -47,7 +47,7 @@ export function registerAnalyze(cli: CAC): void {
     .option("--config <path>", "Path to config JSON file (override rule scores/settings)")
     .option("--no-open", "Don't open report in browser after analysis")
     .option("--json", "Output JSON results to stdout (same format as MCP)")
-    .option("--acknowledgments <path>", "(#371) Path to a JSON file containing [{ nodeId, ruleId }] pairs harvested from canicode-authored Figma annotations. Matching issues are flagged acknowledged and contribute half weight to density.")
+    .option("--acknowledgments <path>", "(#371 / ADR-019) Path to JSON acknowledgments from canicode Figma annotations (nodeId, ruleId; optional intent / sceneWriteOutcome / codegenDirective per #444). Matching issues are flagged acknowledged and contribute half weight to density.")
     .option("--scope <scope>", "(#404) Override analysis scope: `page` (screen/section — container bounds are required) or `component` (standalone reusable unit — root FILL is the design contract). Defaults to auto-detection from the root node type.")
     .example("  canicode analyze https://www.figma.com/design/ABC123/MyDesign")
     .example("  canicode analyze https://www.figma.com/design/ABC123/MyDesign --api --token YOUR_TOKEN")

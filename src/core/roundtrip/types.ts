@@ -76,6 +76,7 @@ export interface CanicodeCategories {
   // "canicode auto-fixed something" but the category actually means
   // "canicode auto-flagged something it could not fix".
   flag: string;
+  /** ADR-012 annotate-instead-of-definition only — not generic "any failure" (#444). */
   fallback: string;
   // Pre-rename installations may still carry a `canicode:auto-fix` category
   // populated by older runs. When present, expose its id here so the Step 5

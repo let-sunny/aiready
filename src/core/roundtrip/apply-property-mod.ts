@@ -2,6 +2,7 @@ import {
   applyWithInstanceFallback,
   type ApplyWithInstanceFallbackContext,
 } from "./apply-with-instance-fallback.js";
+import type { RoundtripIntentPayload } from "./annotation-payload.js";
 import type {
   FigmaGlobal,
   FigmaNode,
@@ -86,6 +87,62 @@ function applyPropertyBinding(
   return true;
 }
 
+/**
+ * ADR-019 / #444: derive structured intent from the survey answer so annotations
+ * preserve user intent when scene writes fail (ADR-012).
+ */
+function buildRoundtripIntentFromPropertyAnswer(
+  question: RoundtripQuestion,
+  answerValue: unknown
+): RoundtripIntentPayload | undefined {
+  const raw = question.targetProperty;
+  if (raw === undefined) return undefined;
+  const props = Array.isArray(raw) ? raw : [raw];
+  if (props.length === 0) return undefined;
+
+  if (props.length === 1) {
+    const prop = props[0]!;
+    const perProp =
+      answerValue &&
+      typeof answerValue === "object" &&
+      !("variable" in (answerValue as object)) &&
+      !Array.isArray(answerValue)
+        ? (answerValue as Record<string, unknown>)[prop]
+        : answerValue;
+    const parsed = parseValueForIntent(perProp);
+    if (parsed === undefined) return undefined;
+    return { field: prop, value: parsed, scope: "instance" };
+  }
+
+  const obj =
+    answerValue &&
+    typeof answerValue === "object" &&
+    !("variable" in (answerValue as object)) &&
+    !Array.isArray(answerValue)
+      ? (answerValue as Record<string, unknown>)
+      : undefined;
+  const picked: Record<string, unknown> = {};
+  for (const p of props) {
+    if (obj && p in obj && obj[p] !== undefined) picked[p] = obj[p]!;
+  }
+  if (Object.keys(picked).length === 0) return undefined;
+  return {
+    field: props.join(", "),
+    value: picked,
+    scope: "instance",
+  };
+}
+
+function parseValueForIntent(raw: unknown): unknown {
+  if (raw && typeof raw === "object" && "variable" in (raw as object)) {
+    return { variable: (raw as { variable: string }).variable };
+  }
+  if (raw && typeof raw === "object" && "fallback" in (raw as object)) {
+    return (raw as { fallback: unknown }).fallback;
+  }
+  return raw;
+}
+
 function applyPropertyScalar(
   target: FigmaNode,
   prop: string,
@@ -107,6 +164,10 @@ export async function applyPropertyMod(
   answerValue: unknown,
   context: ApplyWithInstanceFallbackContext = {}
 ): Promise<RoundtripResult> {
+  const roundtripIntent = buildRoundtripIntentFromPropertyAnswer(
+    question,
+    answerValue
+  );
   const props = Array.isArray(question.targetProperty)
     ? question.targetProperty
     : question.targetProperty !== undefined
@@ -153,6 +214,9 @@ export async function applyPropertyMod(
       }
       return changed;
     },
-    context
+    {
+      ...context,
+      ...(roundtripIntent !== undefined ? { roundtripIntent } : {}),
+    }
   );
 }
