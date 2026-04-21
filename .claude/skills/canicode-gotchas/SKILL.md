@@ -18,6 +18,12 @@ Run a gotcha survey on a Figma design to collect implementation context that Fig
 
 ## Workflow
 
+### Step 0: Verify canicode MCP tools are loaded (optional fast path)
+
+Before Step 1, verify that `gotcha-survey` is callable in **this** session — not merely listed in `.mcp.json`. Newly registered MCP servers usually need a **host restart or MCP reload** before tools appear (same pattern as `/canicode-roundtrip` Step 0 for the Figma MCP).
+
+When you fall back to `npx canicode gotcha-survey … --json`, tell the user explicitly: the canicode MCP may not be loaded yet. They should register it (`claude mcp add canicode -- npx --yes --package=canicode canicode-mcp`, or the Cursor/`mcp.json` equivalent in the Customization guide) and **restart the IDE or reload MCP** — then the next session can use the MCP tool without spawning `npx`. The CLI fallback is correct behavior; silence makes users think registration failed (#433).
+
 ### Step 1: Run the gotcha survey
 
 If the `gotcha-survey` MCP tool is available, call it with the user's Figma URL:
@@ -115,77 +121,48 @@ The `core/contracts/design-key.ts` helper (`computeDesignKey`) handles every sha
 
 File-state detection (4-way: missing / valid / missing-heading / clobbered) and section walking (find existing `## #NNN — ...` by `Design key` substring, otherwise compute the next monotonic zero-padded NNN) are deterministic markdown operations and live in `core/gotcha/upsert-gotcha-section.ts` with vitest coverage — do not re-implement them in prose (per ADR-016).
 
-Render the per-design section markdown using the **Output Template** below with the literal string `{{SECTION_NUMBER}}` in the header (the CLI substitutes the right NNN for you — preserves it on replace, computes the next monotonic value on append). Then invoke:
+Build **one JSON object** on stdin for `upsert-gotcha-section`. The CLI renders the section markdown from `survey` + `answers` via `renderGotchaSection` in TypeScript (#439) — severity, rule text, node ids, and instance context come **verbatim** from `gotcha-survey --json`; the skill must not paste LLM-authored section prose.
+
+Payload shape:
+
+```json
+{
+  "survey": {
+    "designKey": "<same as Step 4a>",
+    "designGrade": "<from gotcha-survey>",
+    "questions": "<full questions[] array from gotcha-survey — preserve order>"
+  },
+  "answers": {
+    "<nodeId>": { "answer": "…" }
+  },
+  "designName": "<Figma file name or fixture label>",
+  "figmaUrl": "<the user's input URL or path>",
+  "analyzedAt": "<ISO 8601 timestamp when you upsert>",
+  "today": "<YYYY-MM-DD local date for the section title>"
+}
+```
+
+For skipped / n/a: use `{ "skipped": true }` for that `nodeId`, or omit the key — both render `- **Answer**: _(skipped)_`.
+
+Invoke (cac requires `--input=-`, not `--input -`, so the stdin sentinel survives parsing — #420):
 
 ```bash
 npx canicode upsert-gotcha-section \
   --file .claude/skills/canicode-gotchas/SKILL.md \
   --design-key "<designKey from Step 4a>" \
-  --section=-   # then pipe the rendered section markdown through stdin
+  --input=-
 ```
 
-The CLI prints a JSON result `{ state, action, sectionNumber, wrote, userMessage }`:
+Pipe the JSON object on stdin. `--design-key` must equal `survey.designKey` (the CLI validates the match).
+
+The CLI prints JSON `{ state, action, sectionNumber, wrote, userMessage, designKey }`:
 
 - `wrote: true` → success. `action` is `"replace"` (preserved `sectionNumber`) or `"append"` (next monotonic `sectionNumber`).
 - `wrote: false` with `state: "missing"` → tell the user: *"Your gotchas SKILL.md is not installed yet. Run `canicode init` first, then re-invoke this skill."* Stop here.
 - `wrote: false` with `state: "clobbered"` → tell the user: *"Your gotchas SKILL.md is missing the canicode YAML frontmatter (pre-#340 single-design clobber). Run `canicode init --force` to restore the workflow, then re-run this survey — your answers will land in a clean numbered section."* Stop here.
 - `wrote: true` with `state: "missing-heading"` → silent recovery. The CLI injected the `# Collected Gotchas` heading and appended the section; the workflow region above is untouched.
 
-The Workflow region above must never be touched. Do NOT copy Workflow prose into the per-design section; the section only carries metadata + gotcha answers.
-
-## Output Template
-
-Each per-design section in the `# Collected Gotchas` region has this exact shape:
-
-````markdown
-## #NNN — {designName} — {YYYY-MM-DD}
-
-- **Figma URL**: {figmaUrl}
-- **Design key**: {designKey}
-- **Grade**: {designGrade}
-- **Analyzed at**: {analyzedAt}
-
-### Gotchas
-
-#### {ruleId} — {nodeName}
-
-- **Severity**: {severity}
-- **Node ID**: {nodeId}
-- **Instance context** (omit this bullet if `instanceContext` was not in the survey question): parent instance `parentInstanceNodeId`, source node `sourceNodeId`, component `sourceComponentName` / `sourceComponentId` when present — roundtrip apply uses this to write on the source definition when instance overrides fail.
-- **Question**: {question}
-- **Answer**: {userAnswer}
-
-(repeat for each question)
-````
-
-### Field mapping
-
-| Field | Source |
-|-------|--------|
-| `NNN` | `sectionNumber` — zero-padded three-digit index. Preserved on re-run, incremented on append. |
-| `designName` | Figma file name or fixture name from the input |
-| `YYYY-MM-DD` | Today's date (the day you are running the survey) |
-| `figmaUrl` | The input URL or fixture path provided by the user |
-| `designKey` | `survey.designKey` from the gotcha-survey response (see Step 4a) |
-| `designGrade` | `designGrade` from gotcha-survey response |
-| `analyzedAt` | Current timestamp (ISO 8601) |
-| `ruleId` | `ruleId` from each question |
-| `nodeName` | `nodeName` from each question |
-| `severity` | `severity` from each question (blocking / risk / missing-info — the last surfaces only for info-collection rules per #406) |
-| `nodeId` | `nodeId` from each question |
-| `instanceContext` | When present on the question, copy `parentInstanceNodeId`, `sourceNodeId`, `sourceComponentId`, `sourceComponentName` into the bullet above (roundtrip / Plugin apply) |
-| `question` | `question` from each question |
-| `userAnswer` | The answer collected from the user in Step 3 |
-
-### Skipped questions
-
-If the user skipped a question or said "n/a", still include it in the section with:
-
-```markdown
-- **Answer**: _(skipped)_
-```
-
-This ensures the code generation agent knows the gotcha exists even if no answer was provided.
+The Workflow region above must never be touched.
 
 ## Edge Cases
 

@@ -13,6 +13,12 @@ This skill works with either channel — the CLI or the canicode MCP server. Bot
 - A **saved fixture** (from `canicode calibrate-save-fixture`)
 - A **FIGMA_TOKEN** for live Figma URLs
 
+### Step 0: Verify canicode MCP tools are loaded (optional fast path)
+
+Before shelling out to `npx canicode analyze …`, check whether the **`analyze` MCP tool** is available in **this** session — not only whether `.mcp.json` lists `canicode`. New MCP registrations usually need a **restart or MCP reload** before tools appear.
+
+If you must use the CLI fallback, say so out loud: the user may have added `claude mcp add canicode …` but not restarted yet (#433). After restart/reload, `analyze` via MCP avoids the `npx` spawn. The fallback is valid — silence makes users think the MCP install failed.
+
 ## How to Analyze
 
 ### From a Figma URL

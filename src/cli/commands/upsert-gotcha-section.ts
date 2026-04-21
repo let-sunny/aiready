@@ -2,26 +2,25 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import type { CAC } from "cac";
 import { z } from "zod";
 
+import { GotchaSurveySchema } from "../../core/contracts/gotcha-survey.js";
+import { renderGotchaSection } from "../../core/gotcha/render-gotcha-section.js";
 import { renderUpsertedFile } from "../../core/gotcha/upsert-gotcha-section.js";
 
 /**
  * Atomic read → upsert → write of the per-design gotcha section into the
  * `canicode-gotchas` SKILL.md. Owns the deterministic markdown parsing
  * the SKILL used to inline as prose (file-state detection, `## #NNN — ...`
- * walking, monotonic numbering) — see ADR-016 and #385.
+ * walking, monotonic numbering) — see ADR-016 and #385 / #439.
  *
  * Inputs:
  * - `--file <path>`: the SKILL.md path. Required.
  * - `--design-key <key>`: canonical design key from `gotcha-survey`'s
- *   response. Required.
- * - `--section <markdown>`: the already-rendered per-design section body
- *   the SKILL produced from its template. The header line is expected to
- *   contain the literal `{{SECTION_NUMBER}}` placeholder, which this
- *   command substitutes with either the preserved existing NNN (replace)
- *   or the next monotonic NNN (append). If the placeholder is absent the
- *   section markdown is written verbatim. Either pass via `--section` or
- *   pipe through stdin (`--section=-`). Note: cac parses a bare `-` as the
- *   start of a flag, so the `=` form is required for the stdin sentinel.
+ *   response. Required — must match `survey.designKey` inside the JSON.
+ * - `--input <path>`: JSON file or `-` for stdin (`--input=-`). Shape:
+ *   `{ survey: { designKey, designGrade, questions }, answers, designName,
+ *   figmaUrl, analyzedAt, today }`. The CLI renders section markdown via
+ *   `renderGotchaSection` so severity / question text cannot drift from the
+ *   survey JSON (#439).
  *
  * Outputs (stdout, JSON):
  * ```
@@ -30,20 +29,35 @@ import { renderUpsertedFile } from "../../core/gotcha/upsert-gotcha-section.js";
  *   "action": "replace" | "append" | null,
  *   "sectionNumber": "NNN" | null,
  *   "wrote": true | false,
- *   "userMessage": string | null
+ *   "userMessage": string | null,
+ *   "designKey": string | null
  * }
  * ```
- *
- * For `state === "missing"` and `state === "clobbered"` the helper does
- * not write — the SKILL surfaces `userMessage` to the user (asking them to
- * run `canicode init` or `canicode init --force`) and stops.
  */
+const AnswerSchema = z.union([
+  z.object({ answer: z.string() }),
+  z.object({ skipped: z.literal(true) }),
+]);
+
+const UpsertJsonPayloadSchema = z.object({
+  survey: GotchaSurveySchema.pick({
+    designKey: true,
+    designGrade: true,
+    questions: true,
+  }),
+  answers: z.record(z.string(), AnswerSchema),
+  designName: z.string(),
+  figmaUrl: z.string(),
+  analyzedAt: z.string(),
+  today: z.string(),
+});
+
 const UpsertOptionsSchema = z.object({
   file: z.string().min(1, "--file is required"),
   designKey: z.string().min(1, "--design-key is required"),
-  section: z
+  input: z
     .string()
-    .min(1, "--section is required (use '--section=-' to read stdin)"),
+    .min(1, "--input is required (use '--input=-' to read stdin)"),
 });
 
 type UpsertOptions = z.infer<typeof UpsertOptionsSchema>;
@@ -54,6 +68,8 @@ interface UpsertCliResult {
   sectionNumber: string | null;
   wrote: boolean;
   userMessage: string | null;
+  /** Echo of the canonical design key after JSON validation (audit). */
+  designKey: string | null;
 }
 
 const USER_MESSAGES: Record<string, string> = {
@@ -71,11 +87,45 @@ async function readStdin(): Promise<string> {
   return Buffer.concat(chunks).toString("utf-8");
 }
 
+function parseUpsertPayload(rawJson: string): z.infer<typeof UpsertJsonPayloadSchema> {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(rawJson) as unknown;
+  } catch {
+    throw new Error("Invalid JSON in --input");
+  }
+  const result = UpsertJsonPayloadSchema.safeParse(parsed);
+  if (!result.success) {
+    const msg = result.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ");
+    throw new Error(`Invalid upsert payload: ${msg}`);
+  }
+  return result.data;
+}
+
 export async function runUpsertGotchaSection(
   options: UpsertOptions,
 ): Promise<UpsertCliResult> {
-  const sectionMarkdown =
-    options.section === "-" ? await readStdin() : options.section;
+  const rawJson =
+    options.input === "-" ? await readStdin() : readFileSync(options.input, "utf-8");
+
+  const payload = parseUpsertPayload(rawJson);
+
+  if (payload.survey.designKey !== options.designKey) {
+    throw new Error(
+      `--design-key (${options.designKey}) does not match survey.designKey (${payload.survey.designKey})`,
+    );
+  }
+
+  const sectionMarkdown = renderGotchaSection({
+    questions: payload.survey.questions,
+    answers: payload.answers,
+    designName: payload.designName,
+    figmaUrl: payload.figmaUrl,
+    designKey: payload.survey.designKey,
+    designGrade: payload.survey.designGrade,
+    analyzedAt: payload.analyzedAt,
+    today: payload.today,
+  });
 
   const currentContent = existsSync(options.file)
     ? readFileSync(options.file, "utf-8")
@@ -94,6 +144,7 @@ export async function runUpsertGotchaSection(
       sectionNumber: null,
       wrote: false,
       userMessage: USER_MESSAGES[state] ?? null,
+      designKey: payload.survey.designKey,
     };
   }
 
@@ -104,6 +155,7 @@ export async function runUpsertGotchaSection(
     sectionNumber: plan?.sectionNumber ?? null,
     wrote: true,
     userMessage: null,
+    designKey: payload.survey.designKey,
   };
 }
 
@@ -119,8 +171,8 @@ export function registerUpsertGotchaSection(cli: CAC): void {
       "Canonical design key from gotcha-survey's response",
     )
     .option(
-      "--section <markdown>",
-      "Already-rendered per-design section markdown. Use '--section=-' to read from stdin (cac parses a bare '-' as a flag, so the '=' form is required).",
+      "--input <path>",
+      "JSON payload path, or '--input=-' to read JSON from stdin (cac parses a bare '-' as a flag, so the '=' form is required).",
     )
     .action(async (rawOptions: Record<string, unknown>) => {
       const parseResult = UpsertOptionsSchema.safeParse(rawOptions);
@@ -136,9 +188,6 @@ export function registerUpsertGotchaSection(cli: CAC): void {
         const result = await runUpsertGotchaSection(parseResult.data);
         console.log(JSON.stringify(result, null, 2));
         if (!result.wrote && result.userMessage) {
-          // Non-zero exit so a wrapping shell script / SKILL knows to
-          // surface the userMessage and stop, rather than treating an
-          // unwritten file as success.
           process.exitCode = 2;
         }
       } catch (error) {

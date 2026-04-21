@@ -86,6 +86,8 @@ npx canicode analyze "https://www.figma.com/design/ABC123/MyDesign?node-id=1-234
 claude mcp add canicode -- npx --yes --package=canicode canicode-mcp
 ```
 
+Restart Claude Code or reload MCP (Cursor) so canicode tools (`analyze`, `gotcha-survey`, …) load — same cold-session requirement as the Figma MCP (#433).
+
 <details>
 <summary><strong>All channels</strong></summary>
 
@@ -158,6 +160,8 @@ Flags: `--global` installs into `~/.claude/skills/` instead. `--no-skills` skips
 ```bash
 claude mcp add canicode -- npx --yes --package=canicode canicode-mcp
 ```
+
+Restart Claude Code or reload MCP (Cursor) so canicode MCP tools appear in a fresh session (#433).
 
 Then ask: *"Analyze this Figma design: https://www.figma.com/design/..."*
 
