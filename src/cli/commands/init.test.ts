@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -51,6 +51,17 @@ describe("figmaMcpRegistered", () => {
     );
     expect(figmaMcpRegistered(tempRoot)).toBe(false);
   });
+
+  it("returns true when only .cursor/mcp.json registers figma (Cursor project layout)", () => {
+    const cursorDir = join(tempRoot, ".cursor");
+    mkdirSync(cursorDir, { recursive: true });
+    writeFileSync(
+      join(cursorDir, "mcp.json"),
+      JSON.stringify({ mcpServers: { figma: { url: "https://mcp.figma.com/mcp" } } }),
+      "utf-8",
+    );
+    expect(figmaMcpRegistered(tempRoot)).toBe(true);
+  });
 });
 
 describe("formatNextSteps", () => {
@@ -81,5 +92,26 @@ describe("formatNextSteps", () => {
     const out = formatNextSteps({ figmaMcpPresent: true, skillsInstalled: false });
     expect(out).toContain(`Next: canicode analyze`);
     expect(out).not.toContain("Restart Claude Code");
+  });
+
+  it("when cursorSkillsInstalled, omits Claude slash commands and mentions @ canicode-roundtrip", () => {
+    const out = formatNextSteps({
+      figmaMcpPresent: true,
+      skillsInstalled: true,
+      cursorSkillsInstalled: true,
+    });
+    expect(out).toContain("@ canicode-roundtrip");
+    expect(out).not.toContain("/canicode-roundtrip");
+    expect(out).not.toContain("Claude Code");
+  });
+
+  it("when cursorSkillsInstalled and Figma MCP missing, points at .cursor/mcp.json", () => {
+    const out = formatNextSteps({
+      figmaMcpPresent: false,
+      skillsInstalled: true,
+      cursorSkillsInstalled: true,
+    });
+    expect(out).toContain(".cursor/mcp.json");
+    expect(out).not.toContain("claude mcp add");
   });
 });

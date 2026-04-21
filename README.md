@@ -65,6 +65,12 @@ npx canicode init --token figd_xxxxxxxxxxxxx
 
 > **Prerequisite:** the roundtrip skill calls the Figma MCP server to read and write the design. Install it once with `claude mcp add -s project -t http figma https://mcp.figma.com/mcp` — see the **MCP Server** install section below.
 
+**CanICode in Cursor (no Claude Code required):**
+
+1. Add **canicode** and **Figma** MCPs — [Cursor MCP](docs/CUSTOMIZATION.md#cursor-mcp-canicode) for `npx` → `canicode-mcp`; Figma MCP is required for **`use_figma`** if you run **roundtrip** (design writes), not for analyze-only.
+2. `npx canicode init --token figd_xxxxxxxxxxxxx --cursor-skills` — installs the same three skills as Claude under `.cursor/skills/` (`canicode`, `canicode-gotchas`, `canicode-roundtrip` + `helpers.js`) plus the shared `.claude/skills/canicode-gotchas/SKILL.md` answer file when needed.
+3. In Agent chat, @-mention **canicode-gotchas** (survey) or **canicode-roundtrip** (full roundtrip) and pass a Figma URL — same tool names and JSON as Claude Code (`gotcha-survey`, `analyze`, etc.).
+
 **If you only want analysis (no writes back to Figma):**
 
 ```bash
@@ -114,7 +120,7 @@ Each row below is a **complete** install. Don't run more than one — they cover
 | If you use… | Install |
 |-------------|---------|
 | **Claude Code** (recommended for the roundtrip workflow) | `npx canicode init --token figd_xxxxxxxxxxxxx` — saves the token AND drops `/canicode`, `/canicode-gotchas`, `/canicode-roundtrip` skills into `./.claude/skills/`. The skills already know how to call canicode via `npx canicode …`, no MCP install needed. |
-| **Cursor / Claude Desktop / other MCP host** | `claude mcp add canicode -- npx --yes --package=canicode canicode-mcp` — registers the MCP server. |
+| **Cursor / Claude Desktop / other MCP host** | Add canicode to the host’s MCP config — see [`docs/CUSTOMIZATION.md`](docs/CUSTOMIZATION.md#cursor-mcp-canicode). Example (Cursor project file): `npx` + `canicode-mcp` via `--package=canicode`. |
 | **Just the CLI** (CI, scripts) | Nothing. `npx canicode analyze "<figma-url>"` works directly. Run `canicode init --token …` once if you want the token persisted to `~/.canicode/config.json`. |
 
 > **Get your token:** Figma → Settings → Security → Personal access tokens → Generate new token
@@ -153,7 +159,7 @@ canicode's rule engine analyzes the design data — the AI assistant just orches
 
 If you genuinely need a per-server token without using `canicode init`, export it on the calling shell instead: `export FIGMA_TOKEN=figd_xxxxxxxxxxxxx`.
 
-For Cursor / Claude Desktop config, see [`docs/CUSTOMIZATION.md`](docs/CUSTOMIZATION.md).
+For Cursor / Claude Desktop config, see [`docs/CUSTOMIZATION.md`](docs/CUSTOMIZATION.md) — especially [Cursor MCP (canicode)](docs/CUSTOMIZATION.md#cursor-mcp-canicode) and the **Manual test checklist (#407)** for verifying `gotcha-survey` end-to-end.
 
 </details>
 

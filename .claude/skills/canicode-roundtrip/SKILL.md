@@ -10,8 +10,8 @@ Orchestrate the full design-to-code roundtrip: analyze a Figma design for readin
 
 ## Prerequisites
 
-- **Figma MCP server** installed (provides `get_design_context`, `get_screenshot`, `use_figma`, and other Figma tools) — REQUIRED, there is no CLI fallback for `use_figma`
-- **canicode MCP server** (preferred): `claude mcp add canicode -- npx --yes --package=canicode canicode-mcp` — long-form flags only; the short-form `-y -p` collides with `claude mcp add`'s parser (#366). The MCP server reads `FIGMA_TOKEN` from `~/.canicode/config.json` or the host environment, so do **not** pass `-e FIGMA_TOKEN=…` here (#364).
+- **Figma MCP server** installed (provides `get_design_context`, `get_screenshot`, `use_figma`, and other Figma tools) — REQUIRED, there is no CLI fallback for `use_figma`. Register it with your host (e.g. Claude Code: `claude mcp add -s project -t http figma https://mcp.figma.com/mcp`; Cursor: add the Figma MCP entry per host docs / project `.mcp.json`).
+- **canicode MCP** (preferred): **Claude Code:** `claude mcp add canicode -- npx --yes --package=canicode canicode-mcp` — long-form flags only; short `-y -p` collides with `claude mcp add`'s parser (#366); do **not** pass `-e FIGMA_TOKEN=…` here (#364). **Cursor / other hosts:** add `canicode-mcp` to MCP config — see [Customization guide](https://github.com/let-sunny/canicode/blob/main/docs/CUSTOMIZATION.md#cursor-mcp-canicode). The server reads `FIGMA_TOKEN` from `~/.canicode/config.json` or the environment.
 - **Without canicode MCP** (fallback): Steps 1 (analyze) and 3 (gotcha-survey) shell out to `npx canicode <command> --json` — same JSON shape as the MCP tools. Step 4 (apply to Figma) still requires Figma MCP `use_figma`.
 - **FIGMA_TOKEN** configured for live Figma URLs
 - **Figma Full seat + file edit permission** (required for `use_figma` to modify the design)
@@ -20,13 +20,13 @@ Orchestrate the full design-to-code roundtrip: analyze a Figma design for readin
 
 ### Step 0: Verify Figma MCP tools are loaded
 
-Before Step 1, verify that `use_figma` is callable in **this** session — not merely listed in `.mcp.json`. Newly registered MCP servers (e.g. via `claude mcp add -s project -t http figma https://mcp.figma.com/mcp`) require a Claude Code restart to load their tools; reading `.mcp.json` is not a substitute for checking the live tool list you have access to right now.
+Before Step 1, verify that `use_figma` is callable in **this** session — not merely listed in `.mcp.json`. Newly registered MCP servers require a **host restart or MCP reload** so tools appear (e.g. Claude Code: restart after `claude mcp add …`; Cursor: restart Cursor or reload MCP after editing `.cursor/mcp.json`). Reading `.mcp.json` is not a substitute for checking the live tool list you have access to right now.
 
 If `use_figma` is unavailable in the current session, **Do NOT proceed to Step 1**. Steps 1 (analyze) and 3 (gotcha-survey) spend real Figma API calls and 5–15 minutes of human survey time before Step 4 would otherwise discover `use_figma` is missing. Halt immediately and tell the user:
 
-1. Confirm `.mcp.json` registers the Figma MCP entry (e.g. `figma` under `mcpServers`).
-2. Restart Claude Code so the newly registered tools load.
-3. Re-invoke `/canicode-roundtrip <url>`.
+1. Confirm `.mcp.json` (project or user) registers the Figma MCP entry (e.g. `figma` under `mcpServers`).
+2. Restart the IDE / agent host (or reload MCP) so the newly registered tools load.
+3. Re-invoke the roundtrip (Claude Code slash command `/canicode-roundtrip`, or Cursor: @ **canicode-roundtrip** with the Figma URL).
 
 See the Edge Case **No Figma MCP server** below for the one-way fallback when Figma MCP genuinely cannot be installed — the precheck above is for the common "installed but not restarted" case, not a replacement for that fallback.
 
@@ -276,11 +276,11 @@ Branches on `probe`:
 
 The probe is read-only and idempotent; running it before the picker adds one round-trip but saves the user a confusing "I opted in, why did I get annotations?" moment that #342 surfaced live on Simple Design System (Community).
 
-**Shared helpers (bundled)** — the deterministic helpers live in TypeScript at `src/core/roundtrip/*.ts` and are bundled to a single IIFE at `.claude/skills/canicode-roundtrip/helpers.js`. `use_figma` only accepts a self-contained JS string, so the source of truth is TypeScript (with vitest coverage) and the bundle is the delivery artifact.
+**Shared helpers (bundled)** — the deterministic helpers live in TypeScript at `src/core/roundtrip/*.ts` and are bundled to a single IIFE shipped next to this skill as `helpers.js`. `use_figma` only accepts a self-contained JS string, so the source of truth is TypeScript (with vitest coverage) and the bundle is the delivery artifact.
 
 **Usage in a roundtrip session:**
 
-1. Read `.claude/skills/canicode-roundtrip/helpers.js` once at the start of Step 4.
+1. Read `helpers.js` from the same directory as this skill once at the start of Step 4 — typically `.claude/skills/canicode-roundtrip/helpers.js` (Claude Code / default `canicode init`) or `.cursor/skills/canicode-roundtrip/helpers.js` (Cursor with `canicode init --cursor-skills`).
 2. Prepend its contents verbatim at the top of every `use_figma` batch body — it registers a single global `CanICodeRoundtrip`.
 3. Reference exposed globals as `CanICodeRoundtrip.*`:
    - `stripAnnotations(annotations)` — normalizes the D1 label/labelMarkdown mutex on readback.

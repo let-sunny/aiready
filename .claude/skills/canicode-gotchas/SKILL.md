@@ -1,17 +1,20 @@
 ---
 name: canicode-gotchas
-description: Gotcha survey workflow plus accumulating per-design answers — one Workflow region on top, numbered sections appended per Figma design
+description: Gotcha survey (Claude Code or Cursor) — Q&A workflow; answers accumulate in .claude/skills/canicode-gotchas/SKILL.md for figma-implement-design
 ---
 
-# CanICode Gotchas -- Design Gotcha Survey & Skill Writer
+# CanICode Gotchas — Design Gotcha Survey
 
-Run a gotcha survey on a Figma design to collect implementation context that Figma cannot encode natively, capture developer/designer answers, and upsert them into this skill file so downstream `figma-implement-design` runs have annotation-ready context. In this model, rules do rule-based best-practice detection, and gotcha is the annotation output from that detection. Some gotchas come from violation rules (what is wrong and how to resolve it); others come from info-collection rules (neutral context Figma cannot represent, like interaction intent/state). The file has two regions: the **Workflow** below (installed by `canicode init`, never overwritten) and the **Collected Gotchas** region at the bottom (one numbered section per design, replaced in place on re-runs).
+Run a gotcha survey on a Figma design to collect implementation context that Figma cannot encode natively, capture developer/designer answers, and upsert them into **`.claude/skills/canicode-gotchas/SKILL.md`** so downstream `figma-implement-design` runs have annotation-ready context. In this model, rules do rule-based best-practice detection, and gotcha is the annotation output from that detection. Some gotchas come from violation rules (what is wrong and how to resolve it); others come from info-collection rules (neutral context Figma cannot represent, like interaction intent/state).
+
+**Install location:** The workflow prose may live under `.claude/skills/canicode-gotchas/SKILL.md` (default `canicode init`) or be copied to `.cursor/skills/canicode-gotchas/SKILL.md` (`canicode init --cursor-skills`). The **authoritative gotcha store** is always **`.claude/skills/canicode-gotchas/SKILL.md`** — the CLI `upsert-gotcha-section` writes there only. In the `.claude` copy, this file has two regions: the **Workflow** below (installed by `canicode init`, never overwritten manually) and the **Collected Gotchas** region at the bottom (one numbered section per design, replaced in place on re-runs).
 
 ## Prerequisites
 
-- **canicode MCP server** (preferred): `claude mcp add canicode -- npx --yes --package=canicode canicode-mcp` — long-form flags only; the short-form `-y -p` collides with `claude mcp add`'s parser (#366). The MCP server reads `FIGMA_TOKEN` from `~/.canicode/config.json` or the host environment, so do **not** pass `-e FIGMA_TOKEN=…` here (#364).
-- **Without canicode MCP** (fallback): the `canicode gotcha-survey --json` CLI produces the same response shape — no MCP installation required.
-- **FIGMA_TOKEN** configured for live Figma URLs
+- **canicode MCP** (recommended): Register the server with your host — **Claude Code:** `claude mcp add canicode -- npx --yes --package=canicode canicode-mcp` — long-form flags only; the short-form `-y -p` collides with `claude mcp add`'s parser (#366); do **not** pass `-e FIGMA_TOKEN=…` here (#364). **Cursor / other hosts:** add `canicode-mcp` to your MCP config — see [Customization guide](https://github.com/let-sunny/canicode/blob/main/docs/CUSTOMIZATION.md#cursor-mcp-canicode) (`~/.cursor/mcp.json` or project `.cursor/mcp.json`). The MCP server reads `FIGMA_TOKEN` from `~/.canicode/config.json` or the environment.
+- **Without canicode MCP** (fallback): `npx canicode gotcha-survey "<input>" --json` — same JSON shape as the MCP tool.
+- **FIGMA_TOKEN** configured for live Figma URLs.
+- **Gotcha destination on disk:** `.claude/skills/canicode-gotchas/SKILL.md` must exist before upsert — run `npx canicode init --token …` (add `--cursor-skills` if you also want the workflow file under `.cursor/skills/`).
 
 ## Workflow
 
@@ -38,12 +41,12 @@ Either channel returns:
 
 If `isReadyForCodeGen` is `true` or `questions` is empty:
 - Tell the user: "This design scored **{designGrade}** and is ready for code generation — no gotchas to resolve."
-- Do NOT write to the skill file.
+- Do NOT write to `.claude/skills/canicode-gotchas/SKILL.md`.
 - Stop here.
 
 ### Step 3: Present questions to the user
 
-The survey response carries a pre-computed `groupedQuestions.groups[].batches[]` shape so the SKILL never has to sort, partition, or maintain a batchable-rule whitelist in prose. The sort key, `_no-source` sentinel, and batchable-rule list all live in `core/gotcha/group-and-batch-questions.ts` with vitest coverage (per ADR-016). Iterate over it:
+The survey response carries a pre-computed `groupedQuestions.groups[].batches[]` shape so this skill never has to sort, partition, or maintain a batchable-rule whitelist in prose. The sort key, `_no-source` sentinel, and batchable-rule list all live in `core/gotcha/group-and-batch-questions.ts` with vitest coverage (per ADR-016). Iterate over it:
 
 For every `batch` in `groupedQuestions.groups.flatMap((g) => g.batches)`:
 
@@ -90,19 +93,19 @@ When applying the batched answer, expand back to per-question records in Step 4 
 
 ### Step 4: Upsert the gotcha section
 
-After collecting all answers, **upsert** this design's section into the `# Collected Gotchas` region at the bottom of this file:
+After collecting all answers, **upsert** this design's section into the `# Collected Gotchas` region at the bottom of:
 
 ```
 .claude/skills/canicode-gotchas/SKILL.md
 ```
 
-This file goes in the **user's project** (current working directory), NOT in the canicode repo. The Workflow region above **must never be modified** — only the `# Collected Gotchas` region below is touched.
+That path is in the **user's project** (current working directory), NOT in the canicode repo. If you are following this workflow from a copy under `.cursor/skills/`, still upsert into **`.claude/skills/...`** only — never write gotcha answers into the `.cursor` copy. The Workflow region in the `.claude` file **must never be modified manually** — only the `# Collected Gotchas` region is touched (via the CLI below).
 
 #### Step 4a: Use the `designKey` from the survey response
 
 `designKey` uniquely identifies the design so re-running on the same URL replaces the existing section in place. The survey response carries it on `survey.designKey` — read it directly. Do **not** parse the input URL in prose.
 
-The `core/contracts/design-key.ts` helper (`computeDesignKey`) handles every shape with vitest coverage so the SKILL stays ADR-016-compliant:
+The `core/contracts/design-key.ts` helper (`computeDesignKey`) handles every shape with vitest coverage so this workflow stays ADR-016-compliant:
 
 - **Figma URL** → `<fileKey>#<nodeId>` with `-` → `:` normalization on the nodeId. Example: `https://figma.com/design/abc123XYZ/My-File?node-id=42-100&t=ref` → `designKey = "abc123XYZ#42:100"`. Trailing query parameters (`?t=...`, `?mode=...`) are dropped.
 - **Figma URL without `node-id`** → just `<fileKey>` (file-level key).
@@ -110,7 +113,7 @@ The `core/contracts/design-key.ts` helper (`computeDesignKey`) handles every sha
 
 #### Step 4b: Upsert via the canicode CLI
 
-File-state detection (4-way: missing / valid / missing-heading / clobbered) and section walking (find existing `## #NNN — ...` by `Design key` substring, otherwise compute the next monotonic zero-padded NNN) are deterministic markdown operations and live in `core/gotcha/upsert-gotcha-section.ts` with vitest coverage — the SKILL never re-implements them in prose (per ADR-016).
+File-state detection (4-way: missing / valid / missing-heading / clobbered) and section walking (find existing `## #NNN — ...` by `Design key` substring, otherwise compute the next monotonic zero-padded NNN) are deterministic markdown operations and live in `core/gotcha/upsert-gotcha-section.ts` with vitest coverage — do not re-implement them in prose (per ADR-016).
 
 Render the per-design section markdown using the **Output Template** below with the literal string `{{SECTION_NUMBER}}` in the header (the CLI substitutes the right NNN for you — preserves it on replace, computes the next monotonic value on append). Then invoke:
 
@@ -186,7 +189,7 @@ This ensures the code generation agent knows the gotcha exists even if no answer
 
 ## Edge Cases
 
-- **No questions returned**: The design is ready for code generation. Inform the user and stop (Step 2). Do not touch the file.
+- **No questions returned**: The design is ready for code generation. Inform the user and stop (Step 2). Do not touch `.claude/skills/canicode-gotchas/SKILL.md`.
 - **Re-run on the same design**: Replace that design's section in place (matched by `Design key`) — preserve the original `#NNN` number. Do NOT append a duplicate.
 - **Re-run on a different design**: Append a new section with the next `#NNN`. Prior designs' sections are untouched.
 - **Workflow region**: Never modified. If you notice the Workflow region has been edited by the user, leave their edits alone — only the `# Collected Gotchas` region is under skill control.

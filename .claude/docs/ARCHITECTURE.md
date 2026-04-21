@@ -21,6 +21,7 @@
 
 **3a. Claude Code Skill (`/canicode-gotchas`)**
 - Location: `.claude/skills/canicode-gotchas/SKILL.md` (copy to any project)
+- **Cursor (#407)**: `pnpm build` fills `skills/cursor/` — `canicode-gotchas` is stripped after `# Collected Gotchas`; `canicode` and `canicode-roundtrip` (+ `helpers.js`) are full copies of the Claude skills. `canicode init --cursor-skills` installs all three into `.cursor/skills/`. Gotcha answers still upsert only to `.claude/skills/canicode-gotchas/SKILL.md`. Roundtrip still requires Figma MCP `use_figma`. MCP: `docs/CUSTOMIZATION.md` (Cursor MCP section).
 - Data source: `gotcha-survey` MCP tool OR `npx canicode gotcha-survey --json` CLI fallback (canicode MCP server is optional)
 - Workflow: calls gotcha-survey → presents questions to user → collects answers → writes `.claude/skills/canicode-gotchas/SKILL.md` in the user's project
 - Output: skill file with design gotcha Q&A pairs (nodeId, ruleId, severity, question, answer)

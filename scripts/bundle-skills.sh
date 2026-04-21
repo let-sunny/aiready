@@ -47,4 +47,26 @@ for f in "${REQUIRED[@]}"; do
   fi
 done
 
+# Cursor skills (issue #407) — single source: gotchas stripped; canicode + roundtrip are full copies (same SKILL.md + helpers.js as Claude).
+node "$ROOT/scripts/strip-cursor-gotcha-skill.mjs"
+echo "  wrote cursor/canicode-gotchas/SKILL.md (stripped from canonical gotchas skill)"
+
+mkdir -p "$DEST/cursor"
+cp -R "$DEST/canicode" "$DEST/cursor/canicode"
+cp -R "$DEST/canicode-roundtrip" "$DEST/cursor/canicode-roundtrip"
+echo "  copied cursor/canicode and cursor/canicode-roundtrip"
+
+CURSOR_REQUIRED=(
+  "$DEST/cursor/canicode-gotchas/SKILL.md"
+  "$DEST/cursor/canicode/SKILL.md"
+  "$DEST/cursor/canicode-roundtrip/SKILL.md"
+  "$DEST/cursor/canicode-roundtrip/helpers.js"
+)
+for f in "${CURSOR_REQUIRED[@]}"; do
+  if [ ! -f "$f" ]; then
+    echo "ERROR: expected Cursor bundle file missing: $f"
+    exit 1
+  fi
+done
+
 echo "=== Skills bundled into $DEST ==="
