@@ -249,3 +249,48 @@ The uplift is the pre-committed correction for a rule that had a large false-pos
 **Policy going forward.** The post-#403 grade table (captured in PR #403's body) is the new reference point for calibration drift assessments. Future scope-aware rules should measure their drift against the post-#403 baseline, not the pre-#411 one. Re-establish the baseline on demand by running `pnpm calibrate --all` (or the cheaper analysis-only sweep via `calibrate-analyze --scope page` on each `fixtures/done/*`) and diffing against the PR body table.
 
 **References**: ADR-017 (detection-channel split — this ADR extends the rule-context vocabulary), [#404](https://github.com/let-sunny/canicode/issues/404), #403 (first consumer — grade uplift evidence in PR body).
+
+## ADR-019: Annotation payload carries user intent; scene-write outcome is metadata
+
+**Decision**: A canicode annotation is the **contract between roundtrip and code-generation**, not a memo about what the roundtrip couldn't do. Every annotation produced from a gotcha answer must carry the user's answer as its primary structured payload. Scene-write outcome (succeeded / silent-ignored / API-rejected / user-declined-propagation) is secondary metadata on the same annotation — never the headline.
+
+The annotation schema extends from `{nodeId, ruleId}` (current `AcknowledgmentSchema`) to:
+
+```
+{
+  nodeId,
+  ruleId,
+  intent: {                              // first-class: what the user answered
+    field,                               // e.g. 'layoutSizingHorizontal'
+    value,                               // e.g. 'FILL' — rule-specific payload
+    scope: 'instance' | 'definition',    // 'apply to this instance' vs 'apply to all instances of <source>'
+  },
+  sceneWriteOutcome: {                   // secondary: what happened in Figma
+    result: 'succeeded' | 'silent-ignored' | 'api-rejected' | 'user-declined-propagation',
+    reason?,                             // short, machine-readable cause
+  },
+  codegenDirective,                      // human-readable one-liner for downstream LLMs
+}
+```
+
+Two surfaces consume the annotation:
+- **Structured (`readCanicodeAcknowledgments` → `figma-implement-design`)**: reads `intent` first. `codegenDirective` supplies the short rendered sentence code-gen can paste into its reasoning. `sceneWriteOutcome` exists only to resolve conflicts when scene property and intent disagree — the intent wins.
+- **Human-readable (Figma canvas annotation text)**: leads with the answer ('User answered: FILL'), then the caveat ('Scene write fell back to annotation — ADR-012 safer default; Button has 12 instances, propagation would affect all of them'). Never leads with 'could not be applied'.
+
+**Why**: The annotation is canicode's only persistence layer for design intent that Figma cannot store natively. If the intent isn't on the annotation's primary payload, it is lost between roundtrip and code-gen — the roundtrip becomes decorative. The current `AcknowledgmentSchema` models only a boolean-ack signal (`did canicode write something here, yes/no`), which is sufficient for half-weight density scoring ([#371](https://github.com/let-sunny/canicode/pull/371)) but insufficient for code-gen handoff. Live v0.11.0 smoke surfaced the gap concretely: a Button FILL gotcha answered by the user produced an annotation whose headline was 'could not be applied' — a code-gen LLM reading it would conclude 'skip this, it failed' rather than 'use FILL'. That is data loss at the most load-bearing hop of the whole roundtrip pipeline.
+
+This ADR is a strict extension of [ADR-010](#adr-010-roundtrip--gotcha-answers-applied-back-to-figma-design) (gotcha answers applied back to Figma) and [ADR-012](#adr-012-safer-write-default--instance-override--annotation-by-default-definition-write-opt-in) (safer-write default). ADR-010 committed canicode to carrying the answer somewhere in Figma. ADR-012 explained that the "somewhere" is often an annotation instead of a scene property. ADR-019 codifies what that annotation must contain so the handoff is lossless. [ADR-017](#adr-017-rulegotcha-output-channels--rule-based-best-practice-detection-gotcha-as-annotation-output) already framed annotation as the durable channel (vs. transient score); this ADR makes the durability useful to downstream consumers.
+
+**Impact**:
+- `AcknowledgmentSchema` in `src/core/contracts/acknowledgment.ts` grows an `intent` object and a `sceneWriteOutcome` object; `AcknowledgmentListSchema` and the MCP `analyze.acknowledgments` input schema pick up the new fields. Density-scoring code that matches `(nodeId, ruleId)` stays unchanged — the new fields are additive for it.
+- `extractAcknowledgmentsFromNode` / `readCanicodeAcknowledgments` (Plugin API helper) read the new payload off the annotation data and surface it intact to MCP/CLI analyze consumers.
+- `canicode-roundtrip/SKILL.md` Step 4 (apply) must write both the structured payload and a canvas-text string. Canvas text begins with `User answered: <value>` (answer first), followed by a single outcome line and — only when the outcome is a fallback — a one-sentence ADR-012 rationale. The current 'The fix below could not be applied…' wording is retired ([#443](https://github.com/let-sunny/canicode/issues/443)).
+- `figma-implement-design` handoff gains a contract it can depend on: 'for any node carrying a canicode annotation, the intent is authoritative over the scene property when they disagree.' Code-gen treats annotation as the source of truth for the annotated field; the Figma scene value is informational when it conflicts.
+- Per-rule annotation encoders (one per rule that produces an answer — `fixed-size-in-auto-layout`, `missing-prototype`, `missing-size-constraint`, etc.) must declare the schema of `intent.value`. The rule registry owns the list; `RuleDefinition` gains an optional `annotationValueSchema` (Zod) that constrains what the roundtrip apply step may write.
+- `computeRoundtripTally` gains a dimension: for each processed gotcha, was the intent captured (`intentRecorded: true/false`) regardless of `sceneWriteOutcome`. This becomes the primary success metric the roundtrip reports back to the user, replacing implicit grade-movement framing ([#423](https://github.com/let-sunny/canicode/issues/423)). A roundtrip that answered every gotcha and wrote annotations for all of them is a successful roundtrip even if zero scene properties changed — which is the common ADR-012 default case.
+- Report HTML and web/plugin UIs that surface per-node status render the intent value (not just the ack boolean) so designers reviewing a fixed design see "this Button is marked FILL by the user" instead of "this Button was acknowledged."
+- This ADR does not change ADR-012. The default behavior is still "write annotation rather than propagate to source definition." ADR-019 only reshapes what the annotation contains so the default behavior doesn't silently lose information.
+
+**Migration**: Annotations written prior to this ADR only carry `(nodeId, ruleId)`. The reader treats them as `intent: undefined`, `sceneWriteOutcome: { result: 'unknown' }` — still valid for density scoring (the pre-existing use case) but surfaces a warning in code-gen handoff ("legacy annotation, no intent payload — re-run roundtrip to capture intent"). Re-running `/canicode-roundtrip` on the same design upgrades the annotation in place.
+
+**References**: ADR-010 (roundtrip commits to carrying the answer back), ADR-012 (safer-write default — why annotation is usually the carrier), ADR-017 (annotation is the durable channel), ADR-013 (scope boundary — canicode must produce the bridge; `figma-implement-design` consumes it), [#444](https://github.com/let-sunny/canicode/issues/444) (primary driver), [#443](https://github.com/let-sunny/canicode/issues/443) (canvas-text wording), [#423](https://github.com/let-sunny/canicode/issues/423) (success metric reframe), [#427](https://github.com/let-sunny/canicode/issues/427) (tally CLI that will expose `intentRecorded`), [#440](https://github.com/let-sunny/canicode/issues/440) (ack auto-chain — read side of the same contract).
