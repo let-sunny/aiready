@@ -99,17 +99,17 @@ ${footer}`;
   async function routeToDefinitionOrAnnotate(definition, writeFn, ctx) {
     if (definition && !ctx.allowDefinitionWrite && ctx.reason !== "non-override-error") {
       const componentName = resolveSourceComponentName(definition, ctx.question);
-      const replicaRaw = ctx.question["replicas"];
-      const replicaCount = typeof replicaRaw === "number" && Number.isInteger(replicaRaw) ? replicaRaw : void 0;
+      const replicaCount = typeof ctx.question.replicas === "number" && Number.isInteger(ctx.question.replicas) ? ctx.question.replicas : void 0;
       if (ctx.categories) {
+        const markdownArgs = {
+          componentName,
+          reason: ctx.reason,
+          ...ctx.errorMessage !== void 0 ? { errorMessage: ctx.errorMessage } : {},
+          ...replicaCount !== void 0 ? { replicaCount } : {}
+        };
         upsertCanicodeAnnotation(ctx.scene, {
           ruleId: ctx.question.ruleId,
-          markdown: formatDefinitionWriteSkippedMarkdown({
-            componentName,
-            reason: ctx.reason,
-            errorMessage: ctx.errorMessage,
-            replicaCount
-          }),
+          markdown: formatDefinitionWriteSkippedMarkdown(markdownArgs),
           categoryId: ctx.categories.fallback
         });
       }

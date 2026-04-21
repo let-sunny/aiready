@@ -108,10 +108,10 @@ async function routeToDefinitionOrAnnotate(
     ctx.reason !== "non-override-error"
   ) {
     const componentName = resolveSourceComponentName(definition, ctx.question);
-    const replicaRaw = ctx.question["replicas"] as unknown;
     const replicaCount =
-      typeof replicaRaw === "number" && Number.isInteger(replicaRaw)
-        ? replicaRaw
+      typeof ctx.question.replicas === "number" &&
+      Number.isInteger(ctx.question.replicas)
+        ? ctx.question.replicas
         : undefined;
     if (ctx.categories) {
       const markdownArgs: Parameters<typeof formatDefinitionWriteSkippedMarkdown>[0] =
