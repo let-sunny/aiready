@@ -118,8 +118,12 @@ export function renderGotchaSection(raw: RenderGotchaSectionInput): string {
   const blocks: string[] = [];
   for (const q of answered) {
     const v = input.answers[q.nodeId];
-    const answerLine =
-      v !== undefined && "answer" in v ? v.answer : "_(skipped)_";
+    if (v === undefined || !("answer" in v)) {
+      throw new Error(
+        `renderGotchaSection: expected answer for nodeId ${q.nodeId} (answered set)`,
+      );
+    }
+    const answerLine = v.answer;
 
     const lines: string[] = [
       `#### ${q.ruleId} — ${q.nodeName}`,

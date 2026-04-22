@@ -144,7 +144,7 @@ Payload shape:
 }
 ```
 
-For skipped / n/a: use `{ "skipped": true }` for that `nodeId`, or omit the key — both render `- **Answer**: _(skipped)_`.
+For skipped / n/a: use `{ "skipped": true }` for that `nodeId`, or omit the key. Skipped questions do **not** get per-question rows; `renderGotchaSection` appends a compact **`#### Skipped (N)`** block listing each `ruleId` with a count (`ruleId` lines sorted lexically — see `src/core/gotcha/render-gotcha-section.ts`).
 
 Invoke (cac requires `--input=-`, not `--input -`, so the stdin sentinel survives parsing — #420):
 
@@ -174,7 +174,7 @@ The Workflow region above must never be touched.
 - **Workflow region**: Never modified. If you notice the Workflow region has been edited by the user, leave their edits alone — only the `# Collected Gotchas` region is under skill control.
 - **Pre-#340 clobbered file** (the YAML frontmatter was rewritten to a per-design variant, so the canonical `canicode-gotchas` frontmatter is missing): tell the user to run `canicode init --force` to restore the workflow, then re-run the survey. The prior single-design content cannot be automatically migrated into a `## #001` section — the user re-runs and gets a clean section.
 - **MCP tool not available**: Fall back to `npx canicode gotcha-survey <input> --json` — the CLI returns the same `GotchaSurvey` shape. If the CLI is also unavailable (e.g. no node runtime), tell the user to install the canicode MCP server or the `canicode` npm package (see Prerequisites).
-- **Partial answers**: If the user stops mid-survey, upsert the section with answers collected so far. Mark remaining questions as _(skipped)_.
+- **Partial answers**: If the user stops mid-survey, upsert the section with answers collected so far. Remaining questions count toward **`#### Skipped (N)`** (omit keys or `{ "skipped": true }`).
 - **Manual section deletion**: If the user deletes a middle section by hand, do not renumber existing sections. The next new section still gets `(highest existing number) + 1`; numeric gaps are acceptable (same pattern as `.claude/docs/ADR.md`).
 
 # Collected Gotchas

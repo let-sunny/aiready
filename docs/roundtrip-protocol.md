@@ -121,3 +121,155 @@ Keep each `writeFn` small so a throw does not abort unrelated writes. Experiment
 
 Wrap every property write in `CanICodeRoundtrip.applyWithInstanceFallback(question, async (target) => { ... }, { categories })` so failed or silently-ignored instance overrides route to the scene annotation (or, when the user has opted in, to the definition tier) instead of silently aborting the batch.
 
+---
+
+## Appendix — Step 3 grouped survey (`groupedQuestions`)
+
+#### Step 3a: Why the response carries a pre-grouped+batched view
+
+The naive "one-question-at-a-time" loop produces two well-known UX failures on real designs:
+
+- **Repeated Instance note (#370)** — when 10 consecutive questions share the same `instanceContext.sourceComponentId`, the standard "_Instance note: …source component **X**…_" paragraph prints 10 times. After the first occurrence it adds zero new information and consumes ~2 screens of vertical space.
+- **Repeated identical answer (#369)** — when 7 consecutive questions all carry the same `ruleId` (e.g. `missing-size-constraint`) and the user's reasonable answer would be the same for all of them (e.g. `min-width: 320px, max-width: 1200px`), the user types the same thing 7 times in a row.
+
+`gotcha-survey` already ships the resolution on its `groupedQuestions` field. Sort key (`(sourceComponentId ?? "_no-source", ruleId, nodeName)`), source-component grouping, and the batchable-rule whitelist (`missing-size-constraint`, `irregular-spacing`, `no-auto-layout`, `fixed-size-in-auto-layout`) all live in `core/gotcha/group-and-batch-questions.ts` with vitest coverage. Per ADR-016, do **not** re-implement the sort, partition, or whitelist in prose — iterate over `groupedQuestions.groups[].batches[]` directly.
+
+#### Step 3b: Prompt each group, then each batch within it
+
+For each `group` in `response.groupedQuestions.groups`:
+
+- **`group.instanceContext === null`** — this is the trailing group of non-instance questions. Skip the header and prompt each batch directly.
+- **`group.instanceContext !== null`** — emit the Instance note **once** as a group header (#370):
+
+  ```
+  ─────────────────────────────────────────
+  The next {sum of batch.questions.length} questions all target instance children of source component **{instanceContext.sourceComponentName ?? instanceContext.sourceComponentId ?? "unknown"}** (definition node `{instanceContext.sourceNodeId}`). Layout and size fixes may need to apply on the source and propagate to all instances — you will be asked to confirm before any definition-level write.
+  ─────────────────────────────────────────
+  ```
+
+For each `batch` inside the group:
+
+- **`batch.questions.length === 1`** — render the standard single-question block for `batch.questions[0]`:
+
+  ```
+  **[{severity}] {ruleId}** — node: {nodeName}
+
+  {question}
+
+  > Hint: {hint}
+  > Example: {example}
+  ```
+
+  **If `question.replicas` is present (#356 dedup)**, prepend one note above the standard block:
+
+  ```
+  _Replicas: This question represents **{replicas} instances** of the same source-component child sharing the same rule. Your single answer will be applied to all of them in Step 4 (one annotation/write per instance scene)._
+  ```
+
+- **`batch.questions.length >= 2 && batch.batchable === true`** (#369) — render one batch prompt covering all members. Use `batch.totalScenes` (already summed across each member's `replicas`) for the Figma-scene fan-out hint:
+
+  ```
+  **[{severity}] {batch.ruleId}** — {batch.questions.length} instances:
+    - {nodeName₁}{ruleSpecificContext₁}
+    - {nodeName₂}{ruleSpecificContext₂}
+    - …
+
+  {sharedQuestionPrompt}
+
+  Reply with one answer to apply to all {batch.questions.length}, or **split** to answer each individually.
+
+  > Hint: {hint}
+  > Example: {example}
+  ```
+
+  Where:
+  - `sharedQuestionPrompt` is the rule's `question` text with the per-node noun replaced by the rule's plural noun (e.g. "These layers all use FILL sizing without min/max constraints. What size boundaries should they share?" instead of repeating "What size boundaries should this layer have?" N times).
+  - `ruleSpecificContext` is short and rule-specific: e.g. for `missing-size-constraint` show the current `width`/`height` if the question has them; for `irregular-spacing` show the current `itemSpacing`; otherwise omit.
+  - On `split`, fall back to the per-question loop for that batch only — keep the rest of the group's batches as-is.
+
+  When `batch.totalScenes > batch.questions.length` (at least one member carries replicas), append one note so the user knows their single answer fans out further than the listed nodes:
+
+  ```
+  _Replicas: your one answer will land on **{batch.totalScenes}** Figma scenes total in Step 4 (some of these {batch.questions.length} questions already represent multiple instances of the same source-component child)._
+  ```
+
+- **`batch.batchable === false`** is always rendered as a single-question prompt — the helper guarantees `questions.length === 1` for those (identity-typed answers like `non-semantic-name`, structural-mod rules).
+
+Wait for the user's answer before moving to the next batch. For each batch, the user may:
+- Answer the question directly (single value covers all batch members)
+- Say **split** (batch only) to fall back to per-question prompting for that batch
+- Say **skip** to skip the question / the entire batch
+- Say **n/a** if the question / the entire batch is not applicable
+
+When applying the batched answer, expand back to per-question records before storing — the gotcha section format and Step 4 apply loop both expect one record per `nodeId`.
+
+After all questions are answered, upsert via the same **`npx canicode upsert-gotcha-section`** JSON path as `/canicode-gotchas` Step 4b: pass `{ survey: { designKey, designGrade, questions }, answers, designName, figmaUrl, analyzedAt, today }` on stdin with `--input=-` — the CLI renders the section from survey JSON (#439); do not author `## #NNN` markdown in prose. `--file .claude/skills/canicode-gotchas/SKILL.md` and `--design-key` must match `survey.designKey`. Never modify anything above `# Collected Gotchas`.
+
+Then proceed to **Step 4** to apply answers to the Figma design.
+
+---
+
+## Appendix — Strategy B structural modification
+
+#### Strategy B: Structural Modification — confirm with user first
+
+Rules with `applyStrategy === "structural-mod"`. Show the proposed change and **ask for user confirmation** before applying.
+
+> **Instance-child guard (#368).** Strategy B mutations restructure the layer tree — `createComponentFromNode`, `flatten`, wrapper removal, instance-link reconnection. None of these compose safely with the Plugin API's instance-override rules: on a node where `question.isInstanceChild === true`, calling `createComponentFromNode` either throws *"Cannot create a component from a node inside an instance"* or detaches the parent instance entirely (the picked instance is replaced by a one-off frame, severing every existing override and propagation link). Restructuring deep-nested wrappers inside an instance child has the same risk surface — even when the call doesn't throw, the resulting structure cannot ride the source-component's propagation in future updates.
+>
+> Before showing the per-rule prompt below, check `question.isInstanceChild`. If it is true, **do not run the destructive call**. Surface this a/b prompt instead and default to **(a)**:
+>
+> ```
+> **{ruleId}** would normally restructure **{nodeName}** here, but this node lives inside instance **{instanceContext.parentInstanceNodeId}** of source component **{instanceContext.sourceComponentName or sourceComponentId or "unknown"}** (definition node `{instanceContext.sourceNodeId}`). On instance children Plugin API restructuring either fails outright or detaches the parent instance.
+>
+> ❯ a) Annotate the scene with a recommendation to apply the change on the source definition (safe — picks up via canicode-gotchas in code-gen, source designer can act on it later)
+>   b) Detach the parent instance and attempt the restructuring on the resulting one-off frame (destructive — every existing instance override is lost and the node no longer rides the source component's propagation)
+> ```
+>
+> On **(a)**, route to Strategy C — call `upsertCanicodeAnnotation(scene, { ruleId: question.ruleId, markdown: "**Q:** … **A:** Apply on source definition `${instanceContext.sourceNodeId}` (`${instanceContext.sourceComponentName ?? "unknown"}`) — instance-child restructuring would detach the parent instance.", categoryId: categories.gotcha })`. Reference `instanceContext.sourceComponentName` and `instanceContext.sourceNodeId` in the body so the source designer can locate the target.
+>
+> On **(b)**, gate behind a second confirmation that explicitly names the side effects ("This will detach instance **{parentInstanceNodeId}** — all overrides on it will be lost and it will stop receiving updates from **{sourceComponentName}**. Type the parent instance name to confirm."). Only then execute the per-rule destructive call below.
+>
+> The same posture as ADR-012's `allowDefinitionWrite: false` default: instance-child structural mutations are off-by-default and require explicit user opt-in *per node*, not per batch — the destructive call here doesn't have a quiet fallback the way Strategy A's `applyWithInstanceFallback` does.
+
+**`non-layout-container`** — Convert Group/Section to Auto Layout frame:
+- Prompt: "I'll convert **{nodeName}** to an Auto Layout frame with {direction} layout and {spacing}px gap. Proceed?"
+- If confirmed: `applyPropertyMod(question, { layoutMode: "VERTICAL", itemSpacing: 12 })`.
+
+**`deep-nesting`** — Flatten intermediate wrappers or extract sub-component:
+- Prompt: "I'll flatten **{nodeName}** by {description from answer}. This changes the layer hierarchy. Proceed?"
+- Apply based on the specific answer (remove wrappers, convert padding, etc.).
+
+**`missing-component`** — Convert frame to reusable component:
+- Prompt: "I'll convert **{nodeName}** to a reusable component. Proceed?"
+- If confirmed:
+```javascript
+const scene = await figma.getNodeByIdAsync(question.nodeId);
+if (scene && scene.type === "FRAME") {
+  figma.createComponentFromNode(scene);
+}
+```
+
+**`detached-instance`** — Reconnect to original component:
+- Prompt: "I'll reconnect **{nodeName}** to its original component. Any overrides will be preserved. Proceed?"
+- Requires finding the original component — if not identifiable, fall back to annotation.
+
+If the user **declines** any structural modification (or the instance-child guard above routes to **(a)**), add an annotation instead (same as Strategy C).
+
+---
+
+## Appendix — Edge Cases (full list)
+
+## Edge Cases
+
+- **No canicode MCP server**: Fall back to `npx canicode analyze --json` and `npx canicode gotcha-survey --json` — both CLI commands return the same shape as the MCP tools. The Figma MCP is still required for `use_figma` in Step 4; there is no CLI fallback for Figma design edits.
+- **No Figma MCP server**: If `get_design_context` or `use_figma` is not found, tell the user to set up the Figma MCP server. Without it, the apply and code generation phases cannot proceed.
+- **No edit permission**: If `use_figma` fails with a permission error, tell the user they need Full seat + file edit permission. Fall back to the one-way flow: skip Steps 4-5 and proceed directly to Step 6 with gotcha answers as code generation context.
+- **User wants analysis only**: Suggest using `/canicode` instead — it runs analysis without the code generation phase.
+- **User wants gotcha survey only**: Suggest using `/canicode-gotchas` instead — it runs the survey and saves answers as a persistent skill file.
+- **Partial gotcha answers**: Apply only the answered questions. Skipped/n/a questions are neither applied nor annotated.
+- **use_figma call fails for a node**: Report the error for that specific node, continue with other nodes. Failed property modifications become annotations so the context is not lost.
+- **Re-analyze shows new issues**: Only address issues from the original gotcha survey. New issues may appear due to structural changes — report them but do not re-enter the gotcha loop.
+- **Very large design (many gotchas)**: The gotcha survey already deduplicates sibling nodes and filters to blocking/risk plus `missing-info` from info-collection rules (#406). If there are still many questions, ask the user if they want to focus on blocking issues only.
+- **External library components**: Applies only when the orchestrator has set `allowDefinitionWrite: true`. Experiment 10's observed case is `getMainComponentAsync()` resolving with `mainComponent.remote === true` — writes then throw *"Cannot write to internal and read-only node"*. The `mainComponent === null` case is documented in the Plugin API but was not reproduced live in Experiment 10; Experiment 11 (#309) unit-test-covers the helper's routing for that branch (override-error + no `sourceChildId` → annotate with `could not apply automatically:` markdown — see ADR-011 Verification), so the code path is regression-locked while live Figma reproduction remains a manual fixture-seeding follow-up. Under the default (`allowDefinitionWrite: false`), the definition write never fires and this throw cannot surface. **The pre-flight `probeDefinitionWritability` (#357) detects both branches up-front** so the Definition write picker can drop the opt-in option entirely when every candidate is unwritable, saving the user a wasted decision before the runtime fallback kicks in.
+
