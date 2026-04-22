@@ -74,7 +74,7 @@ npx canicode init --token figd_xxxxxxxxxxxxx
 
 **CanICode in Cursor (no Claude Code required):**
 
-1. Add **canicode** and **Figma** MCPs — [Cursor MCP](docs/CUSTOMIZATION.md#cursor-mcp-canicode) for `npx` → `canicode-mcp`; Figma MCP is required for **`use_figma`** if you run **roundtrip** (design writes), not for analyze-only.
+1. Add **canicode** and **Figma** MCPs — [Cursor MCP](docs/CUSTOMIZATION.md#cursor-mcp-canicode) for `npx` → `canicode-mcp` (use **`.cursor/mcp.json`** or **`~/.cursor/mcp.json`** in Cursor, not repo-root `.mcp.json`; [why](docs/CUSTOMIZATION.md#which-mcp-file-affects-which-host)); Figma MCP is required for **`use_figma`** if you run **roundtrip** (design writes), not for analyze-only.
 2. `npx canicode init --token figd_xxxxxxxxxxxxx --cursor-skills` (use `FIGMA_TOKEN=…` or the CLI prompt — not chat) — installs the same three skills as Claude under `.cursor/skills/` (`canicode`, `canicode-gotchas`, `canicode-roundtrip` + `helpers.js`) plus the shared `.claude/skills/canicode-gotchas/SKILL.md` answer file when needed.
 3. In Agent chat, @-mention **canicode-gotchas** (survey) or **canicode-roundtrip** (full roundtrip) and pass a Figma URL — same tool names and JSON as Claude Code (`gotcha-survey`, `analyze`, etc.).
 
