@@ -180,6 +180,22 @@ Override score, severity, or enable/disable individual rules:
 
 Configure the canicode MCP server so Cursor exposes `analyze`, `gotcha-survey`, and other tools.
 
+### Which MCP file affects which host?
+
+Two different JSON locations are easy to confuse because both can live in a git repo and both use an `mcpServers` object. (See GitHub #436.)
+
+| Path | Read by | Purpose |
+| --- | --- | --- |
+| **`.mcp.json`** at the **repository root** | **Claude Code** — `claude mcp add …` (project or user scope) persists entries here. | Shared with teammates when committed; this is the file skills and onboarding mean when they say “check `.mcp.json`” in a **Claude Code** context. |
+| **`.cursor/mcp.json`** | **Cursor** — project-scoped MCP list ([Cursor MCP docs — configuration locations](https://cursor.com/docs/context/mcp)). | Team-shared MCP for Cursor Agent in that workspace. |
+| **`~/.cursor/mcp.json`** | **Cursor** — global MCP list (same doc). | Personal MCP available across all projects; merged with project config (project wins if the same server name appears twice). |
+
+**Cursor does not use the repo-root `.mcp.json` for MCP.** If you only edit `.mcp.json` because you copied a Claude Code snippet, Cursor will not load those servers until you add the same `mcpServers` entries under **`.cursor/mcp.json`** or **`~/.cursor/mcp.json`**, then reload MCP or restart Cursor.
+
+**Claude Code does not read `.cursor/mcp.json`.** Register servers with `claude mcp add …` (or maintain the root `.mcp.json` format Claude Code expects for your install).
+
+**Canicode CLI (`canicode init`):** When suggesting Figma MCP setup for Cursor-heavy flows, the init command treats **either** repo-root `.mcp.json` **or** `.cursor/mcp.json` as evidence that Figma MCP is configured — so mixed-host repos still get accurate “already configured” detection. That does **not** mean Cursor loads `.mcp.json`; it only avoids false negatives when both files exist.
+
 ### Project config (`.cursor/mcp.json`)
 
 Create or merge into `.cursor/mcp.json` in your repository root:
