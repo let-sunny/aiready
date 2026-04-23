@@ -52,6 +52,16 @@ If `isReadyForCodeGen` is `true` or `questions` is empty:
 - Do NOT write to `.claude/skills/canicode-gotchas/SKILL.md`.
 - Stop here.
 
+### Step 3 — preamble: match the user's language
+
+Before rendering any question, detect the user's conversation language from their recent messages in **this** session. Korean vs. English vs. other is usually unambiguous; when ambiguous, default to English and ask the user once which language they prefer.
+
+When the user's language is non-English, localize only the **human-readable** strings rendered in the prompt templates below: the `question` text, the `why` line (if shown), the `Hint:` body, the `Example:` body, and the batch shared-prompt wording — including the "Reply with one answer to apply to all …, or **split** to answer each individually" sentence and the `skip` / `n/a` affordance sentence that follows it. Translate at render time only; the rule templates in `core/rules/*` stay English-only per CLAUDE.md and the issue's "Out of scope" list — do not rewrite source.
+
+Keep the following English even when localizing, because they are identifiers or structural markers that downstream tools grep for: `ruleId`, `nodeId`, `nodeName`, the severity label in brackets (`[blocking]`, `[risk]`, `[missing-info]`, `[suggestion]`), and the entire markdown scaffolding of the Step 4 upsert section (`## #NNN — …` headings, `Design key`, `#### Skipped (N)`, the per-record field labels). `renderGotchaSection` is the source of truth for that on-disk markdown (ADR-016) and its output stays English.
+
+In Step 4, pass the user's answer through **verbatim** into the `answers[<nodeId>].answer` field — do **not** back-translate answers to English. `figma-implement-design` is cross-language by design (see #461), and a round-trip to English introduces translation loss and defeats the "shared language for designer/PM" framing.
+
 ### Step 3: Present questions to the user
 
 The survey response carries a pre-computed `groupedQuestions.groups[].batches[]` shape so this skill never has to sort, partition, or maintain a batchable-rule whitelist in prose. The sort key, `_no-source` sentinel, and batchable-rule list all live in `core/gotcha/group-and-batch-questions.ts` with vitest coverage (per ADR-016). Iterate over it:
