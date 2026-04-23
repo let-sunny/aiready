@@ -97,7 +97,7 @@ If `questions` is empty, skip to **Step 6**.
 
 #### Step 3 — grouped survey (`groupedQuestions`)
 
-Iterate `groupedQuestions.groups[].batches[]`. Instance notes, batch prompts, replicas, split/skip/n/a, stdin upsert — **[Appendix Step 3](https://github.com/let-sunny/canicode/blob/main/docs/roundtrip-protocol.md#appendix--step-3-grouped-survey-groupedquestions)**. Per ADR-016, do not re-implement grouping.
+Iterate `groupedQuestions.groups[].batches[]` and branch on `batch.batchMode` (`"safe"` — one uniform answer, `"opt-in"` — shared answer offered as default with per-node `split` override (#426), `"none"` — single-question). Instance notes, batch prompt templates per mode, replicas, split/skip/n/a, stdin upsert — **[Appendix Step 3](https://github.com/let-sunny/canicode/blob/main/docs/roundtrip-protocol.md#appendix--step-3-grouped-survey-groupedquestions)**. Per ADR-016, do not re-implement grouping.
 
 
 ### Step 4: Apply gotcha answers to Figma design

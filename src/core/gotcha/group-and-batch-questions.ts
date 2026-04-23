@@ -25,20 +25,62 @@ export const BATCHABLE_RULE_IDS = [
   "fixed-size-in-auto-layout",
 ] as const satisfies readonly RuleId[];
 
+/**
+ * Rules whose answer is **usually** shareable across same-rule siblings but
+ * may legitimately differ per node — so batching is offered as an opt-in
+ * default with a per-node override escape hatch (the existing `split` verb).
+ *
+ * #426: `missing-prototype` on 9 sibling product cards produces 9 near-
+ * identical "Where does this navigate?" prompts. A single shared answer (e.g.
+ * "navigates to `/product/{id}` detail page") usually fits all of them — but
+ * the user can reply `split` to answer each individually when, e.g., one card
+ * opens a modal instead of a route.
+ *
+ * Unlike `BATCHABLE_RULE_IDS` (safe-mode — one uniform answer by definition),
+ * opt-in members are rendered with an "Apply this answer to all N?" header
+ * so the user knows the shared answer is a suggested default, not a uniform
+ * truth. Grow this list one rule at a time with a justifying commit message —
+ * same cadence `BATCHABLE_RULE_IDS` follows. Per ADR-016, the whitelist lives
+ * here (vitest-covered) and the SKILL.md prose cites it rather than
+ * duplicating it.
+ */
+export const OPT_IN_BATCHABLE_RULE_IDS = [
+  "missing-prototype",
+] as const satisfies readonly RuleId[];
+
 const BATCHABLE_SET: ReadonlySet<string> = new Set(BATCHABLE_RULE_IDS);
+const OPT_IN_BATCHABLE_SET: ReadonlySet<string> = new Set(
+  OPT_IN_BATCHABLE_RULE_IDS,
+);
 
 const NO_SOURCE_SENTINEL = "_no-source";
+
+/**
+ * Tri-state batch rendering mode consumed by `canicode-gotchas` /
+ * `canicode-roundtrip` Step 3:
+ *
+ * - `"safe"` — rule is in `BATCHABLE_RULE_IDS`. One answer covers every
+ *   member by definition (#369).
+ * - `"opt-in"` — rule is in `OPT_IN_BATCHABLE_RULE_IDS`. One shared answer is
+ *   offered as a suggested default; the user can reply `split` for per-node
+ *   override (#426).
+ * - `"none"` — rule is in neither whitelist. The helper emits the question as
+ *   its own single-member batch; same-rule repeats stay separate so the SKILL
+ *   always renders the single-question template.
+ */
+export type BatchMode = "safe" | "opt-in" | "none";
 
 export interface SurveyQuestionBatch {
   ruleId: string;
   /**
-   * `true` when every member's answer is uniformly applicable (rule is in
-   * `BATCHABLE_RULE_IDS`). The SKILL still emits a single-question prompt
-   * when `questions.length === 1`, but the flag stays useful: a batch of one
-   * for a batchable rule keeps the prompt template aligned with subsequent
-   * batches in the same group.
+   * Rendering mode for this batch. `"safe"` and `"opt-in"` both imply
+   * `questions.length >= 1` with a shared-prompt template; the difference is
+   * whether the shared answer is uniform (`safe`) or a suggested default with
+   * a per-node override escape hatch (`opt-in`). `"none"` guarantees
+   * `questions.length === 1` — same-rule repeats for non-batchable rules do
+   * not merge.
    */
-  batchable: boolean;
+  batchMode: BatchMode;
   questions: GotchaSurveyQuestion[];
   /**
    * Sum of `max(question.replicas, 1)` across members. Counts the actual
@@ -140,14 +182,14 @@ function pushIntoBatch(
   question: GotchaSurveyQuestion,
 ): void {
   const sceneWeight = Math.max(question.replicas ?? 1, 1);
-  const isBatchable = BATCHABLE_SET.has(question.ruleId);
+  const batchMode = resolveBatchMode(question.ruleId);
   const last = group.batches.at(-1);
 
   if (
     last !== undefined &&
     last.ruleId === question.ruleId &&
-    isBatchable &&
-    last.batchable
+    batchMode !== "none" &&
+    last.batchMode === batchMode
   ) {
     last.questions.push(question);
     last.totalScenes += sceneWeight;
@@ -156,8 +198,14 @@ function pushIntoBatch(
 
   group.batches.push({
     ruleId: question.ruleId,
-    batchable: isBatchable,
+    batchMode,
     questions: [question],
     totalScenes: sceneWeight,
   });
+}
+
+function resolveBatchMode(ruleId: string): BatchMode {
+  if (BATCHABLE_SET.has(ruleId)) return "safe";
+  if (OPT_IN_BATCHABLE_SET.has(ruleId)) return "opt-in";
+  return "none";
 }

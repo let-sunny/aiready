@@ -135,7 +135,12 @@ The naive "one-question-at-a-time" loop produces two well-known UX failures on r
 - **Repeated Instance note (#370)** — when 10 consecutive questions share the same `instanceContext.sourceComponentId`, the standard "_Instance note: …source component **X**…_" paragraph prints 10 times. After the first occurrence it adds zero new information and consumes ~2 screens of vertical space.
 - **Repeated identical answer (#369)** — when 7 consecutive questions all carry the same `ruleId` (e.g. `missing-size-constraint`) and the user's reasonable answer would be the same for all of them (e.g. `min-width: 320px, max-width: 1200px`), the user types the same thing 7 times in a row.
 
-`gotcha-survey` already ships the resolution on its `groupedQuestions` field. Sort key (`(sourceComponentId ?? "_no-source", ruleId, nodeName)`), source-component grouping, and the batchable-rule whitelist (`missing-size-constraint`, `irregular-spacing`, `no-auto-layout`, `fixed-size-in-auto-layout`) all live in `core/gotcha/group-and-batch-questions.ts` with vitest coverage. Per ADR-016, do **not** re-implement the sort, partition, or whitelist in prose — iterate over `groupedQuestions.groups[].batches[]` directly.
+`gotcha-survey` already ships the resolution on its `groupedQuestions` field. Sort key (`(sourceComponentId ?? "_no-source", ruleId, nodeName)`), source-component grouping, and both batchable-rule whitelists all live in `core/gotcha/group-and-batch-questions.ts` with vitest coverage:
+
+- **`BATCHABLE_RULE_IDS`** (`safe` batch mode — one uniform answer by definition): `missing-size-constraint`, `irregular-spacing`, `no-auto-layout`, `fixed-size-in-auto-layout`.
+- **`OPT_IN_BATCHABLE_RULE_IDS`** (`opt-in` batch mode — shared answer offered as a default with per-node override via `split`): `missing-prototype` (#426).
+
+Each batch carries a pre-computed `batchMode: "safe" | "opt-in" | "none"` so the prompt template branches without re-deriving the whitelist in prose. Per ADR-016, do **not** re-implement the sort, partition, or whitelists in prose — iterate over `groupedQuestions.groups[].batches[]` directly.
 
 #### Step 3b: Prompt each group, then each batch within it
 
@@ -169,7 +174,7 @@ For each `batch` inside the group:
   _Replicas: This question represents **{replicas} instances** of the same source-component child sharing the same rule. Your single answer will be applied to all of them in Step 4 (one annotation/write per instance scene)._
   ```
 
-- **`batch.questions.length >= 2 && batch.batchable === true`** (#369) — render one batch prompt covering all members. Use `batch.totalScenes` (already summed across each member's `replicas`) for the Figma-scene fan-out hint:
+- **`batch.batchMode === "safe"` && `batch.questions.length >= 2`** (#369) — every member's answer is uniformly applicable (rule in `BATCHABLE_RULE_IDS`). Render one batch prompt covering all members. Use `batch.totalScenes` (already summed across each member's `replicas`) for the Figma-scene fan-out hint:
 
   ```
   **[{severity}] {batch.ruleId}** — {batch.questions.length} instances:
@@ -196,7 +201,27 @@ For each `batch` inside the group:
   _Replicas: your one answer will land on **{batch.totalScenes}** Figma scenes total in Step 4 (some of these {batch.questions.length} questions already represent multiple instances of the same source-component child)._
   ```
 
-- **`batch.batchable === false`** is always rendered as a single-question prompt — the helper guarantees `questions.length === 1` for those (identity-typed answers like `non-semantic-name`, structural-mod rules).
+- **`batch.batchMode === "opt-in"` && `batch.questions.length >= 2`** (#426) — rule in `OPT_IN_BATCHABLE_RULE_IDS` (currently `missing-prototype`). The shared answer is offered as a suggested default rather than a uniform truth, because the per-node specifics (target routes, modals vs pages, etc.) may legitimately diverge. Render a variant header that calls out the opt-in framing explicitly:
+
+  ```
+  **[{severity}] {batch.ruleId}** — {batch.questions.length} instances of the same rule:
+    - {nodeName₁}{ruleSpecificContext₁}
+    - {nodeName₂}{ruleSpecificContext₂}
+    - …
+
+  {sharedQuestionPrompt}
+
+  Apply this answer to all {batch.questions.length} occurrences of `{batch.ruleId}`, or reply **split** to answer each individually.
+
+  > Hint: {hint}
+  > Example: {example}
+  ```
+
+  Reuse the rule's existing `example` (e.g. for `missing-prototype`, "navigates to `/product/{id}` detail page") so the user knows the shared answer can be a **pattern** that templates per-node specifics in Step 4 — not a literal string copied character-for-character to every node. The same `split` / `skip` / `n/a` verbs apply; no new vocabulary.
+
+  When `batch.totalScenes > batch.questions.length`, append the same `_Replicas:_` note as the `safe` branch so the user knows the fan-out count.
+
+- **`batch.batchMode === "none"`** is always rendered as a single-question prompt — the helper guarantees `questions.length === 1` for those (identity-typed answers like `non-semantic-name`, structural-mod rules, and anything not in either whitelist).
 
 Wait for the user's answer before moving to the next batch. For each batch, the user may:
 - Answer the question directly (single value covers all batch members)
