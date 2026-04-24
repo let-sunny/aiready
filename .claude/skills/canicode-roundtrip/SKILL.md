@@ -59,7 +59,7 @@ npx canicode analyze "<figma-url>" --json
 
 The response includes:
 - `scores.overall.grade`: design grade (S, A+, A, B+, B, C+, C, D, F)
-- `isReadyForCodeGen`: boolean gate for gotcha skip
+- `isReadyForCodeGen`: recommendation flag — `true` suggests the survey can be skipped, but the user always confirms
 - `issues`: array of design issues found
 - `summary`: human-readable analysis summary
 

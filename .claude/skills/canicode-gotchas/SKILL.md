@@ -42,7 +42,7 @@ npx canicode gotcha-survey "<figma-url-or-fixture-path>" --json
 
 Either channel returns:
 - `designGrade`: overall grade (S, A+, A, B+, B, C+, C, D, F)
-- `isReadyForCodeGen`: whether the design can be implemented without gotchas
+- `isReadyForCodeGen`: recommendation flag — `true` suggests the survey can be skipped, but the user always confirms
 - `questions`: array of gotcha questions (may be empty)
 
 ### Step 2: Surface grade as informational banner
