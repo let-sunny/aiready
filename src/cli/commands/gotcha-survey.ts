@@ -22,6 +22,7 @@ const GotchaSurveyOptionsSchema = z.object({
   targetNodeId: z.string().optional(),
   json: z.boolean().optional(),
   scope: z.enum(["page", "component"]).optional(),
+  readyMinGrade: z.enum(["S", "A+", "A", "B+", "B", "C+", "C", "D", "F"]).optional(),
 });
 
 export type GotchaSurveyOptions = z.infer<typeof GotchaSurveyOptionsSchema>;
@@ -43,10 +44,15 @@ export async function runGotchaSurvey(
     ? { ...getConfigsWithPreset(options.preset) }
     : { ...RULE_CONFIGS };
 
+  let codegenReadyMinGrade: import("../../core/engine/scoring.js").Grade | undefined;
   if (options.config) {
     const configFile = await loadConfigFile(options.config);
     configs = mergeConfigs(configs, configFile);
+    codegenReadyMinGrade = configFile.codegenReadyMinGrade;
   }
+
+  // CLI flag takes priority over configPath field
+  const effectiveMinGrade = options.readyMinGrade ?? codegenReadyMinGrade;
 
   const result = analyzeFile(file, {
     configs: configs as Record<RuleId, RuleConfig>,
@@ -55,7 +61,10 @@ export async function runGotchaSurvey(
   });
 
   const scores = calculateScores(result, configs as Record<RuleId, RuleConfig>);
-  return generateGotchaSurvey(result, scores, { designKey: computeDesignKey(input) });
+  return generateGotchaSurvey(result, scores, {
+    designKey: computeDesignKey(input),
+    ...(effectiveMinGrade ? { codegenReadyMinGrade: effectiveMinGrade } : {}),
+  });
 }
 
 function formatHumanSummary(survey: GotchaSurvey): string {
@@ -84,6 +93,7 @@ export function registerGotchaSurvey(cli: CAC): void {
     .option("--target-node-id <id>", "Scope analysis to a specific node ID")
     .option("--scope <scope>", "(#404) Override analysis scope: `page` or `component`. Defaults to auto-detection from the root node type.")
     .option("--json", "Output GotchaSurvey JSON to stdout (same format as MCP)")
+    .option("--ready-min-grade <grade>", "Minimum grade for code-gen readiness (S | A+ | A | B+ | B | C+ | C | D | F). Overrides configPath codegenReadyMinGrade. Default: A")
     .example("  canicode gotcha-survey https://www.figma.com/design/ABC123/MyDesign --json")
     .example("  canicode gotcha-survey ./fixtures/my-design --json")
     .action(async (input: string, rawOptions: Record<string, unknown>) => {
