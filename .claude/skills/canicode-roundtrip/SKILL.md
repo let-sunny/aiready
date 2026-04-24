@@ -95,6 +95,10 @@ npx canicode gotcha-survey "<figma-url>" --json
 
 If `questions` is empty, skip to **Step 6**.
 
+#### Step 3 — preamble: match the user's language
+
+Detect the user's conversation language from their recent messages in **this** session (Korean vs. English vs. other is usually unambiguous; when ambiguous, default to English and ask once). When the user's language is non-English, localize only the human-readable rendering of questions, `why`, `Hint:`, `Example:`, and the batch shared-prompt wording (including the `split` / `skip` / `n/a` affordance sentence). Keep identifiers and structural markers English: `ruleId`, `nodeId`, severity label in brackets, and the entire upsert-section markdown scaffolding (`## #NNN — …`, `Design key`, `#### Skipped (N)`) — downstream tools grep these, and `renderGotchaSection` is the source of truth for on-disk markdown (ADR-016). In the Appendix Step 3 upsert, pass the user's answer through **verbatim** into `answers[<nodeId>].answer`; do **not** back-translate — `figma-implement-design` is cross-language by design (#461). See `.claude/skills/canicode-gotchas/SKILL.md` Step 3 preamble for the full rule.
+
 #### Step 3 — grouped survey (`groupedQuestions`)
 
 Iterate `groupedQuestions.groups[].batches[]`. Instance notes, batch prompts, replicas, split/skip/n/a, stdin upsert — **[Appendix Step 3](https://github.com/let-sunny/canicode/blob/main/docs/roundtrip-protocol.md#appendix--step-3-grouped-survey-groupedquestions)**. Per ADR-016, do not re-implement grouping.
