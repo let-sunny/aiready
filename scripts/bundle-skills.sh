@@ -37,6 +37,8 @@ REQUIRED=(
   "$DEST/canicode-gotchas/SKILL.md"
   "$DEST/canicode-roundtrip/SKILL.md"
   "$DEST/canicode-roundtrip/helpers.js"
+  "$DEST/canicode-roundtrip/helpers-installer.js"
+  "$DEST/canicode-roundtrip/helpers-bootstrap.js"
 )
 
 for f in "${REQUIRED[@]}"; do
@@ -61,6 +63,8 @@ CURSOR_REQUIRED=(
   "$DEST/cursor/canicode/SKILL.md"
   "$DEST/cursor/canicode-roundtrip/SKILL.md"
   "$DEST/cursor/canicode-roundtrip/helpers.js"
+  "$DEST/cursor/canicode-roundtrip/helpers-installer.js"
+  "$DEST/cursor/canicode-roundtrip/helpers-bootstrap.js"
 )
 for f in "${CURSOR_REQUIRED[@]}"; do
   if [ ! -f "$f" ]; then
