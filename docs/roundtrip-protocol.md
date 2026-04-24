@@ -223,11 +223,29 @@ For each `batch` inside the group:
 
 - **`batch.batchMode === "none"`** is always rendered as a single-question prompt — the helper guarantees `questions.length === 1` for those (identity-typed answers like `non-semantic-name`, structural-mod rules, and anything not in either whitelist).
 
+**Before presenting the first batch**, display this shortcut notice once so the user knows they can exit early:
+
+```
+Survey: {totalBatchCount} question(s) to answer.
+Tip: reply `skip remaining` at any point to bypass the rest with a default no-op annotation and finish immediately.
+```
+
+Where `totalBatchCount` is `groupedQuestions.groups.flatMap((g) => g.batches).length`.
+
+**After every 3rd batch** (i.e. after batches 3, 6, 9, …), re-surface the shortcut as a brief reminder before presenting the next batch:
+
+```
+(You can still reply `skip remaining` to bypass the remaining questions.)
+```
+
+When the user replies `skip remaining` at any point during Step 3, immediately treat all unanswered batches as skipped (`{ "skipped": true }` for each unanswered `nodeId`) and proceed directly to Step 4 without asking further questions.
+
 Wait for the user's answer before moving to the next batch. For each batch, the user may:
 - Answer the question directly (single value covers all batch members)
 - Say **split** (batch only) to fall back to per-question prompting for that batch
 - Say **skip** to skip the question / the entire batch
 - Say **n/a** if the question / the entire batch is not applicable
+- Say **skip remaining** to immediately skip all remaining unanswered batches and proceed to Step 4
 
 When applying the batched answer, expand back to per-question records before storing — the gotcha section format and Step 4 apply loop both expect one record per `nodeId`.
 

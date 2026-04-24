@@ -56,6 +56,23 @@ If `isReadyForCodeGen` is `true` or `questions` is empty:
 
 The survey response carries a pre-computed `groupedQuestions.groups[].batches[]` shape so this skill never has to sort, partition, or maintain a batchable-rule whitelist in prose. The sort key, `_no-source` sentinel, and both batchable-rule lists (`BATCHABLE_RULE_IDS` for `safe` mode, `OPT_IN_BATCHABLE_RULE_IDS` for `opt-in` mode) all live in `core/gotcha/group-and-batch-questions.ts` with vitest coverage (per ADR-016). Iterate over it:
 
+**Before presenting the first batch**, display this shortcut notice once so the user knows they can exit early at any point:
+
+```
+Survey: {totalBatchCount} question(s) to answer.
+Tip: reply `skip remaining` at any point to bypass the rest with a default no-op annotation and finish immediately.
+```
+
+Where `totalBatchCount` is `groupedQuestions.groups.flatMap((g) => g.batches).length`.
+
+**After every 3rd batch** (i.e. after batches 3, 6, 9, …), re-surface the shortcut as a brief reminder before presenting the next batch:
+
+```
+(You can still reply `skip remaining` to bypass the remaining questions.)
+```
+
+When the user replies `skip remaining` at any point during Step 3, immediately treat all unanswered batches as skipped (`{ "skipped": true }` for each unanswered `nodeId`) and proceed directly to Step 4 without asking further questions.
+
 For every `batch` in `groupedQuestions.groups.flatMap((g) => g.batches)`, branch on `batch.batchMode`:
 
 - **`batch.batchMode === "none"`** — single-question batch; the helper guarantees `batch.questions.length === 1`. Render the standard prompt for `batch.questions[0]`:
@@ -112,6 +129,7 @@ Wait for the user's answer before moving to the next batch. The user may:
 - Say **split** (batch only) to fall back to per-question prompting for that batch — works the same for both `safe` and `opt-in` batches
 - Say **skip** to skip the question / the entire batch
 - Say **n/a** if the question / the entire batch is not applicable
+- Say **skip remaining** to immediately skip all remaining unanswered batches and proceed to Step 4
 
 When applying the batched answer, expand back to per-question records in Step 4 — the gotcha section format stores one record per `nodeId`.
 
