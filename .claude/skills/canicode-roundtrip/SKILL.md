@@ -40,7 +40,7 @@ Work through this matrix before concluding a server is broken. Full detail and t
 
 1. **Settings + reload** — open **Settings → MCP**, confirm the server shows as enabled for this workspace, and reload MCP or restart the host. The live tool list (not the on-disk JSON) is what the model can actually call.
 2. **Figma + canicode both present** — canicode provides `analyze` / `gotcha-survey`; Figma provides `use_figma`. A failure in Step 4 is a Figma MCP issue; a failure in Steps 1–3 is a canicode issue. Identify which server exposes the missing tool before editing config.
-3. **Prepend + smoke check** — `helpers.js` must be prepended to every `use_figma` `code` string; if `typeof CanICodeRoundtrip === 'undefined'`, the bundle was not in the string. See the Step 4 preflight block above for the exact prepend procedure and smoke-check snippet. This is distinct from "canicode MCP missing."
+3. **Prepend + smoke check** — every `use_figma` `code` string must begin with one of the bundled helper artifacts. Preferred path (#424): prepend `helpers-installer.js` on the first batch and `helpers-bootstrap.js` on every subsequent batch — the installer caches the helpers source on `figma.root` via `setSharedPluginData`, and the bootstrap loads it back. Conservative single-artifact fallback: prepend `helpers.js` on every batch. In all paths, `typeof CanICodeRoundtrip === 'undefined'` after prepend means the bundle was not in the string. On the cache path, a `globalThis.__canicodeBootstrapResult` with `canicodeBootstrapResult: "cache-missing"` or `"version-mismatch"` means the agent must re-prepend `helpers-installer.js` on the next batch. See the Step 4 preflight block above for the exact prepend procedure and smoke-check snippet. This is distinct from "canicode MCP missing."
 4. **Size / paste fallback** — if the host cannot pass the full code string (truncation or tool-payload limit), measure `Buffer.byteLength(code, "utf8")` (or `wc -c`) and, if too large, paste the code directly into the MCP `use_figma` UI instead of relying on the model to pass it inline. See [`docs/roundtrip-protocol.md`](https://github.com/let-sunny/canicode/blob/main/docs/roundtrip-protocol.md) for delivery notes.
 
 ### Step 1: Analyze the design
@@ -102,21 +102,37 @@ Iterate `groupedQuestions.groups[].batches[]`. Instance notes, batch prompts, re
 
 ### Step 4: Apply gotcha answers to Figma design
 
-#### Mandatory preflight — prepend `helpers.js` before any `CanICodeRoundtrip.*` call
+#### Mandatory preflight — prepend one of the bundled helpers before any `CanICodeRoundtrip.*` call
 
-`CanICodeRoundtrip` is **not** a Figma or MCP built-in. It is the global registered by the bundled IIFE in `helpers.js` shipped next to this skill — it only exists after you read that file and prepend its contents verbatim at the top of every `use_figma` script string. Skipping this step throws `ReferenceError: 'CanICodeRoundtrip' is not defined` on the first `use_figma` batch.
+`CanICodeRoundtrip` is **not** a Figma or MCP built-in. It is the global registered by a bundled IIFE shipped next to this skill — it only exists after you read the right artifact and prepend its contents verbatim at the top of every `use_figma` script string. Skipping this step throws `ReferenceError: 'CanICodeRoundtrip' is not defined` on the first `use_figma` batch.
 
-- **Claude Code / default `canicode init`:** `.claude/skills/canicode-roundtrip/helpers.js`
-- **Cursor after `canicode init --cursor-skills`:** `.cursor/skills/canicode-roundtrip/helpers.js`
+Preferred protocol (cached delivery, #424, ADR-020) — keeps per-batch payload below use_figma's ~50KB budget by caching the ~31KB helpers source on `figma.root` via `setSharedPluginData`:
 
-Optional smoke check — run this as the first `use_figma` call of Step 4 (with `helpers.js` prepended) before any real apply batch:
+- **Batch 1 (install + optional smoke check):** prepend `helpers-installer.js`. It defines `CanICodeRoundtrip` for the current batch AND writes the helpers source + canicode version onto `figma.root` shared plugin data (namespace `"canicode"`, keys `"helpersSrc"` / `"helpersVersion"`).
+- **Batches 2+ (bootstrap):** prepend `helpers-bootstrap.js`. It reads the cached source, version-checks it against the canicode version baked in at build time, and re-evals to register the global. The bootstrap is only a few hundred bytes.
+- **Cross-session continuity:** shared plugin data persists with the file. On a later session against the same file, the agent MAY start straight on `helpers-bootstrap.js` — if the smoke check below returns `{ ok: true }` the cache is live for this canicode version. If the first bootstrap batch instead throws `ReferenceError` whose message starts with `canicode-bootstrap:` (or `globalThis.__canicodeBootstrapResult.canicodeBootstrapResult` is `"cache-missing"` or `"version-mismatch"`), re-prepend `helpers-installer.js` on the next batch and carry on.
+- **Conservative fallback:** `helpers.js` still ships as the single-artifact option — prepend it on every batch when setSharedPluginData isn't available (host strips it) or when simplifying for a smoke-debugging session.
+
+Artifact paths:
+
+- **Claude Code / default `canicode init`:** `.claude/skills/canicode-roundtrip/helpers-installer.js`, `helpers-bootstrap.js`, and `helpers.js` (fallback).
+- **Cursor after `canicode init --cursor-skills`:** `.cursor/skills/canicode-roundtrip/helpers-installer.js`, `helpers-bootstrap.js`, and `helpers.js` (fallback).
+
+Optional smoke check — run this as the first `use_figma` call of Step 4 (with the appropriate artifact prepended) before any real apply batch. The return shape is unchanged from the single-artifact protocol:
 
 ```javascript
-// <contents of helpers.js prepended here>
+// <contents of helpers-installer.js OR helpers-bootstrap.js (OR helpers.js fallback) prepended here>
 return { ok: typeof CanICodeRoundtrip !== 'undefined' };
 ```
 
-See [`docs/roundtrip-protocol.md` → Shared helpers (bundled)](https://github.com/let-sunny/canicode/blob/main/docs/roundtrip-protocol.md#shared-helpers-bundled) for the full helper catalogue (ADR-016 — deterministic logic lives in the bundled helpers, not skill prose).
+<!-- adr-016-ack: structured bootstrap marker is the agent-facing contract for the cache-miss / version-mismatch branch — example shows which field to read, not how to derive it -->
+```javascript
+// On a bootstrap batch, if the batch rejects with a canicode-bootstrap:* ReferenceError,
+// inspect globalThis.__canicodeBootstrapResult and re-prepend helpers-installer.js:
+//   { canicodeBootstrapResult: "cache-missing" | "version-mismatch", expected, actual }
+```
+
+See [`docs/roundtrip-protocol.md` → Shared helpers (bundled)](https://github.com/let-sunny/canicode/blob/main/docs/roundtrip-protocol.md#shared-helpers-bundled) for the full helper catalogue and the cached-delivery subsection (ADR-016 — deterministic install + load logic lives in the bundled artifacts, not skill prose).
 
 For each answered gotcha (skip questions answered with "skip" or "n/a"), branch on the pre-computed `question.applyStrategy`. The routing table, target properties, and instance-child resolution are resolved server-side by `canicode` — do NOT re-derive them from the rule id. The `fileKey` is not needed at this step — the bundled helpers operate on `nodeId` directly.
 

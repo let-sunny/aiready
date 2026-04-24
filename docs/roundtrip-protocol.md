@@ -98,10 +98,23 @@ The probe is read-only and idempotent; running it before the picker adds one rou
 
 **Shared helpers (bundled)** — the deterministic helpers live in TypeScript at `src/core/roundtrip/*.ts` and are bundled to a single IIFE shipped next to this skill as `helpers.js`. `use_figma` only accepts a self-contained JS string, so the source of truth is TypeScript (with vitest coverage) and the bundle is the delivery artifact.
 
-**Usage in a roundtrip session:**
+**Cached delivery (#424, ADR-020)** — the helpers IIFE is currently ~31KB. Prepending it on every `use_figma` batch crowds the ~50KB soft code-string budget and multiplies when the roundtrip splits across batches. Two sibling artifacts are emitted next to `helpers.js` to solve this:
 
-1. Read `helpers.js` from the same directory as this skill once at the start of Step 4 — typically `.claude/skills/canicode-roundtrip/helpers.js` (Claude Code / default `canicode init`) or `.cursor/skills/canicode-roundtrip/helpers.js` (Cursor with `canicode init --cursor-skills`).
-2. Prepend its contents verbatim at the top of every `use_figma` batch body — it registers a single global `CanICodeRoundtrip`.
+- **Install batch** — prepend `helpers-installer.js`. It registers `CanICodeRoundtrip` for the current batch (so the install batch can do real work) AND writes the helpers source onto `figma.root` via `setSharedPluginData`. Cache shape: namespace `"canicode"`, keys `"helpersSrc"` (JSON-stringified IIFE source) and `"helpersVersion"` (canicode version baked in at build time). The namespace + keys are centralised in `src/core/roundtrip/shared-plugin-data.ts`.
+- **Subsequent batches** — prepend `helpers-bootstrap.js`. It reads the two keys, compares the cached version against the constant baked into the bootstrap at build time, and `eval`s the cached source to re-register `globalThis.CanICodeRoundtrip`. Only a few hundred bytes, so every batch after the first pays a fractional fraction of the old cost.
+- **Version-mismatch / cache-missing fallback** — on a cache miss or a canicode-version mismatch, the bootstrap sets `globalThis.__canicodeBootstrapResult = { canicodeBootstrapResult: "cache-missing" | "version-mismatch", expected, actual }` and throws a `ReferenceError` prefixed `canicode-bootstrap:` so the batch self-reports. The orchestrator re-prepends `helpers-installer.js` on the next batch and retries.
+- **Persistence trade-off** — `figma.root.setSharedPluginData` persists across sessions, so cached helpers live with the file forever unless overwritten by a newer install or deleted manually. The cost is one ~31KB string in file metadata (invisible to designers); the alternative is re-pasting ~31KB on every batch of every roundtrip. Documented in ADR-020 as an explicit trade.
+- **File-edit permission** — `setSharedPluginData` requires the same file-edit permission already required by any roundtrip apply step, so this path adds no new permission surface.
+
+The existing single-artifact usage (prepend `helpers.js` on every batch) stays supported as a conservative fallback for hosts that strip shared plugin data or for smoke-debugging sessions.
+
+**Usage in a roundtrip session (preferred cached path):**
+
+1. Read `helpers-installer.js` from the same directory as this skill — `.claude/skills/canicode-roundtrip/helpers-installer.js` (Claude Code / default `canicode init`) or `.cursor/skills/canicode-roundtrip/helpers-installer.js` (Cursor with `canicode init --cursor-skills`). Prepend its contents verbatim at the top of the first `use_figma` batch body (smoke check + install).
+2. Read `helpers-bootstrap.js` from the same directory once. Prepend its contents verbatim at the top of every subsequent `use_figma` batch body — it restores the global `CanICodeRoundtrip` from cache.
+3. On a `canicode-bootstrap:` ReferenceError (or `__canicodeBootstrapResult.canicodeBootstrapResult !== undefined`), re-prepend `helpers-installer.js` on the next batch.
+
+**Usage (conservative single-artifact fallback):** prepend `helpers.js` on every batch — same directory as this skill, registers the global `CanICodeRoundtrip` directly.
 
 See the "Mandatory preflight" block at the start of Step 4 in [`.claude/skills/canicode-roundtrip/SKILL.md`](https://github.com/let-sunny/canicode/blob/main/.claude/skills/canicode-roundtrip/SKILL.md#step-4-apply-gotcha-answers-to-figma-design) for the agent-facing checklist.
 

@@ -19,7 +19,7 @@
   "scripts": {
     "build": "tsup --config tsup.config.ts && pnpm build:roundtrip && pnpm bundle:skills",
     "build:web": "bash scripts/build-web.sh",
-    "build:roundtrip": "tsup --config tsup.roundtrip.config.ts",
+    "build:roundtrip": "tsup --config tsup.roundtrip.config.ts && tsx scripts/bundle-roundtrip-cache.ts",
     "bundle:skills": "bash scripts/bundle-skills.sh",
     "dev": "tsup --watch",
     "test": "vitest",
