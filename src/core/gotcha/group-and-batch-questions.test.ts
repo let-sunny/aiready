@@ -1,6 +1,7 @@
 import type { GotchaSurveyQuestion } from "../contracts/gotcha-survey.js";
 import {
   BATCHABLE_RULE_IDS,
+  OPT_IN_BATCHABLE_RULE_IDS,
   groupAndBatchSurveyQuestions,
 } from "./group-and-batch-questions.js";
 
@@ -53,6 +54,23 @@ describe("BATCHABLE_RULE_IDS", () => {
     expect(BATCHABLE_RULE_IDS).not.toContain("non-semantic-name");
     expect(BATCHABLE_RULE_IDS).not.toContain("missing-component");
     expect(BATCHABLE_RULE_IDS).not.toContain("non-layout-container");
+  });
+});
+
+describe("OPT_IN_BATCHABLE_RULE_IDS", () => {
+  it("contains missing-prototype (#426)", () => {
+    expect(OPT_IN_BATCHABLE_RULE_IDS).toEqual(["missing-prototype"]);
+  });
+
+  it("does not list identity-typed rules whose answer differs per node", () => {
+    expect(OPT_IN_BATCHABLE_RULE_IDS).not.toContain("non-semantic-name");
+    expect(OPT_IN_BATCHABLE_RULE_IDS).not.toContain("missing-component");
+  });
+
+  it("is disjoint from BATCHABLE_RULE_IDS so each rule has exactly one batchMode", () => {
+    for (const id of OPT_IN_BATCHABLE_RULE_IDS) {
+      expect(BATCHABLE_RULE_IDS).not.toContain(id);
+    }
   });
 });
 
@@ -156,7 +174,7 @@ describe("groupAndBatchSurveyQuestions", () => {
 
     const group = result.groups[0]!;
     expect(group.batches).toHaveLength(1);
-    expect(group.batches[0]?.batchable).toBe(true);
+    expect(group.batches[0]?.batchMode).toBe("safe");
     expect(group.batches[0]?.questions.map((q) => q.nodeId)).toEqual([
       "1",
       "2",
@@ -186,7 +204,110 @@ describe("groupAndBatchSurveyQuestions", () => {
 
     const group = result.groups[0]!;
     expect(group.batches).toHaveLength(2);
-    expect(group.batches.every((b) => b.batchable === false)).toBe(true);
+    expect(group.batches.every((b) => b.batchMode === "none")).toBe(true);
+    expect(group.batches.every((b) => b.questions.length === 1)).toBe(true);
+  });
+
+  it("collapses consecutive missing-prototype siblings into one opt-in batch (#426)", () => {
+    const ctx = {
+      parentInstanceNodeId: "p:A",
+      sourceNodeId: "src:A",
+      sourceComponentId: "comp:A",
+      sourceComponentName: "ProductCard",
+    };
+    const result = groupAndBatchSurveyQuestions([
+      makeQuestion({
+        nodeId: "card-1",
+        nodeName: "card-1",
+        ruleId: "missing-prototype",
+        instanceContext: ctx,
+      }),
+      makeQuestion({
+        nodeId: "card-2",
+        nodeName: "card-2",
+        ruleId: "missing-prototype",
+        instanceContext: ctx,
+      }),
+      makeQuestion({
+        nodeId: "card-3",
+        nodeName: "card-3",
+        ruleId: "missing-prototype",
+        instanceContext: ctx,
+      }),
+    ]);
+
+    const group = result.groups[0]!;
+    expect(group.batches).toHaveLength(1);
+    const batch = group.batches[0]!;
+    expect(batch.batchMode).toBe("opt-in");
+    expect(batch.ruleId).toBe("missing-prototype");
+    expect(batch.questions.map((q) => q.nodeId)).toEqual([
+      "card-1",
+      "card-2",
+      "card-3",
+    ]);
+    expect(batch.totalScenes).toBe(3);
+  });
+
+  it("sums replicas into totalScenes on opt-in batches the same way as safe batches", () => {
+    const ctx = {
+      parentInstanceNodeId: "p:A",
+      sourceNodeId: "src:A",
+      sourceComponentId: "comp:A",
+    };
+    const result = groupAndBatchSurveyQuestions([
+      makeQuestion({
+        nodeId: "1",
+        ruleId: "missing-prototype",
+        instanceContext: ctx,
+        replicas: 4,
+        replicaNodeIds: ["1a", "1b", "1c"],
+      }),
+      makeQuestion({
+        nodeId: "2",
+        ruleId: "missing-prototype",
+        instanceContext: ctx,
+      }),
+    ]);
+
+    const batch = result.groups[0]!.batches[0]!;
+    expect(batch.batchMode).toBe("opt-in");
+    expect(batch.questions).toHaveLength(2);
+    expect(batch.totalScenes).toBe(4 + 1);
+  });
+
+  it("emits safe / opt-in / none batches side by side when a group mixes all three modes", () => {
+    const ctx = {
+      parentInstanceNodeId: "p:A",
+      sourceNodeId: "src:A",
+      sourceComponentId: "comp:A",
+    };
+    const result = groupAndBatchSurveyQuestions([
+      makeQuestion({
+        nodeId: "1",
+        ruleId: "missing-size-constraint",
+        instanceContext: ctx,
+      }),
+      makeQuestion({
+        nodeId: "2",
+        ruleId: "missing-prototype",
+        instanceContext: ctx,
+      }),
+      makeQuestion({
+        nodeId: "3",
+        ruleId: "non-semantic-name",
+        instanceContext: ctx,
+      }),
+    ]);
+
+    const group = result.groups[0]!;
+    // Batches are laid out in ruleId sort order: missing-prototype,
+    // missing-size-constraint, non-semantic-name.
+    expect(group.batches.map((b) => [b.ruleId, b.batchMode])).toEqual([
+      ["missing-prototype", "opt-in"],
+      ["missing-size-constraint", "safe"],
+      ["non-semantic-name", "none"],
+    ]);
     expect(group.batches.every((b) => b.questions.length === 1)).toBe(true);
   });
 

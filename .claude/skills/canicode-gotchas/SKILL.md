@@ -64,11 +64,28 @@ In Step 4, pass the user's answer through **verbatim** into the `answers[<nodeId
 
 ### Step 3: Present questions to the user
 
-The survey response carries a pre-computed `groupedQuestions.groups[].batches[]` shape so this skill never has to sort, partition, or maintain a batchable-rule whitelist in prose. The sort key, `_no-source` sentinel, and batchable-rule list all live in `core/gotcha/group-and-batch-questions.ts` with vitest coverage (per ADR-016). Iterate over it:
+The survey response carries a pre-computed `groupedQuestions.groups[].batches[]` shape so this skill never has to sort, partition, or maintain a batchable-rule whitelist in prose. The sort key, `_no-source` sentinel, and both batchable-rule lists (`BATCHABLE_RULE_IDS` for `safe` mode, `OPT_IN_BATCHABLE_RULE_IDS` for `opt-in` mode) all live in `core/gotcha/group-and-batch-questions.ts` with vitest coverage (per ADR-016). Iterate over it:
 
-For every `batch` in `groupedQuestions.groups.flatMap((g) => g.batches)`:
+**Before presenting the first batch**, display this shortcut notice once so the user knows they can exit early at any point:
 
-- **Single-question batch (`batch.questions.length === 1`)** — render the standard prompt for `batch.questions[0]`:
+```
+Survey: {totalBatchCount} question(s) to answer.
+Tip: reply `skip remaining` at any point to bypass the rest with a default no-op annotation and finish immediately.
+```
+
+Where `totalBatchCount` is `groupedQuestions.groups.flatMap((g) => g.batches).length`.
+
+**After every 3rd batch** (i.e. after batches 3, 6, 9, …), re-surface the shortcut as a brief reminder before presenting the next batch:
+
+```
+(You can still reply `skip remaining` to bypass the remaining questions.)
+```
+
+When the user replies `skip remaining` at any point during Step 3, immediately treat all unanswered batches as skipped (`{ "skipped": true }` for each unanswered `nodeId`) and proceed directly to Step 4 without asking further questions.
+
+For every `batch` in `groupedQuestions.groups.flatMap((g) => g.batches)`, branch on `batch.batchMode`:
+
+- **`batch.batchMode === "none"`** — single-question batch; the helper guarantees `batch.questions.length === 1`. Render the standard prompt for `batch.questions[0]`:
 
   ```
   **[{severity}] {ruleId}** — node: {nodeName}
@@ -79,7 +96,7 @@ For every `batch` in `groupedQuestions.groups.flatMap((g) => g.batches)`:
   > Example: {example}
   ```
 
-- **Batch of N ≥ 2 with `batch.batchable === true`** (#369) — render one shared prompt covering every member:
+- **`batch.batchMode === "safe"` with `batch.questions.length >= 2`** (#369) — rule in `BATCHABLE_RULE_IDS`; one answer is uniformly applicable. Render one shared prompt:
 
   ```
   **[{severity}] {ruleId}** — {batch.questions.length} instances:
@@ -97,13 +114,32 @@ For every `batch` in `groupedQuestions.groups.flatMap((g) => g.batches)`:
 
   Where `sharedQuestionPrompt` reuses the rule's `question` text with the per-node noun replaced by the rule's plural noun (e.g. "These layers all use FILL sizing without min/max constraints. What size boundaries should they share?" instead of repeating the singular phrasing N times).
 
-- **Any batch with `batch.batchable === false`** is always rendered as a single-question prompt — the helper guarantees `questions.length === 1` for those (identity-typed answers like `non-semantic-name`, structural-mod rules).
+- **`batch.batchMode === "opt-in"` with `batch.questions.length >= 2`** (#426) — rule in `OPT_IN_BATCHABLE_RULE_IDS` (currently `missing-prototype`). The same answer is usually shareable across siblings but may legitimately differ per node — signal that explicitly so the user can opt out of the shared answer with `split`:
+
+  ```
+  **[{severity}] {batch.ruleId}** — {batch.questions.length} instances of the same rule:
+    - {nodeName₁}
+    - {nodeName₂}
+    - …
+
+  {sharedQuestionPrompt}
+
+  Apply this answer to all {batch.questions.length} occurrences of `{batch.ruleId}`, or reply **split** to answer each individually.
+
+  > Hint: {hint}
+  > Example: {example}
+  ```
+
+  Unlike `safe` batches, the prompt frames the answer as a suggested default, not a uniform truth — reuse the rule's existing `example` (e.g. `missing-prototype`'s "navigates to `/product/{id}` detail page") so the user knows the answer can be a pattern, not a literal string shared character-for-character.
+
+- **Single-member `safe` or `opt-in` batch (`batch.questions.length === 1`)** — render the single-question template above; the shared-prompt framing collapses to the rule's own wording when there is only one node.
 
 Wait for the user's answer before moving to the next batch. The user may:
-- Answer the question / batch directly
-- Say **split** (batch only) to fall back to per-question prompting for that batch
+- Answer the question / batch directly (single value or pattern covers all batch members)
+- Say **split** (batch only) to fall back to per-question prompting for that batch — works the same for both `safe` and `opt-in` batches
 - Say **skip** to skip the question / the entire batch
 - Say **n/a** if the question / the entire batch is not applicable
+- Say **skip remaining** to immediately skip all remaining unanswered batches and proceed to Step 4
 
 When applying the batched answer, expand back to per-question records in Step 4 — the gotcha section format stores one record per `nodeId`.
 

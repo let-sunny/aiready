@@ -107,13 +107,17 @@ export type GotchaSurveyQuestion = z.infer<typeof GotchaSurveyQuestionSchema>;
 export const SurveyQuestionBatchSchema = z.object({
   ruleId: z.string(),
   /**
-   * `true` when every member shares an answer-shape uniformly applicable to
-   * all of them (e.g. one `min-width` value covers all FILL children).
-   * The SKILL renders one shared prompt for `batchable: true` batches with
-   * `questions.length >= 2`; everything else falls through to the
-   * single-question template.
+   * Rendering mode for this batch (see `BatchMode` in
+   * `src/core/gotcha/group-and-batch-questions.ts` — the authoritative
+   * whitelists `BATCHABLE_RULE_IDS` and `OPT_IN_BATCHABLE_RULE_IDS` live
+   * there):
+   * - `"safe"` — one answer uniformly applies to every member (#369).
+   * - `"opt-in"` — one shared answer is a suggested default; the user may
+   *   reply `split` for per-node override (#426).
+   * - `"none"` — single-member batch, renders the standard per-question
+   *   template.
    */
-  batchable: z.boolean(),
+  batchMode: z.enum(["safe", "opt-in", "none"]),
   questions: z.array(GotchaSurveyQuestionSchema),
   /**
    * Sum of `max(question.replicas, 1)` across `questions`. Counts the
@@ -157,6 +161,20 @@ export const GotchaSurveySchema = z.object({
    * prose no longer parses URLs (per ADR-016).
    */
   designKey: z.string(),
+  /**
+   * #428 — threshold hint for the `allowDefinitionWrite` picker in the
+   * `canicode-roundtrip` skill. `true` when `propagationCandidates >= 3`
+   * (i.e. three or more questions target instance children that could
+   * benefit from definition-level writes). When `false`, the skill silently
+   * uses the annotation default (ADR-012) without surfacing the picker —
+   * the opt-in flow is over-engineered for tiny surveys.
+   *
+   * Computed server-side from `questions` so the skill doesn't have to
+   * count `isInstanceChild` manually; the skill may still override this
+   * hint when it has additional context (e.g. all candidates are
+   * read-only per probe result).
+   */
+  suggestedDefaultApply: z.boolean(),
 });
 
 export type GotchaSurvey = z.infer<typeof GotchaSurveySchema>;

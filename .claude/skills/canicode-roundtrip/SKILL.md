@@ -101,7 +101,7 @@ Detect the user's conversation language from their recent messages in **this** s
 
 #### Step 3 — grouped survey (`groupedQuestions`)
 
-Iterate `groupedQuestions.groups[].batches[]`. Instance notes, batch prompts, replicas, split/skip/n/a, stdin upsert — **[Appendix Step 3](https://github.com/let-sunny/canicode/blob/main/docs/roundtrip-protocol.md#appendix--step-3-grouped-survey-groupedquestions)**. Per ADR-016, do not re-implement grouping.
+Iterate `groupedQuestions.groups[].batches[]` and branch on `batch.batchMode` (`"safe"` — one uniform answer, `"opt-in"` — shared answer offered as default with per-node `split` override (#426), `"none"` — single-question). Instance notes, batch prompt templates per mode, replicas, split/skip/n/a, "skip remaining" early-exit affordance (surface before the first batch, re-surface every 3rd), stdin upsert — **[Appendix Step 3](https://github.com/let-sunny/canicode/blob/main/docs/roundtrip-protocol.md#appendix--step-3-grouped-survey-groupedquestions)**. Per ADR-016, do not re-implement grouping.
 
 
 ### Step 4: Apply gotcha answers to Figma design
@@ -144,7 +144,7 @@ Every gotcha-survey question (and every entry in `analyzeResult.issues[]`) carri
 
 #### Instance-child matrix, annotation enum matrix, write tiers, probe, helpers
 
-Full tables, Experiment 08/09 references, definition-write probe branches, and the bundled `CanICodeRoundtrip` API catalogue live in [`docs/roundtrip-protocol.md`](https://github.com/let-sunny/canicode/blob/main/docs/roundtrip-protocol.md) on `main`. Open it when you need the matrices or helper list — do not re-derive write rules from memory (ADR-016).
+Full tables, Experiment 08/09 references, definition-write probe branches, the `suggestedDefaultApply` threshold heuristic for the picker (#428), and the bundled `CanICodeRoundtrip` API catalogue live in [`docs/roundtrip-protocol.md`](https://github.com/let-sunny/canicode/blob/main/docs/roundtrip-protocol.md) on `main`. Open it when you need the matrices or helper list — do not re-derive write rules from memory (ADR-016).
 
 #### Strategy A: Property Modification — apply directly
 

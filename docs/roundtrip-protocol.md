@@ -51,6 +51,13 @@ The helper walks the tiers in order; variable binding is an alternative writeFn 
 
 **Confirmation is a batch-level concern — and only needed when opting in.** A `use_figma` call runs one JavaScript batch and cannot pause mid-batch for user input. Under the ADR-012 default (`allowDefinitionWrite: false`), no propagation happens, so no confirmation is required — override-errors annotate and move on. The orchestrator sets `allowDefinitionWrite: true` only after enumerating the likely propagation set to the user up-front and collecting **one confirmation for the whole batch** that names the source component(s) and the affected instance set. When describing impact, note that the write reaches every **non-overridden** instance — any instance with a local override for the same property keeps its override. The helper below never prompts — it assumes that if the flag is on, confirmation already happened.
 
+**Threshold heuristic — when to surface the picker (#428).** The `allowDefinitionWrite` opt-in flow is over-engineered for tiny surveys. Use `survey.suggestedDefaultApply` (a boolean computed server-side by `generateGotchaSurvey`) to gate the picker:
+
+- **`survey.suggestedDefaultApply === false`** (fewer than 3 instance-child questions in the survey) — skip the picker entirely and call the helpers with the default `allowDefinitionWrite: false`. Every override-error routes to a scene annotation per ADR-012. Do not ask the user about propagation.
+- **`survey.suggestedDefaultApply === true`** (3 or more instance-child questions) — surface the pre-flight probe and picker as usual. The threshold is `propagationCandidates >= 3` where `propagationCandidates = questions.filter(q => q.isInstanceChild).length`.
+
+The skill may still override this hint — for example, when `probeDefinitionWritability` returns `allUnwritable === true`, drop to annotate-only regardless of `suggestedDefaultApply`.
+
 **Pre-flight writability probe (#357).** Before showing the user the Definition write picker, call `CanICodeRoundtrip.probeDefinitionWritability(questions)` inside a small `use_figma` batch. The probe loads every distinct `sourceChildId` once and classifies it as writable or unwritable using the same detection as the runtime fallback (Experiment 10 `remote === true` and Experiment 11 unresolved-`null`). The result decides which version of the picker to show:
 
 ```javascript
@@ -135,7 +142,12 @@ The naive "one-question-at-a-time" loop produces two well-known UX failures on r
 - **Repeated Instance note (#370)** — when 10 consecutive questions share the same `instanceContext.sourceComponentId`, the standard "_Instance note: …source component **X**…_" paragraph prints 10 times. After the first occurrence it adds zero new information and consumes ~2 screens of vertical space.
 - **Repeated identical answer (#369)** — when 7 consecutive questions all carry the same `ruleId` (e.g. `missing-size-constraint`) and the user's reasonable answer would be the same for all of them (e.g. `min-width: 320px, max-width: 1200px`), the user types the same thing 7 times in a row.
 
-`gotcha-survey` already ships the resolution on its `groupedQuestions` field. Sort key (`(sourceComponentId ?? "_no-source", ruleId, nodeName)`), source-component grouping, and the batchable-rule whitelist (`missing-size-constraint`, `irregular-spacing`, `no-auto-layout`, `fixed-size-in-auto-layout`) all live in `core/gotcha/group-and-batch-questions.ts` with vitest coverage. Per ADR-016, do **not** re-implement the sort, partition, or whitelist in prose — iterate over `groupedQuestions.groups[].batches[]` directly.
+`gotcha-survey` already ships the resolution on its `groupedQuestions` field. Sort key (`(sourceComponentId ?? "_no-source", ruleId, nodeName)`), source-component grouping, and both batchable-rule whitelists all live in `core/gotcha/group-and-batch-questions.ts` with vitest coverage:
+
+- **`BATCHABLE_RULE_IDS`** (`safe` batch mode — one uniform answer by definition): `missing-size-constraint`, `irregular-spacing`, `no-auto-layout`, `fixed-size-in-auto-layout`.
+- **`OPT_IN_BATCHABLE_RULE_IDS`** (`opt-in` batch mode — shared answer offered as a default with per-node override via `split`): `missing-prototype` (#426).
+
+Each batch carries a pre-computed `batchMode: "safe" | "opt-in" | "none"` so the prompt template branches without re-deriving the whitelist in prose. Per ADR-016, do **not** re-implement the sort, partition, or whitelists in prose — iterate over `groupedQuestions.groups[].batches[]` directly.
 
 #### Step 3b: Prompt each group, then each batch within it
 
@@ -169,7 +181,7 @@ For each `batch` inside the group:
   _Replicas: This question represents **{replicas} instances** of the same source-component child sharing the same rule. Your single answer will be applied to all of them in Step 4 (one annotation/write per instance scene)._
   ```
 
-- **`batch.questions.length >= 2 && batch.batchable === true`** (#369) — render one batch prompt covering all members. Use `batch.totalScenes` (already summed across each member's `replicas`) for the Figma-scene fan-out hint:
+- **`batch.batchMode === "safe"` && `batch.questions.length >= 2`** (#369) — every member's answer is uniformly applicable (rule in `BATCHABLE_RULE_IDS`). Render one batch prompt covering all members. Use `batch.totalScenes` (already summed across each member's `replicas`) for the Figma-scene fan-out hint:
 
   ```
   **[{severity}] {batch.ruleId}** — {batch.questions.length} instances:
@@ -196,13 +208,51 @@ For each `batch` inside the group:
   _Replicas: your one answer will land on **{batch.totalScenes}** Figma scenes total in Step 4 (some of these {batch.questions.length} questions already represent multiple instances of the same source-component child)._
   ```
 
-- **`batch.batchable === false`** is always rendered as a single-question prompt — the helper guarantees `questions.length === 1` for those (identity-typed answers like `non-semantic-name`, structural-mod rules).
+- **`batch.batchMode === "opt-in"` && `batch.questions.length >= 2`** (#426) — rule in `OPT_IN_BATCHABLE_RULE_IDS` (currently `missing-prototype`). The shared answer is offered as a suggested default rather than a uniform truth, because the per-node specifics (target routes, modals vs pages, etc.) may legitimately diverge. Render a variant header that calls out the opt-in framing explicitly:
+
+  ```
+  **[{severity}] {batch.ruleId}** — {batch.questions.length} instances of the same rule:
+    - {nodeName₁}{ruleSpecificContext₁}
+    - {nodeName₂}{ruleSpecificContext₂}
+    - …
+
+  {sharedQuestionPrompt}
+
+  Apply this answer to all {batch.questions.length} occurrences of `{batch.ruleId}`, or reply **split** to answer each individually.
+
+  > Hint: {hint}
+  > Example: {example}
+  ```
+
+  Reuse the rule's existing `example` (e.g. for `missing-prototype`, "navigates to `/product/{id}` detail page") so the user knows the shared answer can be a **pattern** that templates per-node specifics in Step 4 — not a literal string copied character-for-character to every node. The same `split` / `skip` / `n/a` verbs apply; no new vocabulary.
+
+  When `batch.totalScenes > batch.questions.length`, append the same `_Replicas:_` note as the `safe` branch so the user knows the fan-out count.
+
+- **`batch.batchMode === "none"`** is always rendered as a single-question prompt — the helper guarantees `questions.length === 1` for those (identity-typed answers like `non-semantic-name`, structural-mod rules, and anything not in either whitelist).
+
+**Before presenting the first batch**, display this shortcut notice once so the user knows they can exit early:
+
+```
+Survey: {totalBatchCount} question(s) to answer.
+Tip: reply `skip remaining` at any point to bypass the rest with a default no-op annotation and finish immediately.
+```
+
+Where `totalBatchCount` is `groupedQuestions.groups.flatMap((g) => g.batches).length`.
+
+**After every 3rd batch** (i.e. after batches 3, 6, 9, …), re-surface the shortcut as a brief reminder before presenting the next batch:
+
+```
+(You can still reply `skip remaining` to bypass the remaining questions.)
+```
+
+When the user replies `skip remaining` at any point during Step 3, immediately treat all unanswered batches as skipped (`{ "skipped": true }` for each unanswered `nodeId`) and proceed directly to Step 4 without asking further questions.
 
 Wait for the user's answer before moving to the next batch. For each batch, the user may:
 - Answer the question directly (single value covers all batch members)
 - Say **split** (batch only) to fall back to per-question prompting for that batch
 - Say **skip** to skip the question / the entire batch
 - Say **n/a** if the question / the entire batch is not applicable
+- Say **skip remaining** to immediately skip all remaining unanswered batches and proceed to Step 4
 
 When applying the batched answer, expand back to per-question records before storing — the gotcha section format and Step 4 apply loop both expect one record per `nodeId`.
 
