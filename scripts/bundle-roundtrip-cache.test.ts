@@ -27,6 +27,31 @@ describe("bundleRoundtripCache", () => {
     expect(withoutStringifiedCopy).not.toContain(helpersSource);
   });
 
+  it("installer UTF-8 size stays within helpers + modest wrapper overhead (regression for #424 / PR-472)", () => {
+    const largeAscii = "x".repeat(32_000);
+    const { installer } = bundleRoundtripCache({
+      helpersSource: largeAscii,
+      version: "0.0.0",
+    });
+    const bytes = Buffer.byteLength(installer, "utf8");
+    expect(bytes).toBeLessThanOrEqual(
+      Math.ceil(largeAscii.length * 1.12) + 2_000,
+    );
+    // Catches accidental double-embedding (~2× helpers) that would push the
+    // install batch far past the ~50KB use_figma soft budget.
+    expect(bytes).toBeLessThan(largeAscii.length * 1.9);
+  });
+
+  it("installer does not balloon toward 2× when helpers has many newlines (#424)", () => {
+    const multiline = "const x = 1;\n".repeat(3_000);
+    const { installer } = bundleRoundtripCache({
+      helpersSource: multiline,
+      version: "0.0.0",
+    });
+    const bytes = Buffer.byteLength(installer, "utf8");
+    expect(bytes).toBeLessThan(multiline.length * 2.1);
+  });
+
   it("installer writes both setSharedPluginData keys using the shared constants", () => {
     const { installer } = bundleRoundtripCache({ helpersSource, version });
     expect(installer).toContain(

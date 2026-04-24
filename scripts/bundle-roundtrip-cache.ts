@@ -10,13 +10,14 @@
  * This script emits two sibling artifacts so the SKILL can drop the per-batch
  * payload from ~31KB to a few hundred bytes after the first batch:
  *
- *   - `helpers-installer.js` — stores the helpers IIFE once as a JSON.stringify'd
- *     string and then (a) evals that string via indirect eval so the global
- *     `CanICodeRoundtrip` is defined for the install batch itself and
- *     (b) persists the source + canicode version onto `figma.root` via
- *     `setSharedPluginData`. Only one copy of the ~31KB source ships in the
- *     installer artifact so the install batch stays well under the use_figma
- *     ~50KB soft budget.
+ *   - `helpers-installer.js` — assigns the helpers IIFE source to a variable using
+ *     one JavaScript string literal (`JSON.stringify` at build time escapes the
+ *     source for pasting), indirect-evaluates it so `CanICodeRoundtrip` exists for
+ *     the install batch, then persists that **same string value** (verbatim
+ *     helpers UTF-8 — not an extra JSON envelope) + canicode version onto
+ *     `figma.root` via `setSharedPluginData`. Only one copy of the source appears
+ *     in the artifact so the install batch stays in the same ballpark as
+ *     `helpers.js` plus wrapper overhead (see ADR-020 scaling note).
  *   - `helpers-bootstrap.js` — a small loader that reads the cached source +
  *     version, version-checks against the constant baked in at build time,
  *     and evals to re-register `globalThis.CanICodeRoundtrip`. On cache-miss
@@ -142,8 +143,10 @@ function main(): void {
   writeFileSync(installerPath, installer);
   writeFileSync(bootstrapPath, bootstrap);
 
+  const installerBytes = Buffer.byteLength(installer, "utf8");
+  const bootstrapBytes = Buffer.byteLength(bootstrap, "utf8");
   console.log(
-    `bundle-roundtrip-cache: wrote helpers-installer.js (${installer.length} chars) and helpers-bootstrap.js (${bootstrap.length} chars) for canicode v${pkg.version}`,
+    `bundle-roundtrip-cache: wrote helpers-installer.js (${installerBytes} UTF-8 bytes, ${installer.length} code units) and helpers-bootstrap.js (${bootstrapBytes} UTF-8 bytes) for canicode v${pkg.version}`,
   );
 }
 
