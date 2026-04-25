@@ -76,7 +76,7 @@ const USER_MESSAGES: Record<string, string> = {
   missing:
     "Gotchas SKILL.md not found at the given path. Run `canicode init` first, then re-invoke this skill.",
   clobbered:
-    "Your gotchas SKILL.md is missing the canicode YAML frontmatter (pre-#340 single-design clobber). Run `canicode init --force` to restore the workflow, then re-run this survey.",
+    "Your gotchas SKILL.md is missing the canicode YAML frontmatter. Run `canicode init --force` to restore the workflow, then re-run this survey.",
 };
 
 async function readStdin(): Promise<string> {

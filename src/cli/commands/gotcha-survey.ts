@@ -88,11 +88,11 @@ export function registerGotchaSurvey(cli: CAC): void {
     .option("--token <token>", "Figma API token (or use FIGMA_TOKEN env var)")
     .option(
       "--api",
-      "No-op for Figma URL inputs (file data is always fetched via REST). Accepted for CLI parity with `analyze` (#461).",
+      "No-op for Figma URL inputs (file data is always fetched via REST). Accepted for CLI parity with `analyze`.",
     )
     .option("--config <path>", "Path to config JSON file (override rule scores/settings)")
     .option("--target-node-id <id>", "Scope analysis to a specific node ID")
-    .option("--scope <scope>", "(#404) Override analysis scope: `page` or `component`. Defaults to auto-detection from the root node type.")
+    .option("--scope <scope>", "Override analysis scope: `page` or `component`. Defaults to auto-detection from the root node type.")
     .option("--json", "Output GotchaSurvey JSON to stdout (same format as MCP)")
     .option("--ready-min-grade <grade>", "Minimum grade for code-gen readiness (S | A+ | A | B+ | B | C+ | C | D | F). Overrides configPath codegenReadyMinGrade. Default: A")
     .example("  canicode gotcha-survey https://www.figma.com/design/ABC123/MyDesign --json")

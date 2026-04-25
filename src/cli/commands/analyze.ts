@@ -47,14 +47,14 @@ export function registerAnalyze(cli: CAC): void {
     .option("--token <token>", "Figma API token (or use FIGMA_TOKEN env var)")
     .option(
       "--api",
-      "No-op for Figma URL inputs (file data is always fetched via REST). Accepted for CLI parity with `gotcha-survey` (#461).",
+      "No-op for Figma URL inputs (file data is always fetched via REST). Accepted for CLI parity with `gotcha-survey`.",
     )
     .option("--screenshot", "Include screenshot comparison in report (requires ANTHROPIC_API_KEY)")
     .option("--config <path>", "Path to config JSON file (override rule scores/settings)")
     .option("--no-open", "Don't open report in browser after analysis")
     .option("--json", "Output JSON results to stdout (same format as MCP)")
-    .option("--acknowledgments <path>", "(#371 / ADR-019) Path to JSON acknowledgments from canicode Figma annotations (nodeId, ruleId; optional intent / sceneWriteOutcome / codegenDirective per #444). Matching issues are flagged acknowledged and contribute half weight to density.")
-    .option("--scope <scope>", "(#404) Override analysis scope: `page` (screen/section — container bounds are required) or `component` (standalone reusable unit — root FILL is the design contract). Defaults to auto-detection from the root node type.")
+    .option("--acknowledgments <path>", "Path to JSON acknowledgments from canicode Figma annotations (nodeId, ruleId; optional intent / sceneWriteOutcome / codegenDirective). Matching issues are flagged acknowledged and contribute half weight to density.")
+    .option("--scope <scope>", "Override analysis scope: `page` (screen/section — container bounds are required) or `component` (standalone reusable unit — root FILL is the design contract). Defaults to auto-detection from the root node type.")
     .option("--ready-min-grade <grade>", "Minimum grade for code-gen readiness (S | A+ | A | B+ | B | C+ | C | D | F). Overrides configPath codegenReadyMinGrade. Default: A")
     .example("  canicode analyze https://www.figma.com/design/ABC123/MyDesign")
     .example("  canicode analyze ./fixtures/my-design --output report.html")
