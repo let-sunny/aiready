@@ -140,6 +140,7 @@ Each row below is a **complete** install. Don't run more than one — they cover
 |-------------|---------|
 | **Claude Code** (recommended for the roundtrip workflow) | `npx canicode init --token figd_xxxxxxxxxxxxx` — saves the token AND drops `/canicode`, `/canicode-gotchas`, `/canicode-roundtrip` skills into `./.claude/skills/`. The skills already know how to call canicode via `npx canicode …`, so no **canicode** MCP install is needed; the **Figma** MCP is still required for the `/canicode-roundtrip` apply step — see the prereq below. |
 | **Cursor / Claude Desktop / other MCP host** | Add canicode to the host’s MCP config — see [`docs/CUSTOMIZATION.md`](docs/CUSTOMIZATION.md#cursor-mcp-canicode). Example (Cursor project file): `npx` + `canicode-mcp` via `--package=canicode`. |
+| **OpenClaw / other AgentSkills-compatible host** | Manual skill copy — see [Other agents (manual install)](docs/CUSTOMIZATION.md#other-agents-manual-install). Best-effort docs, not a support commitment. |
 | **Just the CLI** (CI, scripts) | Nothing. `npx canicode analyze "<figma-url>"` works directly. Run `canicode init --token …` once if you want the token persisted to `~/.canicode/config.json`. |
 
 > **Get your token:** Figma → Settings → Security → Personal access tokens → Generate new token. [Figma's PAT docs](https://help.figma.com/hc/en-us/articles/8085703771159-Manage-personal-access-tokens)

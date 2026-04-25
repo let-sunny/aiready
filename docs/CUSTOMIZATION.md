@@ -276,6 +276,47 @@ Work through these checks in order before concluding that an MCP server is broke
 
 ---
 
+## Other agents (manual install)
+
+CanICode ships three [AgentSkills](https://agentskills.io)-compatible skills via the npm package. For Claude Code and Cursor, `npx canicode init` (or `--cursor-skills`) handles install automatically. For other AgentSkills-compatible hosts, copy the skill folders into a directory your host scans.
+
+This is best-effort documentation, not a support commitment — hosts named below are listed by their published scan paths, not because canicode is tested against them.
+
+### What ships in the npm package
+
+After `npm install canicode` (or via `npx canicode`), the skill files live under `node_modules/canicode/skills/`:
+
+- `skills/canicode/SKILL.md`
+- `skills/canicode-gotchas/SKILL.md`
+- `skills/canicode-roundtrip/SKILL.md`
+- `skills/canicode-roundtrip/helpers.js`
+- `skills/canicode-roundtrip/helpers-bootstrap.js`
+- `skills/canicode-roundtrip/helpers-installer.js`
+- `skills/canicode-roundtrip/canicode-roundtrip-helpers.d.ts`
+
+These are produced by `pnpm bundle:skills` (`scripts/bundle-skills.sh`) and ship as part of the npm tarball via `package.json` `files`. The four `helpers-*` files in `canicode-roundtrip/` are required for the Step 4 Plugin API write path — copy the whole folder, don't cherry-pick.
+
+The package also contains a `skills/cursor/` subtree, which is a Cursor-specific variant (gotchas SKILL.md is stripped via `strip-cursor-gotcha-skill.mjs`). Use the canonical `skills/canicode*` folders above for non-Cursor manual installs — `skills/cursor/canicode-gotchas/SKILL.md` is missing the gotchas section by design.
+
+### Install into any AgentSkills-compatible host
+
+Copy each of the three skill folders (`canicode/`, `canicode-gotchas/`, `canicode-roundtrip/`) into a directory your host scans for skills.
+
+| Host | Workspace path | User path |
+| --- | --- | --- |
+| Claude Code | `.claude/skills/` | `~/.claude/skills/` |
+| Cursor | `.cursor/skills/` | `~/.cursor/skills/` |
+| OpenClaw ([scan-path doc](https://github.com/openclaw/openclaw/blob/main/docs/tools/skills.md)) | `./skills/` or `./.agents/skills/` | `~/.agents/skills/` or `~/.openclaw/skills/` |
+| Generic AgentSkills runtime | see your host's docs | see your host's docs |
+
+> **Pro tip:** for Claude Code or Cursor specifically, run `npx canicode init` (Claude Code) or `npx canicode init --cursor-skills` (Cursor) instead — those flows handle the copy plus token setup, and you avoid having two copies of the skill folders side by side.
+
+### MCP server registration
+
+Most AgentSkills-compatible hosts also need the canicode MCP server registered through their own MCP config. The [Cursor MCP (canicode)](#cursor-mcp-canicode) section above shows the `mcpServers` JSON shape — most runtimes accept the same shape in a different config file (consult your host's docs for the exact path). The skills can call `npx canicode …` directly without MCP registration, but `analyze` / `gotcha-survey` invoked as MCP tools need the server entry.
+
+---
+
 ## Telemetry
 
 CanICode collects anonymous usage analytics via [PostHog](https://posthog.com) and error tracking via [Sentry](https://sentry.io). This helps improve the tool by understanding which features are used and catching errors early.
