@@ -1,0 +1,15 @@
+{
+  "name": "canicode",
+  "version": "0.11.3",
+  "description": "Lint Figma designs for AI code-gen and roundtrip the answers back into the file. CLI + MCP server.",
+  "skills": [
+    "./skills/canicode",
+    "./skills/canicode-gotchas",
+    "./skills/canicode-roundtrip"
+  ],
+  "mcpServers": {
+    "canicode": {
+      "command": "canicode-mcp"
+    }
+  }
+}
