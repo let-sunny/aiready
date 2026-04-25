@@ -184,7 +184,7 @@ Configure the canicode MCP server so Cursor exposes `analyze`, `gotcha-survey`, 
 
 ### Which MCP file affects which host?
 
-Two different JSON locations are easy to confuse because both can live in a git repo and both use an `mcpServers` object. (See GitHub #436.)
+Two different JSON locations are easy to confuse because both can live in a git repo and both use an `mcpServers` object.
 
 | Path | Read by | Purpose |
 | --- | --- | --- |
@@ -215,14 +215,14 @@ Create or merge into `.cursor/mcp.json` in your repository root:
 
 Use long-form `--package` (short `-p` can confuse some parsers). Set your Figma token once with `npx canicode init --token figd_…` — the MCP server reads `~/.canicode/config.json`; you do not need `FIGMA_TOKEN` in the MCP block unless your team prefers env injection.
 
-### Figma MCP server id and tool names in Cursor (#437)
+### Figma MCP server id and tool names in Cursor
 
 Cursor may show an MCP **server id** in the UI that is **not** literally the key you typed in `mcpServers` (for example a workspace or project prefix). Skills and docs often say “the `figma` MCP” or “call `use_figma`” as shorthand — **your session’s truth is the live tool list** after MCP reload (Cursor: MCP / Tools panel), not the string `figma` or `use_figma` read from a config file alone.
 
 - If roundtrip fails with “cannot find `use_figma`” but Figma MCP shows as connected, open the tool list and note the **exact** tool identifier Cursor exposes (it may be namespaced).
 - Keep the Figma MCP entry in `.cursor/mcp.json` (or `~/.cursor/mcp.json`) per [Figma’s MCP docs](https://developers.figma.com/docs/figma-mcp-server/) — then rely on the host-reported tool name when wiring skills or debugging.
 
-### Post-install checklist (MCP + skills + Figma) (#461)
+### Post-install checklist (MCP + skills + Figma)
 
 After editing MCP JSON or running `canicode init`:
 
@@ -239,7 +239,7 @@ After editing MCP JSON or running `canicode init`:
 
 > **Deterministic invocation (both hosts):** the SKILL.md `description` fields advertise TRIGGER conditions so the model auto-routes Figma-URL prompts to the matching skill, but model routing is non-deterministic. When you want guaranteed routing, invoke explicitly — `/canicode <figma-url>`, `/canicode-gotchas <figma-url>`, or `/canicode-roundtrip <figma-url>` (Claude Code), or the equivalent slash-command path in Cursor where supported. Both `@`-mention and slash-command invocation skip the description-based router.
 
-### Manual test checklist (#407)
+### Manual test checklist
 
 - [ ] MCP: Cursor shows `canicode` connected and the tools list includes `gotcha-survey` (and `analyze` if testing roundtrip Step 1).
 - [ ] Figma MCP: `use_figma` is available when testing **roundtrip** (install + restart host if tools are missing).
@@ -266,7 +266,7 @@ Work through these checks in order before concluding that an MCP server is broke
    See the Step 4 preflight block in [`docs/roundtrip-protocol.md`](https://github.com/let-sunny/canicode/blob/main/docs/roundtrip-protocol.md) and the corresponding preflight check in the `canicode-roundtrip` SKILL.md for the full prepend procedure.
 
 4. **Size / delivery — measure the code string before assuming a server bug.**
-   If the `use_figma` call silently fails, truncates, or the host reports the tool payload is too large, the `helpers.js` bundle combined with the apply script may exceed the host's per-message or per-tool-call limit. Measure with `Buffer.byteLength(code, "utf8")` (Node) or `wc -c` (shell). If the string is too large for the chat/tool input, write it to a file and paste it into the MCP `use_figma` UI directly instead of relying on the model to pass the full string inline. See also the delivery notes in [#462](https://github.com/let-sunny/canicode/issues/462) and [`docs/roundtrip-protocol.md`](https://github.com/let-sunny/canicode/blob/main/docs/roundtrip-protocol.md).
+   If the `use_figma` call silently fails, truncates, or the host reports the tool payload is too large, the `helpers.js` bundle combined with the apply script may exceed the host's per-message or per-tool-call limit. Measure with `Buffer.byteLength(code, "utf8")` (Node) or `wc -c` (shell). If the string is too large for the chat/tool input, write it to a file and paste it into the MCP `use_figma` UI directly instead of relying on the model to pass the full string inline. See also the delivery notes in [`docs/roundtrip-protocol.md`](https://github.com/let-sunny/canicode/blob/main/docs/roundtrip-protocol.md).
 
 5. **Common symptom → likely cause mapping:**
    - `ReferenceError: CanICodeRoundtrip is not defined` → `helpers.js` was not prepended (check 3 above).

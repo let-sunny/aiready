@@ -57,7 +57,7 @@ CANICODE SETUP GUIDE
     --preset strict|relaxed|dev-friendly|ai-ready
     --config ./my-config.json
     --no-open   Don't open report in browser
-    --api       No-op for Figma URLs (REST always); same flag as gotcha-survey (#461)
+    --api       No-op for Figma URLs (REST always); same flag as gotcha-survey
 
   Output:
     ~/.canicode/reports/report-YYYY-MM-DD-HH-mm-<filekey>.html

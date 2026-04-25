@@ -24,7 +24,7 @@
 
 ## How it works
 
-AI can turn Figma designs into code — but the quality depends heavily on **how the design is structured**. CanICode runs a **roundtrip** over your Figma file: analyze the design, surface the gotchas it can't answer on its own, apply fixes back to Figma, re-analyze until the design is clean, then hand off to Figma's `figma-implement-design` skill for code generation. canicode does the design augmentation; code generation lives downstream (see [ADR-013](.claude/docs/ADR.md) for the scope boundary).
+AI can turn Figma designs into code — but the quality depends heavily on **how the design is structured**. CanICode runs a **roundtrip** over your Figma file: analyze the design, surface the gotchas it can't answer on its own, apply fixes back to Figma, re-analyze until the design is clean, then hand off to Figma's `figma-implement-design` skill for code generation. canicode does the design augmentation; code generation lives downstream.
 
 ![Role diagram: gotchas (memo) vs roundtrip (canvas) vs code-gen](docs/images/roles.svg)
 
@@ -46,10 +46,10 @@ Rule scores aren't guesswork. The calibration pipeline converts real Figma desig
 2. **Surface gotchas** — the analyzer emits questions for design information it can't infer (missing states, unclear variants, responsive intent).
 3. **Apply fixes to Figma** — the `/canicode-roundtrip` skill writes answers back via `use_figma`. Each write shows up in the summary with one of three outcome markers:
    - ✅ **scene write succeeded** — the property was written directly to the scene node or instance override.
-   - 📝 **annotated the scene node** — the skill left a structured annotation instead of writing the property. This is the [ADR-012](.claude/docs/ADR.md) default for instance-child layout writes, because propagating a property to the component definition (and therefore every instance of it) is almost never what the user wants. **A summary full of 📝 markers is correct behavior, not failure.**
+   - 📝 **annotated the scene node** — the skill left a structured annotation instead of writing the property. This is the default for instance-child layout writes, because propagating a property to the component definition (and therefore every instance of it) is almost never what the user wants. **A summary full of 📝 markers is correct behavior, not failure.**
    - 🌐 **definition write propagated** — the property was written to the component definition and every instance inherited it. Only happens when the user opted in up front with `allowDefinitionWrite`.
 4. **Re-analyze** — verify gotchas were captured (annotations / acks); repeat step 2 if new gotchas surface.
-5. **Hand off** to `figma-implement-design` — canicode's scope ends here ([ADR-013](.claude/docs/ADR.md)). Figma's official code-generation skill takes the now-clean design and produces code.
+5. **Hand off** to `figma-implement-design` — canicode's scope ends here. Figma's official code-generation skill takes the now-clean design and produces code.
 
 ---
 
@@ -88,7 +88,7 @@ npx canicode analyze "https://www.figma.com/design/ABC123/MyDesign?node-id=1-234
 claude mcp add canicode -- npx --yes --package=canicode canicode-mcp
 ```
 
-Restart Claude Code or reload MCP (Cursor) so canicode tools (`analyze`, `gotcha-survey`, …) load — same cold-session requirement as the Figma MCP (#433).
+Restart Claude Code or reload MCP (Cursor) so canicode tools (`analyze`, `gotcha-survey`, …) load — same cold-session requirement as the Figma MCP.
 
 **Smoke test (no Figma token needed):**
 
@@ -134,7 +134,7 @@ Each issue is classified: **Blocking** > **Risk** > **Missing Info** > **Suggest
 
 ## Installation — pick one
 
-Each row below is a **complete** install. Don't run more than one — they cover overlapping use cases. (#367)
+Each row below is a **complete** install. Don't run more than one — they cover overlapping use cases.
 
 | If you use… | Install |
 |-------------|---------|
@@ -180,15 +180,15 @@ Flags: `--global` installs into `~/.claude/skills/` instead. `--cursor-skills` a
 claude mcp add canicode -- npx --yes --package=canicode canicode-mcp
 ```
 
-Restart Claude Code or reload MCP (Cursor) so canicode MCP tools appear in a fresh session (#433).
+Restart Claude Code or reload MCP (Cursor) so canicode MCP tools appear in a fresh session.
 
 Then ask: *"Analyze this Figma design: https://www.figma.com/design/..."*
 
-canicode's rule engine analyzes the design data — the AI assistant just orchestrates the calls. The MCP server reads `FIGMA_TOKEN` from `~/.canicode/config.json` (set via `canicode init --token …`) or from the host's environment, so passing `-e FIGMA_TOKEN=…` to `claude mcp add` is **not** required and the current parser rejects it anyway (#364).
+canicode's rule engine analyzes the design data — the AI assistant just orchestrates the calls. The MCP server reads `FIGMA_TOKEN` from `~/.canicode/config.json` (set via `canicode init --token …`) or from the host's environment, so passing `-e FIGMA_TOKEN=…` to `claude mcp add` is **not** required and the current parser rejects it anyway.
 
 If you genuinely need a per-server token without using `canicode init`, export it on the calling shell instead: `export FIGMA_TOKEN=figd_xxxxxxxxxxxxx`.
 
-For Cursor / Claude Desktop config, see [`docs/CUSTOMIZATION.md`](docs/CUSTOMIZATION.md) — especially [Cursor MCP (canicode)](docs/CUSTOMIZATION.md#cursor-mcp-canicode) and the **Manual test checklist (#407)** for verifying `gotcha-survey` end-to-end.
+For Cursor / Claude Desktop config, see [`docs/CUSTOMIZATION.md`](docs/CUSTOMIZATION.md) — especially [Cursor MCP (canicode)](docs/CUSTOMIZATION.md#cursor-mcp-canicode) and the **Manual test checklist** for verifying `gotcha-survey` end-to-end.
 
 </details>
 
@@ -199,7 +199,7 @@ For Cursor / Claude Desktop config, see [`docs/CUSTOMIZATION.md`](docs/CUSTOMIZA
 npx canicode analyze "https://www.figma.com/design/ABC123/MyDesign?node-id=1-234"
 ```
 
-> Pass `--ready-min-grade <S|A+|A|B+|B|C+|C|D|F>` to override the codegen-readiness threshold (default: A; from #483).
+> Pass `--ready-min-grade <S|A+|A|B+|B|C+|C|D|F>` to override the codegen-readiness threshold (default: A).
 
 Setup: `npx canicode init --token figd_xxxxxxxxxxxxx` saves the token and installs the Claude Code skills into `./.claude/skills/`.
 

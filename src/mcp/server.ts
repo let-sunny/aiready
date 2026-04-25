@@ -63,9 +63,9 @@ Provide a Figma URL or fixture path via the input parameter. Requires FIGMA_TOKE
     preset: z.enum(["relaxed", "dev-friendly", "ai-ready", "strict"]).optional().describe("Analysis preset"),
     targetNodeId: z.string().optional().describe("Scope analysis to a specific node ID"),
     configPath: z.string().optional().describe("Path to config JSON file for rule overrides"),
-    openReport: z.boolean().optional().describe("Open the generated HTML report in the user's browser. Defaults to false — opt in only when a visible report is the explicit user request (#365). The HTML file is always written to disk regardless."),
-    acknowledgments: z.array(AcknowledgmentSchema).optional().describe("(#371 / ADR-019) Pre-resolved acknowledgments from canicode-authored Figma annotations (e.g. via readCanicodeAcknowledgments in a use_figma batch). Each entry includes nodeId and ruleId; newer annotations may also carry intent, sceneWriteOutcome, and codegenDirective from a canicode-json fenced block (#444). Matching issues are flagged acknowledged and contribute half weight to the density score."),
-    scope: z.enum(["page", "component"]).optional().describe("(#404) Override analysis scope — `page` (screen/section where container bounds are required) or `component` (standalone reusable unit where root FILL is the design contract). Defaults to auto-detection from the root node type: `COMPONENT` / `COMPONENT_SET` / `INSTANCE` roots resolve to `component`, everything else to `page`."),
+    openReport: z.boolean().optional().describe("Open the generated HTML report in the user's browser. Defaults to false — opt in only when a visible report is the explicit user request. The HTML file is always written to disk regardless."),
+    acknowledgments: z.array(AcknowledgmentSchema).optional().describe("Pre-resolved acknowledgments from canicode-authored Figma annotations (e.g. via readCanicodeAcknowledgments in a use_figma batch). Each entry includes nodeId and ruleId; newer annotations may also carry intent, sceneWriteOutcome, and codegenDirective from a canicode-json fenced block. Matching issues are flagged acknowledged and contribute half weight to the density score."),
+    scope: z.enum(["page", "component"]).optional().describe("Override analysis scope — `page` (screen/section where container bounds are required) or `component` (standalone reusable unit where root FILL is the design contract). Defaults to auto-detection from the root node type: `COMPONENT` / `COMPONENT_SET` / `INSTANCE` roots resolve to `component`, everything else to `page`."),
     codegenReadyMinGrade: z.enum(["S", "A+", "A", "B+", "B", "C+", "C", "D", "F"]).optional().describe("Minimum grade for code-gen readiness. Overrides the codegenReadyMinGrade field in configPath. Default: A"),
   },
   {
@@ -183,7 +183,7 @@ Provide a Figma URL or fixture path via the input parameter. Requires FIGMA_TOKE
     preset: z.enum(["relaxed", "dev-friendly", "ai-ready", "strict"]).optional().describe("Analysis preset"),
     targetNodeId: z.string().optional().describe("Scope analysis to a specific node ID"),
     configPath: z.string().optional().describe("Path to config JSON file for rule overrides"),
-    scope: z.enum(["page", "component"]).optional().describe("(#404) Override analysis scope — `page` or `component`. Defaults to auto-detection from the root node type."),
+    scope: z.enum(["page", "component"]).optional().describe("Override analysis scope — `page` or `component`. Defaults to auto-detection from the root node type."),
     codegenReadyMinGrade: z.enum(["S", "A+", "A", "B+", "B", "C+", "C", "D", "F"]).optional().describe("Minimum grade for code-gen readiness. Overrides the codegenReadyMinGrade field in configPath. Default: A"),
   },
   {
@@ -375,7 +375,7 @@ Get your token: Figma → Settings → Security → Personal access tokens → G
 claude mcp add canicode -- npx --yes --package=canicode canicode-mcp
 \`\`\`
 
-Requires FIGMA_TOKEN for live Figma URL analysis. The MCP server reads it from \`~/.canicode/config.json\` (set via \`canicode init --token …\`) or from the host's environment, so do **not** pass \`-e FIGMA_TOKEN=…\` to \`claude mcp add\` — \`@anthropic-ai/claude-code\`'s current parser rejects short-form flags placed before \`--\`. (#364, #366)
+Requires FIGMA_TOKEN for live Figma URL analysis. The MCP server reads it from \`~/.canicode/config.json\` (set via \`canicode init --token …\`) or from the host's environment, so do **not** pass \`-e FIGMA_TOKEN=…\` to \`claude mcp add\` — \`@anthropic-ai/claude-code\`'s current parser rejects short-form flags placed before \`--\`.
 
 ## CLI only (no MCP server)
 
