@@ -30,11 +30,18 @@ let analysisState: Map<string, unknown>;
 function makeContext(
   setupDetected: boolean,
   overrides?: Partial<RuleContext>,
+  mappedNodeIds: string[] = [],
 ): RuleContext {
   // Pre-seed the analysis state cache so the rule does not actually touch the
   // filesystem during the test. The cached value short-circuits the existsSync
   // check inside `codeConnectIsSetUp`.
   analysisState.set("unmapped-component:setup-detected", setupDetected);
+  // v1.5 (#526 sub-task 1): pre-seed the mapping-parser cache too so the rule
+  // sees the test's chosen mapped-node-id set without invoking the parser.
+  analysisState.set("unmapped-component:mappings", {
+    mappedNodeIds: new Set(mappedNodeIds),
+    scannedFiles: [],
+  });
   return {
     file: makeFile(),
     depth: 1,
@@ -90,6 +97,32 @@ describe("unmapped-component", () => {
     const ctx = makeContext(true, { ancestorTypes: ["FRAME", "INSTANCE"] });
     const result = unmappedComponent.check(node, ctx);
     expect(result).toBeNull();
+  });
+
+  it("does NOT fire for a COMPONENT whose nodeId is in the parsed mapping set (#526 sub-task 1)", () => {
+    const node = makeNode({ id: "100:1", name: "Button", type: "COMPONENT" });
+    const result = unmappedComponent.check(
+      node,
+      makeContext(true, undefined, ["100:1"]),
+    );
+    expect(result).toBeNull();
+  });
+
+  it("still fires for a COMPONENT whose nodeId is NOT in the parsed mapping set (#526)", () => {
+    const node = makeNode({ id: "100:2", name: "Card", type: "COMPONENT" });
+    const result = unmappedComponent.check(
+      node,
+      makeContext(true, undefined, ["100:1"]),
+    );
+    expect(result).not.toBeNull();
+    expect(result?.nodeId).toBe("100:2");
+  });
+
+  it("falls back to v1 behaviour when the parser returns an empty mapping set (degraded mode)", () => {
+    const node = makeNode({ id: "100:3", name: "EmptyParse", type: "COMPONENT" });
+    const result = unmappedComponent.check(node, makeContext(true, undefined, []));
+    expect(result).not.toBeNull();
+    expect(result?.nodeId).toBe("100:3");
   });
 
   it("caches the setup detection across calls within one analysis", () => {

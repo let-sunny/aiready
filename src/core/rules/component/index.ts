@@ -367,27 +367,39 @@ export const variantStructureMismatch = defineRule({
 });
 
 // ============================================
-// unmapped-component (#520)
+// unmapped-component (#520, v1.5: #526)
 // ============================================
 //
 // Fires once per main component (COMPONENT / COMPONENT_SET) when the consuming
 // repo has Code Connect set up at all (figma.config.json present in cwd). The
 // gotcha drives the user to /canicode-roundtrip for actual mapping
-// registration via the Figma MCP tools — analyze does not parse mapping
-// declarations from the user's *.figma.tsx files yet (deferred to v1.5).
+// registration via the Figma MCP tools.
 //
-// v1 limitation: this fires for every main even when already mapped, because
-// canicode does not yet read the actual mapping state. Roundtrip Step 7c
-// (`get_code_connect_map`) does the precise check at registration time. The
-// note severity (score 0) makes this acceptable — false positives do not move
-// the grade, just surface a redundant gotcha that the roundtrip will skip.
+// v1.5 (#526 sub-task 1): we now parse Code Connect mapping declarations from
+// the project's `*.figma.tsx?` files (sourced from `figma.config.json`'s
+// `codeConnect.include` paths) so already-mapped components are skipped. This
+// addresses the v1 false-positive complaint without changing the rule's scope
+// or severity. Parser failures are non-fatal and degrade to v1 behaviour
+// (fire on every main).
+
+import {
+  parseCodeConnectMappings,
+  type CodeConnectMappingResult,
+} from "./code-connect-mapping-parser.js";
 
 const CODE_CONNECT_SETUP_KEY = "unmapped-component:setup-detected";
+const CODE_CONNECT_MAPPINGS_KEY = "unmapped-component:mappings";
 
 function codeConnectIsSetUp(context: RuleContext): boolean {
   return getAnalysisState(context, CODE_CONNECT_SETUP_KEY, () => {
     return existsSync(join(process.cwd(), "figma.config.json"));
   });
+}
+
+function codeConnectMappings(context: RuleContext): CodeConnectMappingResult {
+  return getAnalysisState(context, CODE_CONNECT_MAPPINGS_KEY, () =>
+    parseCodeConnectMappings(process.cwd()),
+  );
 }
 
 const unmappedComponentDef: RuleDefinition = {
@@ -403,6 +415,13 @@ const unmappedComponentCheck: RuleCheckFn = (node, context) => {
   if (node.type !== "COMPONENT" && node.type !== "COMPONENT_SET") return null;
   if (isInsideInstance(context)) return null;
   if (!codeConnectIsSetUp(context)) return null;
+
+  // v1.5 (#526 sub-task 1): consult parsed Code Connect declarations and
+  // skip components that already carry a mapping. Parser failures return an
+  // empty set, in which case this short-circuit is a no-op and the rule
+  // fires v1-style on every main.
+  const mappings = codeConnectMappings(context);
+  if (mappings.mappedNodeIds.has(node.id)) return null;
 
   return {
     ruleId: unmappedComponentDef.id,

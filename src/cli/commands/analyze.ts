@@ -14,8 +14,15 @@ import {
 import {
   getFigmaToken, getReportsDir, ensureReportsDir,
 } from "../../core/engine/config-store.js";
-import { calculateScores, formatScoreSummary, buildResultJson } from "../../core/engine/scoring.js";
+import {
+  calculateScores,
+  formatScoreSummary,
+  buildResultJson,
+  formatCodeConnectCoverageLine,
+  type CodeConnectCoverage,
+} from "../../core/engine/scoring.js";
 import type { Grade } from "../../core/engine/scoring.js";
+import { parseCodeConnectMappings } from "../../core/rules/component/code-connect-mapping-parser.js";
 import { computeDesignKey } from "../../core/contracts/design-key.js";
 import { getConfigsWithPreset, RULE_CONFIGS } from "../../core/rules/rule-config.js";
 import { loadConfigFile, mergeConfigs } from "../../core/rules/config-loader.js";
@@ -38,6 +45,25 @@ const AnalyzeOptionsSchema = z.object({
   readyMinGrade: z.enum(["S", "A+", "A", "B+", "B", "C+", "C", "D", "F"]).optional(),
 });
 
+
+/**
+ * Code Connect coverage = mapped / total components in this Figma file (#526).
+ * Returns undefined when figma.config.json is absent — without Code Connect
+ * setup, the metric isn't meaningful and would just add noise to the report.
+ */
+function computeCodeConnectCoverage(
+  components: Record<string, { key: string; name: string; description: string }>,
+): CodeConnectCoverage | undefined {
+  const result = parseCodeConnectMappings(process.cwd());
+  if (result.skippedReason?.includes("not found")) return undefined;
+  const componentNodeIds = Object.keys(components);
+  const total = componentNodeIds.length;
+  let mapped = 0;
+  for (const nodeId of componentNodeIds) {
+    if (result.mappedNodeIds.has(nodeId)) mapped++;
+  }
+  return { mapped, total };
+}
 
 export function registerAnalyze(cli: CAC): void {
   cli
@@ -179,9 +205,20 @@ export function registerAnalyze(cli: CAC): void {
         // Calculate scores using the same preset-adjusted configs
         const scores = calculateScores(result, configs as Record<RuleId, RuleConfig>);
 
+        // Code Connect coverage (#526 sub-task 3) — only when figma.config.json
+        // is present in cwd, otherwise the metric is meaningless. Computed by
+        // intersecting parsed `figma.connect` declarations with this file's
+        // components map. Parser failures degrade silently (mapped:0 / total:N).
+        const coverage = computeCodeConnectCoverage(file.components);
+
         // JSON output mode — only JSON goes to stdout; exit code still applies
         if (options.json) {
-          console.log(JSON.stringify(buildResultJson(file.name, result, scores, { fileKey: file.fileKey, designKey: computeDesignKey(input), ...(effectiveMinGrade ? { codegenReadyMinGrade: effectiveMinGrade } : {}) }), null, 2));
+          console.log(JSON.stringify(buildResultJson(file.name, result, scores, {
+            fileKey: file.fileKey,
+            designKey: computeDesignKey(input),
+            ...(effectiveMinGrade ? { codegenReadyMinGrade: effectiveMinGrade } : {}),
+            ...(coverage ? { codeConnectCoverage: coverage } : {}),
+          }), null, 2));
           if (scores.overall.grade === "F") {
             process.exitCode = 1;
           }
@@ -191,6 +228,10 @@ export function registerAnalyze(cli: CAC): void {
         // Print summary to terminal
         console.log("\n" + "=".repeat(50));
         console.log(formatScoreSummary(scores));
+        if (coverage) {
+          console.log(""); // blank line for visual separation
+          console.log(formatCodeConnectCoverageLine(coverage));
+        }
         console.log("=".repeat(50));
 
         // Generate HTML report
