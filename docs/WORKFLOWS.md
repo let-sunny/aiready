@@ -40,7 +40,7 @@ These workflows compose. A new project typically starts at Workflow 3 (find the 
 - `figma.config.json` configured at the repo root
 - A code component (or a planned slot) corresponding to the Figma component
 
-> If any of the above is missing, set them up first using Figma's Code Connect docs. canicode will eventually detect and warn about missing prerequisites — until then, this is a manual check.
+> Run `canicode doctor` to verify the prerequisites in your repo (`@figma/code-connect` install + `figma.config.json` presence). It exits 0 when everything is in place, 1 with a remediation hint otherwise.
 
 **Today's flow**
 1. Finish the Figma main component (with variants if applicable).
