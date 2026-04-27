@@ -51,11 +51,11 @@ describe("AcknowledgmentIntentSchema (ADR-019 + ADR-022)", () => {
   });
 
   it("rejects a malformed mix (rule-opt-out with stray property fields)", () => {
-    // Discriminated union routes by `kind`; the rule-opt-out branch has no
-    // `field`, so a stray `field` would still parse via Zod's default
-    // strip-extras. The hard rejection comes from the missing `ruleId`.
+    // The rule-opt-out branch is `.strict()` so stray `field`/`value`/`scope`
+    // keys cause `safeParse` to fail even when `ruleId` is present.
     const result = AcknowledgmentIntentSchema.safeParse({
       kind: "rule-opt-out",
+      ruleId: "unmapped-component",
       field: "x",
       value: 1,
       scope: "instance",

@@ -14,6 +14,7 @@ export {
   extractAcknowledgmentsFromNode,
   readCanicodeAcknowledgments,
 } from "./read-acknowledgments.js";
+export { buildIntentionallyUnmappedAnnotationBody } from "./annotation-payload.js";
 export { computeRoundtripTally } from "./compute-roundtrip-tally.js";
 export { applyAutoFix, applyAutoFixes } from "./apply-auto-fix.js";
 export type {

@@ -35,10 +35,12 @@ export const PropertyAcknowledgmentIntentSchema = z.object({
   scope: z.enum(["instance", "definition"]),
 });
 
-export const RuleOptOutAcknowledgmentIntentSchema = z.object({
-  kind: z.literal("rule-opt-out"),
-  ruleId: z.string(),
-});
+export const RuleOptOutAcknowledgmentIntentSchema = z
+  .object({
+    kind: z.literal("rule-opt-out"),
+    ruleId: z.string(),
+  })
+  .strict();
 
 export const AcknowledgmentIntentSchema = z.preprocess((raw) => {
   if (raw && typeof raw === "object" && !Array.isArray(raw)) {
