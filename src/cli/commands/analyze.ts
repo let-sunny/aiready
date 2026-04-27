@@ -19,6 +19,7 @@ import {
   formatScoreSummary,
   buildResultJson,
   formatCodeConnectCoverageLine,
+  formatRoundtripOptOutHintLine,
   type CodeConnectCoverage,
 } from "../../core/engine/scoring.js";
 import type { Grade } from "../../core/engine/scoring.js";
@@ -211,6 +212,14 @@ export function registerAnalyze(cli: CAC): void {
         // components map. Parser failures degrade silently (mapped:0 / total:N).
         const coverage = computeCodeConnectCoverage(file.components);
 
+        // ADR-022: standalone analyze never receives an ack channel today —
+        // the CLI threads in `--acknowledgments` only when explicitly given,
+        // so eligibility is "user did not pass --acknowledgments".
+        const optOutHintEligible = acknowledgments === undefined;
+        const optOutHint = optOutHintEligible
+          ? formatRoundtripOptOutHintLine(result.issues, false)
+          : null;
+
         // JSON output mode — only JSON goes to stdout; exit code still applies
         if (options.json) {
           console.log(JSON.stringify(buildResultJson(file.name, result, scores, {
@@ -218,6 +227,7 @@ export function registerAnalyze(cli: CAC): void {
             designKey: computeDesignKey(input),
             ...(effectiveMinGrade ? { codegenReadyMinGrade: effectiveMinGrade } : {}),
             ...(coverage ? { codeConnectCoverage: coverage } : {}),
+            roundtripOptOutHintEligible: optOutHintEligible,
           }), null, 2));
           if (scores.overall.grade === "F") {
             process.exitCode = 1;
@@ -231,6 +241,10 @@ export function registerAnalyze(cli: CAC): void {
         if (coverage) {
           console.log(""); // blank line for visual separation
           console.log(formatCodeConnectCoverageLine(coverage));
+        }
+        if (optOutHint) {
+          console.log(""); // blank line for visual separation
+          console.log(optOutHint);
         }
         console.log("=".repeat(50));
 

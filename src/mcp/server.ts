@@ -143,6 +143,13 @@ Provide a Figma URL or fixture path via the input parameter. Requires FIGMA_TOKE
 
       const coverage = computeMcpCodeConnectCoverage(file.components);
 
+      // ADR-022: roundtrip-opt-out hint is informational only — surfaces
+      // when the caller did not pass an `acknowledgments` channel. The
+      // signal is `acknowledgments === undefined`, NOT `[].length === 0`,
+      // because a roundtrip on a clean file legitimately passes an empty
+      // array and the hint would be misleading there.
+      const optOutHintEligible = acknowledgments === undefined;
+
       return {
         content: [
           {
@@ -152,6 +159,7 @@ Provide a Figma URL or fixture path via the input parameter. Requires FIGMA_TOKE
               designKey: computeDesignKey(input),
               ...(effectiveMinGrade ? { codegenReadyMinGrade: effectiveMinGrade } : {}),
               ...(coverage ? { codeConnectCoverage: coverage } : {}),
+              roundtripOptOutHintEligible: optOutHintEligible,
             }), null, 2),
           },
         ],
