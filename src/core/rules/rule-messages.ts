@@ -174,6 +174,13 @@ export const missingComponentMsg = {
   }),
 };
 
+// ── unmapped-component (#520) ────────────────────────────────────────────────
+
+export const unmappedComponentMsg = (componentName: string): ViolationMsg => ({
+  message: `"${componentName}" has no Code Connect mapping`,
+  suggestion: `Run /canicode-roundtrip on this component to register a mapping so figma-implement-design reuses your code instead of regenerating markup. Skip if intentionally unmapped.`,
+});
+
 // ── detached-instance ────────────────────────────────────────────────────────
 
 export const detachedInstanceMsg = (name: string, componentName: string): ViolationMsg => ({

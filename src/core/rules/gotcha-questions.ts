@@ -87,6 +87,12 @@ const GOTCHA_QUESTION_CONTENT: Record<RuleId, GotchaQuestionContent> = {
     hint: "Describe which variant has the correct structure, or if they should all match",
     example: "Default variant is canonical — other variants should toggle child visibility instead of adding/removing elements",
   },
+  "unmapped-component": {
+    ruleId: "unmapped-component",
+    question: '"{nodeName}" has no Code Connect mapping yet. Should we register one so figma-implement-design reuses your code?',
+    hint: "Skip if this component is intentionally unmapped (e.g. marketing-only banner). Otherwise run /canicode-roundtrip on the component to walk through registration.",
+    example: "Yes — map to src/components/Button.tsx so future screens reuse the existing implementation",
+  },
   "deep-nesting": {
     ruleId: "deep-nesting",
     question: '"{nodeName}" is deeply nested. Can some intermediate layers be flattened or extracted?',

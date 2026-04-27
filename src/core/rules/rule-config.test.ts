@@ -159,11 +159,12 @@ describe("rule-config sync", () => {
       expect(RULE_PURPOSE["missing-size-constraint"]).toBe("info-collection");
     });
 
-    it("keeps all other non-interaction rules as violation", () => {
+    it("keeps all other non-info-collection rules as violation", () => {
       const infoCollectionRules = new Set([
         "missing-prototype",
         "missing-interaction-state",
         "missing-size-constraint",
+        "unmapped-component", // #520
       ]);
       for (const [id, purpose] of Object.entries(RULE_PURPOSE)) {
         if (infoCollectionRules.has(id)) continue;

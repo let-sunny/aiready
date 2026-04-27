@@ -1,0 +1,110 @@
+import type { RuleContext } from "../../contracts/rule.js";
+import type { AnalysisFile, AnalysisNode } from "../../contracts/figma-node.js";
+import { unmappedComponent } from "./index.js";
+
+function makeNode(overrides?: Partial<AnalysisNode>): AnalysisNode {
+  return {
+    id: "1:1",
+    name: "Button",
+    type: "COMPONENT",
+    visible: true,
+    ...overrides,
+  };
+}
+
+function makeFile(overrides?: Partial<AnalysisFile>): AnalysisFile {
+  return {
+    fileKey: "test-file",
+    name: "Test File",
+    lastModified: "2026-01-01T00:00:00Z",
+    version: "1",
+    document: makeNode({ id: "0:1", name: "Document", type: "DOCUMENT" }),
+    components: {},
+    styles: {},
+    ...overrides,
+  };
+}
+
+let analysisState: Map<string, unknown>;
+
+function makeContext(
+  setupDetected: boolean,
+  overrides?: Partial<RuleContext>,
+): RuleContext {
+  // Pre-seed the analysis state cache so the rule does not actually touch the
+  // filesystem during the test. The cached value short-circuits the existsSync
+  // check inside `codeConnectIsSetUp`.
+  analysisState.set("unmapped-component:setup-detected", setupDetected);
+  return {
+    file: makeFile(),
+    depth: 1,
+    componentDepth: 0,
+    maxDepth: 10,
+    path: ["Page", "Components"],
+    ancestorTypes: [],
+    analysisState,
+    scope: "page",
+    rootNodeType: "FRAME",
+    ...overrides,
+  };
+}
+
+beforeEach(() => {
+  analysisState = new Map();
+});
+
+describe("unmapped-component", () => {
+  it("fires for a COMPONENT when Code Connect is set up", () => {
+    const node = makeNode({ id: "10:1", name: "Button", type: "COMPONENT" });
+    const result = unmappedComponent.check(node, makeContext(true));
+    expect(result).not.toBeNull();
+    expect(result?.ruleId).toBe("unmapped-component");
+    expect(result?.nodeId).toBe("10:1");
+    expect(result?.message).toContain("Button");
+    expect(result?.suggestion).toMatch(/canicode-roundtrip/);
+  });
+
+  it("fires for a COMPONENT_SET when Code Connect is set up", () => {
+    const node = makeNode({ id: "10:2", name: "ButtonVariants", type: "COMPONENT_SET" });
+    const result = unmappedComponent.check(node, makeContext(true));
+    expect(result).not.toBeNull();
+    expect(result?.message).toContain("ButtonVariants");
+  });
+
+  it("does NOT fire when Code Connect is not set up (no figma.config.json)", () => {
+    const node = makeNode({ id: "10:3", type: "COMPONENT" });
+    const result = unmappedComponent.check(node, makeContext(false));
+    expect(result).toBeNull();
+  });
+
+  it("does NOT fire on FRAME / INSTANCE / other node types", () => {
+    for (const type of ["FRAME", "INSTANCE", "RECTANGLE", "TEXT"] as const) {
+      const node = makeNode({ id: `20:${type}`, type });
+      const result = unmappedComponent.check(node, makeContext(true));
+      expect(result, `expected null for type ${type}`).toBeNull();
+    }
+  });
+
+  it("does NOT fire for a COMPONENT nested inside an INSTANCE", () => {
+    const node = makeNode({ id: "30:1", type: "COMPONENT" });
+    const ctx = makeContext(true, { ancestorTypes: ["FRAME", "INSTANCE"] });
+    const result = unmappedComponent.check(node, ctx);
+    expect(result).toBeNull();
+  });
+
+  it("caches the setup detection across calls within one analysis", () => {
+    // First call seeds the cache (true). Second call should reuse the cached
+    // value even if we mutate the underlying world — proves the per-analysis
+    // cache key is honoured rather than re-statting on every node.
+    const node = makeNode({ id: "40:1", type: "COMPONENT" });
+    const ctx = makeContext(true);
+    const first = unmappedComponent.check(node, ctx);
+    expect(first).not.toBeNull();
+
+    // Flip the cached value to false; the rule must now skip — proving it
+    // reads from `analysisState`, not from a fresh filesystem check.
+    ctx.analysisState.set("unmapped-component:setup-detected", false);
+    const second = unmappedComponent.check(node, ctx);
+    expect(second).toBeNull();
+  });
+});
