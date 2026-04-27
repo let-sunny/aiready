@@ -137,12 +137,12 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
     enabled: true,
   },
   "missing-size-constraint": {
-    // #403: severity downgraded `risk → missing-info` and score from
-    // -8 → -1 to match the new info-collection purpose. Keeping the
-    // rule enabled (not disabled) so its gotchas still surface in the
-    // survey — see RULE_PURPOSE entry above for the full rationale.
-    severity: "missing-info",
-    score: -1,
+    // #403 → #519: info-collection rule. Score is 0 (severity `note`):
+    // its value is the gotcha annotation, not the grade impact. Survey-
+    // generator includes this rule via the `purpose === "info-collection"`
+    // branch so the gotcha keeps surfacing.
+    severity: "note",
+    score: 0,
     enabled: true,
   },
 
@@ -198,13 +198,13 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
   // is minimal. Score stays at -1 so re-enabling `missing-prototype` on
   // fixtures that lack `interactionDestinations` (#139) cannot swing grades.
   "missing-interaction-state": {
-    severity: "missing-info",
-    score: -1, // uncalibrated: no metric to validate score (#210), kept at -1 to preserve category visibility
+    severity: "note", // #519: info-collection rule, zero-score tier
+    score: 0,
     enabled: true,
   },
   "missing-prototype": {
-    severity: "missing-info",
-    score: -1, // #406: info-collection — annotation is primary output; score kept minimal so #139 fixtures don't skew calibration
+    severity: "note", // #519: info-collection — annotation is primary output, no grade impact
+    score: 0,
     enabled: true,
   },
 

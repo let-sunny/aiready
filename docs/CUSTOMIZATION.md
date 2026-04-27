@@ -106,7 +106,7 @@ Override score, severity, or enable/disable individual rules:
 | Rule ID | Default Score | Default Severity |
 |---------|--------------|-----------------|
 | `fixed-size-in-auto-layout` | -6 | risk |
-| `missing-size-constraint` | -1 | missing-info |
+| `missing-size-constraint` | 0 | note |
 
 **Code Quality (4 rules)**
 
@@ -136,8 +136,8 @@ Override score, severity, or enable/disable individual rules:
 
 | Rule ID | Default Score | Default Severity |
 |---------|--------------|-----------------|
-| `missing-interaction-state` | -1 | missing-info |
-| `missing-prototype` | -1 | missing-info |
+| `missing-interaction-state` | 0 | note |
+| `missing-prototype` | 0 | note |
 <!-- RULE_TABLE_END -->
 
 ### Example Configs

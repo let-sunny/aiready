@@ -26,6 +26,7 @@ const CategoryScoreResultSchema = z.object({
     risk: z.number().int().min(0),
     "missing-info": z.number().int().min(0),
     suggestion: z.number().int().min(0),
+    note: z.number().int().min(0),
   }),
 });
 

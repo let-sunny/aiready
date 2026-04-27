@@ -95,6 +95,7 @@ ${CATEGORIES.map((cat) => {
         ${renderSummaryDot("sev-risk", scores.summary.risk, "Risk")}
         ${renderSummaryDot("sev-missing", scores.summary.missingInfo, "Missing Info")}
         ${renderSummaryDot("sev-suggestion", scores.summary.suggestion, "Suggestion")}
+        ${renderSummaryDot("sev-note", scores.summary.note, "Note")}
         <div class="rpt-summary-total">
           <span class="rpt-summary-count">${scores.summary.totalIssues}</span>
           <span class="rpt-summary-label">Total</span>
@@ -346,7 +347,7 @@ function groupIssuesByRule(issues: AnalysisIssue[]): RuleGroup[] {
     group.totalScore += issue.calculatedScore;
   }
 
-  const SEVERITY_RANK: Record<string, number> = { blocking: 0, risk: 1, "missing-info": 2, suggestion: 3 };
+  const SEVERITY_RANK: Record<string, number> = { blocking: 0, risk: 1, "missing-info": 2, suggestion: 3, note: 4 };
   return [...byRule.values()].sort((a, b) => {
     const sevDiff = (SEVERITY_RANK[a.severity] ?? 4) - (SEVERITY_RANK[b.severity] ?? 4);
     return sevDiff !== 0 ? sevDiff : a.totalScore - b.totalScore;
