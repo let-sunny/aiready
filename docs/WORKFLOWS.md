@@ -21,7 +21,7 @@ These workflows compose. A new project typically starts at Workflow 3 (find the 
 
 | Phase | Workflow | Status | Tracking epic |
 |---|---|---|---|
-| 1 | Component-to-code mapping | 🚧 Partial | [#509](https://github.com/let-sunny/canicode/issues/509) |
+| 1 | Component-to-code mapping | ✅ Available | [#509](https://github.com/let-sunny/canicode/issues/509) |
 | 2 | Screen-to-code handoff | ✅ Largely shipped | [#510](https://github.com/let-sunny/canicode/issues/510) |
 | 3 | Bootstrap a design system from screens | 🗺️ Planned | [#508](https://github.com/let-sunny/canicode/issues/508) |
 
@@ -29,7 +29,7 @@ These workflows compose. A new project typically starts at Workflow 3 (find the 
 
 ## Workflow 1 — Component-to-code mapping
 
-> 🚧 Partial — `analyze`, `roundtrip`, and `doctor` ship today. The roundtrip's closing Code Connect mapping step is the next milestone (epic #509, sub-issue #515).
+> ✅ Available — `analyze`, `roundtrip`, `doctor`, and the roundtrip's closing Code Connect mapping step (epic [#509](https://github.com/let-sunny/canicode/issues/509)) all ship in v0.12.0. End-to-end live verification ran 2026-04-28 against a real Figma component on `npx canicode@0.12.0`; all hard-pass items in [#527](https://github.com/let-sunny/canicode/issues/527) Section A landed (Step 1.5 soft-warn, Step 7 satisfaction prompt + `add_code_connect_map` + `send_code_connect_mappings`, screen-level skip, failure case with verbatim error). Follow-ups in [#526](https://github.com/let-sunny/canicode/issues/526) (`unmapped-component` v1.5), [#531](https://github.com/let-sunny/canicode/issues/531) (skill prose: inline use_figma payload), [#532](https://github.com/let-sunny/canicode/issues/532) (doctor: publish-status pre-check), [#533](https://github.com/let-sunny/canicode/issues/533) (ADR-020 installer eval bug), [#534](https://github.com/let-sunny/canicode/issues/534) (Step 7d duplicate `send_*` call) — all polish, none blocking.
 
 **You are**: a designer creating a single component (Button, Card, Input...) on purpose, knowing it should be reused in code.
 
