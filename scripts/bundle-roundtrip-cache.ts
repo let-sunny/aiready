@@ -52,6 +52,22 @@ export interface BundleRoundtripCacheResult {
 }
 
 /**
+ * Trailer appended inside the eval'd helpers source so the IIFE-bound
+ * `CanICodeRoundtrip` variable is explicitly bridged onto `globalThis` (#533).
+ *
+ * The tsup IIFE output ends with `var CanICodeRoundtrip = (function(){...})({})`.
+ * Spec-wise, `(0, eval)(src)` runs in global scope and a `var` declaration
+ * there should create a global binding — but Figma's plugin runtime does not
+ * honour that contract reliably (every Step 4 batch in #527 verification
+ * reported "indirect-eval … didn't expose CanICodeRoundtrip" and fell back to
+ * the conservative single-artifact path). Appending the bridge inside the
+ * eval body sidesteps the runtime question entirely: the assignment runs in
+ * the same scope as the `var`, so `CanICodeRoundtrip` is in lexical reach
+ * regardless of how the host implements indirect eval.
+ */
+const GLOBALTHIS_BRIDGE_SUFFIX = "\n;globalThis.CanICodeRoundtrip = CanICodeRoundtrip;\n";
+
+/**
  * Pure function: given the already-bundled helpers IIFE source and the
  * canicode version, returns the two string artifacts to emit. Keeping the
  * installer + bootstrap templates as plain constants (no nested template
@@ -65,7 +81,8 @@ export function bundleRoundtripCache(
   const helpersSrcKeyLiteral = JSON.stringify(HELPERS_SRC_KEY);
   const helpersVersionKeyLiteral = JSON.stringify(HELPERS_VERSION_KEY);
   const versionLiteral = JSON.stringify(version);
-  const srcLiteral = JSON.stringify(helpersSource);
+  const bridgedHelpersSource = helpersSource + GLOBALTHIS_BRIDGE_SUFFIX;
+  const srcLiteral = JSON.stringify(bridgedHelpersSource);
 
   const installer = [
     "// canicode-roundtrip helpers installer (auto-generated — see scripts/bundle-roundtrip-cache.ts)",
