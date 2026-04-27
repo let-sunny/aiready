@@ -442,6 +442,29 @@ export function getSeverityLabel(severity: Severity): string {
 }
 
 /**
+ * Code Connect mapping coverage metric (#526 sub-task 3). Surfaces how many of
+ * the file's components are already wired to a code path via a `figma.connect`
+ * declaration. Optional — only computed when the consuming repo has Code
+ * Connect set up (figma.config.json present).
+ */
+export interface CodeConnectCoverage {
+  /** Number of components in this file that have a Code Connect mapping. */
+  mapped: number;
+  /** Total components in this file (numerator + unmapped). */
+  total: number;
+}
+
+/**
+ * Format the coverage line that ships in the analyze summary. Kept exported
+ * so consumers (HTML report, MCP wrapper) render the same wording.
+ */
+export function formatCodeConnectCoverageLine(coverage: CodeConnectCoverage): string {
+  const { mapped, total } = coverage;
+  const pct = total === 0 ? 0 : Math.round((mapped / total) * 100);
+  return `Code Connect coverage: ${mapped}/${total} components (${pct}%) mapped`;
+}
+
+/**
  * Build a JSON-serializable analysis result summary.
  * Shared by CLI (--json) and MCP server (analyze tool response).
  */
@@ -449,7 +472,12 @@ export function buildResultJson(
   fileName: string,
   result: AnalysisResult,
   scores: ScoreReport,
-  options?: { fileKey?: string; designKey?: string; codegenReadyMinGrade?: Grade },
+  options?: {
+    fileKey?: string;
+    designKey?: string;
+    codegenReadyMinGrade?: Grade;
+    codeConnectCoverage?: CodeConnectCoverage;
+  },
 ): Record<string, unknown> {
   const issuesByRule: Record<string, number> = {};
   for (const issue of result.issues) {
@@ -506,8 +534,14 @@ export function buildResultJson(
     },
     issuesByRule,
     issues,
-    summary: formatScoreSummary(scores),
+    summary: options?.codeConnectCoverage
+      ? `${formatScoreSummary(scores)}\n\n${formatCodeConnectCoverageLine(options.codeConnectCoverage)}`
+      : formatScoreSummary(scores),
   };
+
+  if (options?.codeConnectCoverage) {
+    json["codeConnectCoverage"] = options.codeConnectCoverage;
+  }
 
   if (result.failedRules.length > 0) {
     json["failedRules"] = result.failedRules;

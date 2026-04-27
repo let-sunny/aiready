@@ -8,7 +8,8 @@ import { writeFile } from "node:fs";
 import { exec } from "node:child_process";
 import { analyzeFile } from "../core/engine/rule-engine.js";
 import { loadFile, isJsonFile, isFixtureDir } from "../core/engine/loader.js";
-import { calculateScores, buildResultJson } from "../core/engine/scoring.js";
+import { calculateScores, buildResultJson, type CodeConnectCoverage } from "../core/engine/scoring.js";
+import { parseCodeConnectMappings } from "../core/rules/component/code-connect-mapping-parser.js";
 import type { Grade } from "../core/engine/scoring.js";
 import { generateGotchaSurvey } from "../core/gotcha/survey-generator.js";
 import { generateHtmlReport } from "../core/report-html/index.js";
@@ -140,11 +141,18 @@ Provide a Figma URL or fixture path via the input parameter. Requires FIGMA_TOKE
         source: isJsonFile(input) || isFixtureDir(input) ? "fixture" : "figma",
       });
 
+      const coverage = computeMcpCodeConnectCoverage(file.components);
+
       return {
         content: [
           {
             type: "text" as const,
-            text: JSON.stringify(buildResultJson(file.name, result, scores, { fileKey: file.fileKey, designKey: computeDesignKey(input), ...(effectiveMinGrade ? { codegenReadyMinGrade: effectiveMinGrade } : {}) }), null, 2),
+            text: JSON.stringify(buildResultJson(file.name, result, scores, {
+              fileKey: file.fileKey,
+              designKey: computeDesignKey(input),
+              ...(effectiveMinGrade ? { codegenReadyMinGrade: effectiveMinGrade } : {}),
+              ...(coverage ? { codeConnectCoverage: coverage } : {}),
+            }), null, 2),
           },
         ],
       };
@@ -612,6 +620,23 @@ Requires: Playwright with Chromium installed, Figma API token.`,
     }
   },
 );
+
+/**
+ * Same intent as analyze CLI's `computeCodeConnectCoverage` (#526 sub-task 3).
+ * Returns undefined when figma.config.json is absent in cwd.
+ */
+function computeMcpCodeConnectCoverage(
+  components: Record<string, { key: string; name: string; description: string }>,
+): CodeConnectCoverage | undefined {
+  const result = parseCodeConnectMappings(process.cwd());
+  if (result.skippedReason?.includes("not found")) return undefined;
+  const componentNodeIds = Object.keys(components);
+  let mapped = 0;
+  for (const nodeId of componentNodeIds) {
+    if (result.mappedNodeIds.has(nodeId)) mapped++;
+  }
+  return { mapped, total: componentNodeIds.length };
+}
 
 async function main() {
   const monitoringConfig: Parameters<typeof initMonitoring>[0] = {

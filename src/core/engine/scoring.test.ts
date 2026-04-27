@@ -712,6 +712,42 @@ describe("buildResultJson", () => {
     expect(json.acknowledgedCount).toBe(0);
     expect(issues[0]).not.toHaveProperty("acknowledged");
   });
+
+  it("emits codeConnectCoverage in the JSON and appends a coverage line to the summary when the option is provided (#526 sub-task 3)", () => {
+    const result = makeResult([]);
+    const scores = calculateScores(result);
+    const json = buildResultJson("TestFile", result, scores, {
+      codeConnectCoverage: { mapped: 2, total: 5 },
+    });
+    expect(json["codeConnectCoverage"]).toEqual({ mapped: 2, total: 5 });
+    expect(json.summary).toMatch(/Code Connect coverage: 2\/5 components \(40%\) mapped/);
+  });
+
+  it("does not emit codeConnectCoverage when the option is omitted", () => {
+    const result = makeResult([]);
+    const scores = calculateScores(result);
+    const json = buildResultJson("TestFile", result, scores);
+    expect(json["codeConnectCoverage"]).toBeUndefined();
+    expect(json.summary).not.toMatch(/Code Connect coverage/);
+  });
+
+  it("renders 0% coverage cleanly when total is non-zero and mapped is zero (#526)", () => {
+    const result = makeResult([]);
+    const scores = calculateScores(result);
+    const json = buildResultJson("TestFile", result, scores, {
+      codeConnectCoverage: { mapped: 0, total: 4 },
+    });
+    expect(json.summary).toMatch(/0\/4 components \(0%\) mapped/);
+  });
+
+  it("renders 0% (not NaN) when both numerator and denominator are 0 — empty-component file with config present", () => {
+    const result = makeResult([]);
+    const scores = calculateScores(result);
+    const json = buildResultJson("TestFile", result, scores, {
+      codeConnectCoverage: { mapped: 0, total: 0 },
+    });
+    expect(json.summary).toMatch(/0\/0 components \(0%\) mapped/);
+  });
 });
 
 // ─── isReadyForCodeGen helper ─────────────────────────────────────────────────

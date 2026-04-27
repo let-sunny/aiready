@@ -84,6 +84,15 @@ export const McpAnalyzeResponseSchema = z.object({
   issues: z.array(McpIssueSchema),
   summary: z.string(),
   failedRules: z.array(z.string()).optional(),
+  /**
+   * #526 sub-task 3 — Code Connect mapping coverage. Optional: only emitted
+   * when the consuming repo has `figma.config.json`. Numerator = components in
+   * this file with a discovered `figma.connect` declaration; denominator =
+   * total components in the file.
+   */
+  codeConnectCoverage: z
+    .object({ mapped: z.number().int().min(0), total: z.number().int().min(0) })
+    .optional(),
 });
 
 export type McpAnalyzeResponse = z.infer<typeof McpAnalyzeResponseSchema>;
