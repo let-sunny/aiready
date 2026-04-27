@@ -57,6 +57,7 @@ body {
 .sev-risk { background: var(--amber); }
 .sev-missing { background: #a1a1aa; }
 .sev-suggestion { background: var(--green); }
+.sev-note { background: #d4d4d8; }
 
 /* ---- Print ---- */
 @media print {
@@ -453,6 +454,7 @@ body {
 .rpt-issue-score.sev-risk     { background: var(--amber-bg); color: #d97706; border-color: rgba(245,158,11,0.2); }
 .rpt-issue-score.sev-missing  { background: #f4f4f5; color: #71717a; border-color: rgba(113,113,122,0.2); }
 .rpt-issue-score.sev-suggestion { background: var(--green-bg); color: #16a34a; border-color: rgba(34,197,94,0.2); }
+.rpt-issue-score.sev-note     { background: #f4f4f5; color: #71717a; border-color: rgba(113,113,122,0.2); }
 
 .rpt-issue-body {
   padding: 12px;

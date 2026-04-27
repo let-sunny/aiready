@@ -40,6 +40,7 @@ export interface ScoreReport {
     risk: number;
     missingInfo: number;
     suggestion: number;
+    note: number;
     nodeCount: number;
     /**
      * Number of issues marked `acknowledged` by an upstream
@@ -316,6 +317,7 @@ export function calculateScores(
     risk: 0,
     missingInfo: 0,
     suggestion: 0,
+    note: 0,
     nodeCount,
     acknowledgedCount: 0,
   };
@@ -333,6 +335,9 @@ export function calculateScores(
         break;
       case "suggestion":
         summary.suggestion++;
+        break;
+      case "note":
+        summary.note++;
         break;
     }
     if (issue.acknowledged === true) summary.acknowledgedCount++;
@@ -372,6 +377,7 @@ function initializeCategoryScores(): Record<Category, CategoryScoreResult> {
         risk: 0,
         "missing-info": 0,
         suggestion: 0,
+        note: 0,
       },
     };
   }
@@ -400,6 +406,7 @@ export function formatScoreSummary(report: ScoreReport): string {
   lines.push(`  Risk: ${report.summary.risk}`);
   lines.push(`  Missing Info: ${report.summary.missingInfo}`);
   lines.push(`  Suggestion: ${report.summary.suggestion}`);
+  lines.push(`  Note: ${report.summary.note}`);
   if (report.summary.acknowledgedCount > 0) {
     const unaddressed =
       report.summary.totalIssues - report.summary.acknowledgedCount;
@@ -429,6 +436,7 @@ export function getSeverityLabel(severity: Severity): string {
     risk: "Risk",
     "missing-info": "Missing Info",
     suggestion: "Suggestion",
+    note: "Note",
   };
   return labels[severity];
 }

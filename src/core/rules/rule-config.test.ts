@@ -171,14 +171,14 @@ describe("rule-config sync", () => {
       }
     });
 
-    it("info-collection rules are enabled and use missing-info severity", () => {
+    it("info-collection rules are enabled and use the zero-impact `note` severity (#519)", () => {
       for (const [id, purpose] of Object.entries(RULE_PURPOSE)) {
         if (purpose !== "info-collection") continue;
         const config = RULE_CONFIGS[id as RuleId];
         expect(config.enabled).toBe(true);
-        expect(config.severity).toBe("missing-info");
-        // Score kept minimal — annotation is primary output, not score penalty.
-        expect(config.score).toBeGreaterThanOrEqual(-1);
+        // Annotation is the primary output, so the rule must not move the grade.
+        expect(config.severity).toBe("note");
+        expect(config.score).toBe(0);
       }
     });
 

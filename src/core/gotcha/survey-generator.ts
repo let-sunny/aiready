@@ -38,19 +38,18 @@ export function generateGotchaSurvey(
   // Step 1: Filter to gotcha-relevant issues.
   // - `blocking` + `risk`: violation rules where the user needs to describe
   //   how to resolve the violation (existing behavior).
-  // - `missing-info` + purpose `info-collection` (#406): annotation-primary
+  // - any severity + purpose `info-collection` (#406, #519): annotation-primary
   //   rules like `missing-prototype` / `missing-interaction-state` where the
-  //   gotcha IS the output. Without this, info-collection rules would never
-  //   reach the survey because their penalty is intentionally minimal.
-  // `suggestion` severity still stays out — it's prose-level advice, not an
-  // implementation gap Figma can't encode.
+  //   gotcha IS the output. The severity tier is incidental — what matters is
+  //   `purpose`. After #519 the canonical home for these rules is `note`
+  //   (zero-score) but earlier versions placed them in `missing-info`; both
+  //   should keep surfacing as gotchas.
+  // `suggestion` severity stays out by default — it's prose-level advice, not
+  // an implementation gap Figma can't encode.
   const relevantIssues = result.issues.filter((issue) => {
     const severity = issue.config.severity;
     if (severity === "blocking" || severity === "risk") return true;
-    if (severity === "missing-info") {
-      return getRulePurpose(issue.violation.ruleId) === "info-collection";
-    }
-    return false;
+    return getRulePurpose(issue.violation.ruleId) === "info-collection";
   });
 
   // Step 2: Deduplicate — same ruleId on siblings (same parent path) → keep first

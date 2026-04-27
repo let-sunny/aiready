@@ -31,4 +31,5 @@ export const SEVERITY_ORDER: Severity[] = [
   "risk",
   "missing-info",
   "suggestion",
+  "note",
 ];

@@ -188,8 +188,9 @@ Rules are classified into 4 severity levels:
 - **risk**: Implementable now but will break or increase cost later.
 - **missing-info**: Information is absent, forcing developers to guess.
 - **suggestion**: Not immediately problematic, but improves systemization.
+- **note** (#519): Zero-impact tier. Surfaces in the report and (when `purpose === "info-collection"`) feeds the gotcha survey, but never moves the grade. Use for annotation-primary rules whose value is the nudge, not the score (e.g. `missing-prototype`, `missing-interaction-state`, `missing-size-constraint`, `unmapped-component`).
 
-Severity labels describe user impact, while rule purpose may differ (ADR-017): rules perform rule-based best-practice detection, and gotcha is annotation output from that detection pass. Violation rules remain score-primary best-practice checks; info-collection rules are annotation-primary checks for context Figma cannot encode. In practice, info-collection rules should usually stay in low-penalty ranges (commonly `missing-info` or `suggestion` severity, depending on implementation risk).
+Severity labels describe user impact, while rule purpose may differ (ADR-017): rules perform rule-based best-practice detection, and gotcha is annotation output from that detection pass. Violation rules remain score-primary best-practice checks; info-collection rules are annotation-primary checks for context Figma cannot encode. The canonical home for info-collection rules is `note` (zero-score) so the gotcha can fire without distorting the grade; older rules may still sit at `missing-info` or `suggestion` until backfilled.
 
 ## Adjustable Rule Config
 

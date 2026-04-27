@@ -36,6 +36,7 @@ export function severityDot(sev: Severity): string {
     risk: "sev-risk",
     "missing-info": "sev-missing",
     suggestion: "sev-suggestion",
+    note: "sev-note",
   };
   return map[sev];
 }
@@ -47,6 +48,7 @@ export function severityBadge(sev: Severity): string {
     risk: "sev-risk",
     "missing-info": "sev-missing",
     suggestion: "sev-suggestion",
+    note: "sev-note",
   };
   return map[sev];
 }
