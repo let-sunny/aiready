@@ -24,6 +24,7 @@ import { registerDesignTree } from "./commands/design-tree.js";
 import { registerVisualCompare } from "./commands/visual-compare.js";
 import { registerInit } from "./commands/init.js";
 import { registerConfig } from "./commands/config.js";
+import { registerDoctor } from "./commands/doctor.js";
 import { registerListRules } from "./commands/list-rules.js";
 import { registerRoundtripTally } from "./commands/roundtrip-tally.js";
 
@@ -77,6 +78,7 @@ registerDesignTree(cli);
 registerVisualCompare(cli);
 registerInit(cli);
 registerConfig(cli);
+registerDoctor(cli);
 registerListRules(cli);
 registerRoundtripTally(cli);
 
