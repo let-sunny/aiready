@@ -49,7 +49,8 @@ Rule scores aren't guesswork. The calibration pipeline converts real Figma desig
    - 📝 **annotated the scene node** — the skill left a structured annotation instead of writing the property. This is the default for instance-child layout writes, because propagating a property to the component definition (and therefore every instance of it) is almost never what the user wants. **A summary full of 📝 markers is correct behavior, not failure.**
    - 🌐 **definition write propagated** — the property was written to the component definition and every instance inherited it. Only happens when the user opted in up front with `allowDefinitionWrite`.
 4. **Re-analyze** — verify gotchas were captured (annotations / acks); repeat step 2 if new gotchas surface.
-5. **Hand off** to `figma-implement-design` — canicode's scope ends here. Figma's official code-generation skill takes the now-clean design and produces code.
+5. **Hand off** to `figma-implement-design` — canicode's scope ends at design augmentation. Figma's official code-generation skill takes the now-clean design and produces code.
+6. **Close out with a Code Connect mapping** — after `figma-implement-design` returns, the roundtrip asks whether the generated code is satisfactory. On `y`, canicode registers a [Code Connect](https://www.figma.com/code-connect-docs/) mapping pointing the Figma component at the just-generated code so future roundtrips on screens containing this component reuse the implementation instead of regenerating markup. **Skipped if Code Connect is not set up in your repo** — the roundtrip warns about this up front (Step 1.5) so you can decide whether to install prerequisites first or proceed without mapping.
 
 ---
 
@@ -73,6 +74,8 @@ npx canicode init
 ```
 
 > **Prerequisite:** the roundtrip skill calls the Figma MCP server to read and write the design. Install it once with `claude mcp add -s project -t http figma https://mcp.figma.com/mcp` — see the **MCP Server** install section below.
+
+> **Optional — Code Connect (for the closing Step 6 mapping):** install `@figma/code-connect` (`pnpm add -D @figma/code-connect` or npm/yarn equivalent) and create `figma.config.json` at your repo root per [Figma's setup guide](https://www.figma.com/code-connect-docs/). Then run `canicode doctor` to confirm both prerequisites are in place. If you skip this, the roundtrip still generates code but will not register a Code Connect mapping — it tells you up front (Step 1.5) so you can decide.
 
 **CanICode in Cursor (no Claude Code required):**
 
