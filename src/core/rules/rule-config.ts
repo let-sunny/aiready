@@ -25,6 +25,7 @@ export const RULE_ID_CATEGORY: Record<RuleId, Category> = {
   "detached-instance": "code-quality",
   "variant-structure-mismatch": "code-quality",
   "deep-nesting": "code-quality",
+  "unmapped-component": "code-quality",
   // Token Management
   "raw-value": "token-management",
   "irregular-spacing": "token-management",
@@ -71,6 +72,12 @@ export const RULE_PURPOSE: Record<RuleId, RulePurpose> = {
   "detached-instance": "violation",
   "variant-structure-mismatch": "violation",
   "deep-nesting": "violation",
+  // #520: unmapped-component is annotation-primary. Fires only when the
+  // user has Code Connect set up at all (figma.config.json present in cwd).
+  // The gotcha drives the user to /canicode-roundtrip for actual mapping
+  // registration via the Figma MCP tools — analyze itself does not parse
+  // mapping declarations (deferred to v1.5).
+  "unmapped-component": "info-collection",
   // Token Management
   "raw-value": "violation",
   "irregular-spacing": "violation",
@@ -174,6 +181,16 @@ export const RULE_CONFIGS: Record<RuleId, RuleConfig> = {
     options: {
       maxDepth: 5,
     },
+  },
+  "unmapped-component": {
+    // #520 / #519: zero-impact tier. Fires per main component when Code
+    // Connect is set up in the consuming repo (figma.config.json at cwd).
+    // Score is 0 because the rule's value is the gotcha + roundtrip handoff,
+    // not the grade signal — designers who deliberately do not map (e.g.
+    // marketing-only banners) are not punished.
+    severity: "note",
+    score: 0,
+    enabled: true,
   },
 
   // ── Token Management ──

@@ -59,6 +59,7 @@ const STRATEGY_BY_RULE: Record<RuleId, RuleApplyStrategy> = {
   // Strategy C — annotation only
   "absolute-position-in-auto-layout": "annotation",
   "variant-structure-mismatch": "annotation",
+  "unmapped-component": "annotation",
   // Strategy D — auto-fix lower-severity issues from analyze output
   "non-standard-naming": "auto-fix",
   "inconsistent-naming-convention": "auto-fix",
@@ -116,6 +117,7 @@ function resolveTargetProperty(
     case "raw-value":
     case "missing-interaction-state":
     case "missing-prototype":
+    case "unmapped-component":
       return undefined;
   }
 }

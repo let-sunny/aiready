@@ -1,9 +1,12 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+
 import type { RuleCheckFn, RuleDefinition, RuleContext } from "../../contracts/rule.js";
 import { getAnalysisState } from "../../contracts/rule.js";
 import type { AnalysisNode } from "../../contracts/figma-node.js";
 import { defineRule } from "../rule-registry.js";
 import { getRuleOption } from "../rule-config.js";
-import { missingComponentMsg, detachedInstanceMsg, variantStructureMismatchMsg } from "../rule-messages.js";
+import { missingComponentMsg, detachedInstanceMsg, variantStructureMismatchMsg, unmappedComponentMsg } from "../rule-messages.js";
 
 // ============================================
 // Helper functions
@@ -363,3 +366,53 @@ export const variantStructureMismatch = defineRule({
   check: variantStructureMismatchCheck,
 });
 
+// ============================================
+// unmapped-component (#520)
+// ============================================
+//
+// Fires once per main component (COMPONENT / COMPONENT_SET) when the consuming
+// repo has Code Connect set up at all (figma.config.json present in cwd). The
+// gotcha drives the user to /canicode-roundtrip for actual mapping
+// registration via the Figma MCP tools — analyze does not parse mapping
+// declarations from the user's *.figma.tsx files yet (deferred to v1.5).
+//
+// v1 limitation: this fires for every main even when already mapped, because
+// canicode does not yet read the actual mapping state. Roundtrip Step 7c
+// (`get_code_connect_map`) does the precise check at registration time. The
+// note severity (score 0) makes this acceptable — false positives do not move
+// the grade, just surface a redundant gotcha that the roundtrip will skip.
+
+const CODE_CONNECT_SETUP_KEY = "unmapped-component:setup-detected";
+
+function codeConnectIsSetUp(context: RuleContext): boolean {
+  return getAnalysisState(context, CODE_CONNECT_SETUP_KEY, () => {
+    return existsSync(join(process.cwd(), "figma.config.json"));
+  });
+}
+
+const unmappedComponentDef: RuleDefinition = {
+  id: "unmapped-component",
+  name: "Unmapped Component",
+  category: "code-quality",
+  why: "Without a Code Connect mapping, figma-implement-design regenerates the same markup every time this component appears in a screen — wasting tokens and risking drift.",
+  impact: "Future roundtrips on screens containing this component cannot reuse your existing code; they regenerate markup that may not match the canonical implementation.",
+  fix: "Run /canicode-roundtrip on this component to register a mapping. Figma's get_code_connect_map will skip if a mapping already exists.",
+};
+
+const unmappedComponentCheck: RuleCheckFn = (node, context) => {
+  if (node.type !== "COMPONENT" && node.type !== "COMPONENT_SET") return null;
+  if (isInsideInstance(context)) return null;
+  if (!codeConnectIsSetUp(context)) return null;
+
+  return {
+    ruleId: unmappedComponentDef.id,
+    nodeId: node.id,
+    nodePath: context.path.join(" > "),
+    ...unmappedComponentMsg(node.name),
+  };
+};
+
+export const unmappedComponent = defineRule({
+  definition: unmappedComponentDef,
+  check: unmappedComponentCheck,
+});

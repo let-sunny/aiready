@@ -108,7 +108,7 @@ Override score, severity, or enable/disable individual rules:
 | `fixed-size-in-auto-layout` | -6 | risk |
 | `missing-size-constraint` | 0 | note |
 
-**Code Quality (4 rules)**
+**Code Quality (5 rules)**
 
 | Rule ID | Default Score | Default Severity |
 |---------|--------------|-----------------|
@@ -116,6 +116,7 @@ Override score, severity, or enable/disable individual rules:
 | `missing-component` | -7 | risk |
 | `detached-instance` | -4 | risk |
 | `variant-structure-mismatch` | -6 | risk |
+| `unmapped-component` | 0 | note |
 
 **Token Management (2 rules)**
 

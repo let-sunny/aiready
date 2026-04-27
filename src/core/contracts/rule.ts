@@ -138,6 +138,7 @@ export type RuleId =
   | "detached-instance"
   | "variant-structure-mismatch"
   | "deep-nesting"
+  | "unmapped-component"
   // Token Management — raw values without design tokens
   | "raw-value"
   | "irregular-spacing"
