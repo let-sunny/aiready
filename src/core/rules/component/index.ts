@@ -390,6 +390,7 @@ import { isRuleOptOutIntent } from "../../contracts/acknowledgment.js";
 
 const CODE_CONNECT_SETUP_KEY = "unmapped-component:setup-detected";
 const CODE_CONNECT_MAPPINGS_KEY = "unmapped-component:mappings";
+const SEEN_MAIN_IDS_KEY = "unmapped-component:seen-main-ids";
 
 function codeConnectIsSetUp(context: RuleContext): boolean {
   return getAnalysisState(context, CODE_CONNECT_SETUP_KEY, () => {
@@ -403,6 +404,10 @@ function codeConnectMappings(context: RuleContext): CodeConnectMappingResult {
   );
 }
 
+function seenMainIds(context: RuleContext): Set<string> {
+  return getAnalysisState(context, SEEN_MAIN_IDS_KEY, () => new Set<string>());
+}
+
 const unmappedComponentDef: RuleDefinition = {
   id: "unmapped-component",
   name: "Unmapped Component",
@@ -413,16 +418,43 @@ const unmappedComponentDef: RuleDefinition = {
 };
 
 const unmappedComponentCheck: RuleCheckFn = (node, context) => {
-  if (node.type !== "COMPONENT" && node.type !== "COMPONENT_SET") return null;
-  if (isInsideInstance(context)) return null;
   if (!codeConnectIsSetUp(context)) return null;
+
+  // #548: collapse three traversal entry points onto a single "main
+  // component" axis. The rule previously fired only on COMPONENT /
+  // COMPONENT_SET nodes inside the analyzed scope, which left every
+  // screen-level analysis blind: a screen frame contains INSTANCEs whose
+  // main definition lives elsewhere in the file, and the rule never saw
+  // the main. Now an INSTANCE's `componentId` short-circuits to the same
+  // (mapping / opt-out) checks against the main id, so screen-scope
+  // analyze surfaces the rule and the gotcha survey can pick it up.
+  let mainId: string | null = null;
+  let mainName = node.name;
+  if (node.type === "COMPONENT" || node.type === "COMPONENT_SET") {
+    if (isInsideInstance(context)) return null;
+    mainId = node.id;
+  } else if (node.type === "INSTANCE" && node.componentId) {
+    mainId = node.componentId;
+    const meta = context.file.components[node.componentId];
+    if (meta?.name) mainName = meta.name;
+  } else {
+    return null;
+  }
+
+  // Dedupe so multiple INSTANCEs of the same main (and a COMPONENT seen
+  // alongside its INSTANCEs in the same scope) yield exactly one finding,
+  // matching the existing "one annotation per main" assumption that the
+  // ADR-022 opt-out write path encodes.
+  const seen = seenMainIds(context);
+  if (seen.has(mainId)) return null;
+  seen.add(mainId);
 
   // v1.5 (#526 sub-task 1): consult parsed Code Connect declarations and
   // skip components that already carry a mapping. Parser failures return an
   // empty set, in which case this short-circuit is a no-op and the rule
   // fires v1-style on every main.
   const mappings = codeConnectMappings(context);
-  if (mappings.mappedNodeIds.has(node.id)) return null;
+  if (mappings.mappedNodeIds.has(mainId)) return null;
 
   // ADR-022 / #526 sub-task 2: roundtrip-recorded opt-out short-circuit.
   // When the user marked this component as intentionally unmapped, the
@@ -431,7 +463,7 @@ const unmappedComponentCheck: RuleCheckFn = (node, context) => {
   // `intent.ruleId === "unmapped-component"`. The two skip paths are
   // independent — parser handles standalone analyze, ack handles the
   // roundtrip leg.
-  const ack = context.findAcknowledgment(node.id, unmappedComponentDef.id);
+  const ack = context.findAcknowledgment(mainId, unmappedComponentDef.id);
   if (
     ack &&
     isRuleOptOutIntent(ack.intent) &&
@@ -442,9 +474,9 @@ const unmappedComponentCheck: RuleCheckFn = (node, context) => {
 
   return {
     ruleId: unmappedComponentDef.id,
-    nodeId: node.id,
+    nodeId: mainId,
     nodePath: context.path.join(" > "),
-    ...unmappedComponentMsg(node.name),
+    ...unmappedComponentMsg(mainName),
   };
 };
 
