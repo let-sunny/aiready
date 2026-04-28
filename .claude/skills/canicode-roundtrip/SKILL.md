@@ -25,6 +25,8 @@ disable-model-invocation: false
 
 **Channel contrast:** **`canicode-gotchas`** stores answers in **local** `.claude/skills/canicode-gotchas/SKILL.md` only (memo — no Figma write). **`canicode-roundtrip`** (**this skill**) writes to the **Figma canvas** via Plugin API (`use_figma`). If you only need Q&A persistence, use gotchas; if you need annotations and fixes on the file, use roundtrip.
 
+**Output language (#546):** Detect the user's conversation language from their messages in **this** session. When the user is conversing in a non-English language (e.g. Korean, Japanese, Spanish), every human-readable line you render — Step 1 design summary, Step 2 grade banner, Step 3 question / `Hint:` / `Example:` / batch shared-prompt wording, Step 4 apply summary, Step 5 wrap-up rubric, Step 6 handoff line, Step 7 prompts and wrap-up — must be rendered in that language. Identifiers stay English: `ruleId`, `nodeId`, severity label in brackets, marker glyphs (📝/✅/🌐/⏭️), the upsert-section markdown scaffolding. The full localization scope and exclusions are in Step 3's preamble below. Default to English only when the user's language is genuinely ambiguous (and ask once).
+
 Orchestrate the full design-to-code roundtrip: analyze a Figma design for readiness, collect gotcha answers for problem areas, **apply fixes directly to the Figma design** via `use_figma`, re-analyze to verify gotchas were captured, then generate code. Success means **gotchas answered and carried into annotations / writes** — not a numeric grade bump (analyze still reports grade for continuity; roundtrip success is lint-first).
 
 ## Prerequisites
@@ -158,6 +160,8 @@ Detect the user's conversation language from their recent messages in **this** s
 #### Step 3 — grouped survey (`groupedQuestions`)
 
 Iterate `groupedQuestions.groups[].batches[]` and branch on `batch.batchMode` (`"safe"` — one uniform answer, `"opt-in"` — shared answer offered as default with per-node `split` override (#426), `"none"` — single-question). Instance notes, batch prompt templates per mode, replicas, split/skip/n/a, "skip remaining" early-exit affordance (surface before the first batch, re-surface every 3rd), stdin upsert — **[Appendix Step 3](https://github.com/let-sunny/canicode/blob/main/docs/roundtrip-protocol.md#appendix--step-3-grouped-survey-groupedquestions)**. Per ADR-016, do not re-implement grouping.
+
+**Pacing — one batch per message (#545):** Render exactly **one** batch per assistant message and **wait for the user's reply** before rendering the next. A `safe` / `opt-in` multi-instance batch is still **one** batch — render the shared prompt once and wait. Do **not** dump multiple batches in a single message and ask "Reply with answers numbered 1–N"; that defeats the paced Q&A UX. The total-batch count and the `skip remaining` affordance are surfaced once before batch 1 (and re-surfaced every 3rd batch per the appendix); they are not a license to bulk-render. The only exception is `skip remaining` — when the user invokes it, mark all unanswered batches as skipped and proceed straight to Step 4.
 
 
 ### Step 4: Apply gotcha answers to Figma design
@@ -398,6 +402,8 @@ The response now carries:
 
 Under ADR-012's annotate-by-default policy, many writes become 📝 annotations. Treat **issues-delta + `acknowledgedCount`** as the headline success signal — not grade movement (#423).
 
+**Grade-movement attribution (#547):** When the wrap-up shows a grade jump (e.g. `C+ → B+`), attribute the move to the resolved bucket (`✅` / `🔧` / `🌐`) explicitly so the user does not mis-infer that 📝 annotations contributed. Per ADR-012, annotations are zero-score by design — they carry context into code-gen but never move the grade. When `tally.Y > 0` (any 📝 annotated count), include a one-liner near the bucket tally clarifying this. Templates below already include the line; do not omit it.
+
 **Tally** — call `CanICodeRoundtrip.computeRoundtripTally` with the structured `stepFourReport` you assembled in Step 4 and the re-analyze response from Step 5b. The helper handles every count derivation (`N = X + Y + Z + W`, `V_open = V - V_ack`) and validates that `acknowledgedCount` cannot exceed `issueCount`. Render the returned `{ X, Y, Z, W, N, V, V_ack, V_open }` straight into the templates below — do **not** re-derive any of these from the Step 4 prose:
 
 ```javascript
@@ -423,6 +429,8 @@ If Step 4 produced no `stepFourReport` (e.g. user skipped every question, or no 
     ⏭️  W skipped (user declined or "skip")
     —
     V issues remaining (unresolved gotchas + non-actionable rules)
+
+  *(When Y > 0)* 📝 annotations carry context into code-gen but do not change the grade — that is by design (ADR-012). Any grade movement comes from the ✅ / 🔧 / 🌐 buckets above.
 
   Ready for code generation. *(Optional:) Report still shows grade **{grade}** — informational only.*
   ```
@@ -456,6 +464,8 @@ for (const id of nodeIds) {
        ↳ V_ack acknowledged via canicode annotations (carried into code-gen)
        ↳ V_open unaddressed (no annotation — your follow-up backlog)
 
+  *(When Y > 0)* 📝 annotations carry context into code-gen but do not change the grade — that is by design (ADR-012). Any grade movement comes from the ✅ / 🔧 / 🌐 buckets above.
+
   Proceed to code generation with remaining context? *(Optional footnote: report grade **{grade}**.)*
   ```
 
@@ -477,6 +487,8 @@ Stopped — N issues addressed, V remaining for manual follow-up:
   V remaining
      ↳ V_ack acknowledged via canicode annotations
      ↳ V_open unaddressed
+
+*(When Y > 0)* 📝 annotations carry context into code-gen but do not change the grade — that is by design (ADR-012).
 
 *(Optional)* Report grade: **{grade}**.
 ```
@@ -515,6 +527,8 @@ Roundtrip complete — N issues addressed, code generated:
   V issues remaining
      ↳ V_ack acknowledged via canicode annotations
      ↳ V_open unaddressed
+
+*(When Y > 0)* 📝 annotations carry context into code-gen but do not change the grade — that is by design (ADR-012).
 
 *(Optional)* Report grade: **{grade}**.
 Code: <files generated / next-step pointer from figma-implement-design>
@@ -598,6 +612,8 @@ Roundtrip complete — N issues addressed, code generated, mapping <state>:
   V issues remaining
      ↳ V_ack acknowledged via canicode annotations
      ↳ V_open unaddressed
+
+*(When Y > 0)* 📝 annotations carry context into code-gen but do not change the grade — that is by design (ADR-012).
 
 Code: <files generated / next-step pointer from figma-implement-design>
 Code Connect: <mapping outcome line>

@@ -95,6 +95,23 @@ export interface FigmaPublishCheckInput {
   fetchPublishedComponents:
     | ((fileKey: string) => Promise<Array<{ node_id: string; name: string }>>)
     | undefined;
+  /**
+   * #548 — when the URL targets a screen-level node (FRAME / SECTION /
+   * INSTANCE / GROUP) rather than a single COMPONENT / COMPONENT_SET, the
+   * publish-status lookup fails not because the design is broken but
+   * because frames are never published. The downstream Step 7 (close-out)
+   * skips on screen-level scope anyway. Wire this to fetch the node's type
+   * so the check can return ⚠️ inconclusive instead of a misleading ❌.
+   *
+   * Returns the raw Figma node type (e.g. `"FRAME"`, `"COMPONENT"`,
+   * `"INSTANCE"`) or `undefined` when the node could not be resolved.
+   * Production wires this to `FigmaClient.getFileNodes(fileKey, [nodeId])`.
+   * Optional for backwards compatibility — when omitted, the check keeps
+   * its #538 hard-fail behavior on miss.
+   */
+  fetchNodeType?:
+    | ((fileKey: string, nodeId: string) => Promise<string | undefined>)
+    | undefined;
 }
 
 const PUBLISH_CHECK_NAME = "Figma component published in a library";
@@ -110,7 +127,7 @@ const PUBLISH_CHECK_NAME = "Figma component published in a library";
 export async function runFigmaPublishCheck(
   input: FigmaPublishCheckInput,
 ): Promise<DoctorCheckResult> {
-  const { figmaUrl, token, fetchPublishedComponents } = input;
+  const { figmaUrl, token, fetchPublishedComponents, fetchNodeType } = input;
 
   let parsed;
   try {
@@ -189,6 +206,33 @@ export async function runFigmaPublishCheck(
     };
   }
 
+  // #548: before declaring this a hard failure, ask whether the URL even
+  // targets a component. Screen-level nodes (FRAME / SECTION / INSTANCE /
+  // GROUP) are never published — the original #538 implementation fails
+  // them with the same "not in published-components list" error, which
+  // misleads the user during /canicode-roundtrip Step 1.5 when the URL
+  // points at a screen. Step 7 (close-out) already skips on screen-level
+  // scope, so the meaningful answer here is ⚠️ inconclusive, not ❌.
+  if (fetchNodeType) {
+    let nodeType: string | undefined;
+    try {
+      nodeType = await fetchNodeType(parsed.fileKey, canonicalNodeId);
+    } catch {
+      nodeType = undefined;
+    }
+
+    if (nodeType && nodeType !== "COMPONENT" && nodeType !== "COMPONENT_SET") {
+      return {
+        name: PUBLISH_CHECK_NAME,
+        pass: false,
+        inconclusive: true,
+        detail: `node ${canonicalNodeId} is type ${nodeType} — Code Connect mapping is per-component`,
+        remediation:
+          "Step 7 (Code Connect close-out) skips on screen-level scope anyway. To verify a specific component, re-invoke doctor with that component's URL.",
+      };
+    }
+  }
+
   return {
     name: PUBLISH_CHECK_NAME,
     pass: false,
@@ -249,6 +293,12 @@ export function registerDoctor(cli: CAC): void {
           token,
           fetchPublishedComponents: client
             ? (fileKey) => client.getPublishedComponents(fileKey)
+            : undefined,
+          fetchNodeType: client
+            ? async (fileKey, nodeId) => {
+                const response = await client.getFileNodes(fileKey, [nodeId]);
+                return response.nodes[nodeId]?.document.type;
+              }
             : undefined,
         });
         results.push(publishCheck);

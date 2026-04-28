@@ -191,6 +191,68 @@ describe("runFigmaPublishCheck (#532)", () => {
     expect(result.inconclusive).toBe(true);
     expect(result.detail).toMatch(/parse URL/);
   });
+
+  it("returns ⚠️ inconclusive when fetchNodeType reports the URL targets a screen-level FRAME — Step 7 will skip on screen scope anyway (#548)", async () => {
+    const result = await runFigmaPublishCheck({
+      figmaUrl: validUrl,
+      token: "tok",
+      fetchPublishedComponents: async () => [],
+      fetchNodeType: async () => "FRAME",
+    });
+    expect(result.pass).toBe(false);
+    expect(result.inconclusive).toBe(true);
+    expect(result.detail).toMatch(/type FRAME/);
+    expect(result.remediation).toMatch(/screen-level/);
+  });
+
+  it("returns ⚠️ inconclusive for SECTION / INSTANCE / GROUP — anything that is not a component (#548)", async () => {
+    for (const type of ["SECTION", "INSTANCE", "GROUP"]) {
+      const result = await runFigmaPublishCheck({
+        figmaUrl: validUrl,
+        token: "tok",
+        fetchPublishedComponents: async () => [],
+        fetchNodeType: async () => type,
+      });
+      expect(result.pass, `expected non-pass for ${type}`).toBe(false);
+      expect(result.inconclusive, `expected inconclusive for ${type}`).toBe(true);
+    }
+  });
+
+  it("returns ❌ hard-fail when fetchNodeType confirms the URL targets a COMPONENT that just is not published (#548 preserves #538 behavior)", async () => {
+    const result = await runFigmaPublishCheck({
+      figmaUrl: validUrl,
+      token: "tok",
+      fetchPublishedComponents: async () => [],
+      fetchNodeType: async () => "COMPONENT",
+    });
+    expect(result.pass).toBe(false);
+    expect(result.inconclusive).toBeUndefined();
+    expect(result.remediation).toMatch(/Publish library/);
+  });
+
+  it("falls back to ❌ hard-fail when fetchNodeType is omitted (legacy #538 callers)", async () => {
+    const result = await runFigmaPublishCheck({
+      figmaUrl: validUrl,
+      token: "tok",
+      fetchPublishedComponents: async () => [],
+      // No fetchNodeType — legacy #538 callers must keep their behavior.
+    });
+    expect(result.pass).toBe(false);
+    expect(result.inconclusive).toBeUndefined();
+  });
+
+  it("falls back to ❌ hard-fail when fetchNodeType throws (network error mid-lookup)", async () => {
+    const result = await runFigmaPublishCheck({
+      figmaUrl: validUrl,
+      token: "tok",
+      fetchPublishedComponents: async () => [],
+      fetchNodeType: async () => {
+        throw new Error("ECONNREFUSED");
+      },
+    });
+    expect(result.pass).toBe(false);
+    expect(result.inconclusive).toBeUndefined();
+  });
 });
 
 describe("doctor command", () => {

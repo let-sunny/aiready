@@ -93,12 +93,18 @@ describe("unmapped-component", () => {
     expect(result).toBeNull();
   });
 
-  it("does NOT fire on FRAME / INSTANCE / other node types", () => {
-    for (const type of ["FRAME", "INSTANCE", "RECTANGLE", "TEXT"] as const) {
+  it("does NOT fire on FRAME / RECTANGLE / TEXT / unrelated node types", () => {
+    for (const type of ["FRAME", "RECTANGLE", "TEXT"] as const) {
       const node = makeNode({ id: `20:${type}`, type });
       const result = unmappedComponent.check(node, makeContext(true));
       expect(result, `expected null for type ${type}`).toBeNull();
     }
+  });
+
+  it("does NOT fire on an INSTANCE without a componentId (#548)", () => {
+    const node = makeNode({ id: "20:1", type: "INSTANCE" });
+    const result = unmappedComponent.check(node, makeContext(true));
+    expect(result).toBeNull();
   });
 
   it("does NOT fire for a COMPONENT nested inside an INSTANCE", () => {
@@ -205,6 +211,84 @@ describe("unmapped-component", () => {
       ]),
     );
     expect(viaAck).toBeNull();
+  });
+
+  it("fires on an INSTANCE whose main is not in the parsed mapping set, attributing the finding to the main componentId (#548)", () => {
+    // Screen-scope analysis: the INSTANCE lives in the screen subtree,
+    // its COMPONENT lives elsewhere in the file. Without this path the
+    // rule would never fire on screen URLs.
+    const file = {
+      fileKey: "test-file",
+      name: "Test File",
+      lastModified: "2026-01-01T00:00:00Z",
+      version: "1",
+      document: makeNode({ id: "0:1", name: "Document", type: "DOCUMENT" }),
+      components: {
+        "3384:3": { key: "k", name: "Button", description: "" },
+      },
+      styles: {},
+    };
+    const node = makeNode({ id: "I9:1", type: "INSTANCE", componentId: "3384:3" });
+    const result = unmappedComponent.check(node, makeContext(true, { file }));
+    expect(result).not.toBeNull();
+    expect(result?.nodeId).toBe("3384:3");
+    expect(result?.message).toContain("Button");
+  });
+
+  it("falls back to the INSTANCE node name when the components map has no entry (#548)", () => {
+    const node = makeNode({
+      id: "I9:2",
+      name: "Button",
+      type: "INSTANCE",
+      componentId: "3384:3",
+    });
+    const result = unmappedComponent.check(node, makeContext(true));
+    expect(result).not.toBeNull();
+    expect(result?.nodeId).toBe("3384:3");
+    expect(result?.message).toContain("Button");
+  });
+
+  it("does NOT fire on an INSTANCE whose main is in the parsed mapping set (#548)", () => {
+    const node = makeNode({ id: "I9:3", type: "INSTANCE", componentId: "3384:3" });
+    const result = unmappedComponent.check(
+      node,
+      makeContext(true, undefined, ["3384:3"]),
+    );
+    expect(result).toBeNull();
+  });
+
+  it("does NOT fire on an INSTANCE whose main carries a rule-opt-out ack (#548)", () => {
+    const node = makeNode({ id: "I9:4", type: "INSTANCE", componentId: "3384:3" });
+    const result = unmappedComponent.check(
+      node,
+      makeContext(true, undefined, [], [
+        {
+          nodeId: "3384:3",
+          ruleId: "unmapped-component",
+          intent: { kind: "rule-opt-out", ruleId: "unmapped-component" },
+        },
+      ]),
+    );
+    expect(result).toBeNull();
+  });
+
+  it("dedupes across multiple INSTANCEs of the same main — exactly one finding per main componentId (#548)", () => {
+    const ctx = makeContext(true);
+    const a = makeNode({ id: "I9:5", type: "INSTANCE", componentId: "3384:3" });
+    const b = makeNode({ id: "I9:6", type: "INSTANCE", componentId: "3384:3" });
+    const c = makeNode({ id: "I9:7", type: "INSTANCE", componentId: "3384:3" });
+    expect(unmappedComponent.check(a, ctx)).not.toBeNull();
+    expect(unmappedComponent.check(b, ctx)).toBeNull();
+    expect(unmappedComponent.check(c, ctx)).toBeNull();
+  });
+
+  it("dedupes a COMPONENT and its INSTANCEs against the same main id (#548)", () => {
+    const ctx = makeContext(true);
+    const main = makeNode({ id: "3384:3", name: "Button", type: "COMPONENT" });
+    const inst = makeNode({ id: "I9:8", type: "INSTANCE", componentId: "3384:3" });
+    expect(unmappedComponent.check(main, ctx)).not.toBeNull();
+    // COMPONENT already produced a finding — INSTANCE of same main is suppressed.
+    expect(unmappedComponent.check(inst, ctx)).toBeNull();
   });
 
   it("caches the setup detection across calls within one analysis", () => {
