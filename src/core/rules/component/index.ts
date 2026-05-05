@@ -475,16 +475,35 @@ const CODE_CONNECT_SETUP_KEY = "unmapped-component:setup-detected";
 const CODE_CONNECT_MAPPINGS_KEY = "unmapped-component:mappings";
 const SEEN_MAIN_IDS_KEY = "unmapped-component:seen-main-ids";
 
+// Browser/plugin environments (Figma plugin sandbox, web app) have no
+// `process` global and no real fs — short-circuit cleanly so the rule
+// degrades to "no Code Connect setup" instead of throwing.
+function browserCwd(): string | null {
+  return typeof process !== "undefined" && typeof process.cwd === "function"
+    ? process.cwd()
+    : null;
+}
+
 function codeConnectIsSetUp(context: RuleContext): boolean {
   return getAnalysisState(context, CODE_CONNECT_SETUP_KEY, () => {
-    return existsSync(join(process.cwd(), "figma.config.json"));
+    const cwd = browserCwd();
+    if (cwd === null) return false;
+    return existsSync(join(cwd, "figma.config.json"));
   });
 }
 
 function codeConnectMappings(context: RuleContext): CodeConnectMappingResult {
-  return getAnalysisState(context, CODE_CONNECT_MAPPINGS_KEY, () =>
-    parseCodeConnectMappings(process.cwd()),
-  );
+  return getAnalysisState(context, CODE_CONNECT_MAPPINGS_KEY, () => {
+    const cwd = browserCwd();
+    if (cwd === null) {
+      return {
+        mappedNodeIds: new Set<string>(),
+        scannedFiles: [],
+        skipReason: "no-config",
+      };
+    }
+    return parseCodeConnectMappings(cwd);
+  });
 }
 
 function seenMainIds(context: RuleContext): Set<string> {

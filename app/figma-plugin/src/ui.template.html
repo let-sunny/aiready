@@ -71,6 +71,31 @@
     })();
   </script>
 
+  <!--
+    Node-builtin shims for the analysis engine bundle.
+    tsup wraps the IIFE with `(function(exports, fs$1, path){...})({}, fs$1, path);`
+    because rollup externalises `fs`/`path` regardless of the browser
+    platform target. Pre-declaring them here prevents a ReferenceError at
+    the IIFE call site (which would leave `CanICode` as undefined and
+    surface as "Cannot read properties of undefined (reading 'analyzeFile')").
+    Rules that reach these stubs short-circuit at the call site —
+    see src/core/rules/component/index.ts.
+  -->
+  <script>
+    var fs$1 = {
+      existsSync: function () { return false; },
+      readFileSync: function () { return ''; },
+      statSync: function () { throw new Error('statSync not available in Figma plugin sandbox'); },
+      readdirSync: function () { return []; }
+    };
+    var path = {
+      sep: '/',
+      join: function () { return Array.prototype.filter.call(arguments, Boolean).join('/'); },
+      resolve: function () { return Array.prototype.filter.call(arguments, Boolean).join('/'); },
+      isAbsolute: function (p) { return typeof p === 'string' && p.charAt(0) === '/'; }
+    };
+  </script>
+
   <!-- Inline analysis engine (injected at build time) -->
   <script>
     /* __CANICODE_BROWSER_BUNDLE_INJECT__ */
