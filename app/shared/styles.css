@@ -645,6 +645,22 @@ body {
   border: 1px solid rgba(239,68,68,0.15);
 }
 
+/* ---- Warning (skipped nodes, etc.) ---- */
+.warning-msg {
+  background: var(--amber-bg);
+  color: #92400e;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  margin-bottom: 16px;
+  border: 1px solid rgba(245,158,11,0.2);
+}
+.warning-msg details { margin-top: 8px; }
+.warning-msg summary { cursor: pointer; font-weight: 500; }
+.warning-msg ul { margin: 8px 0 0 16px; padding: 0; }
+.warning-msg li { margin: 4px 0; }
+.warning-msg a { color: inherit; text-decoration: underline; }
+
 /* ---- Layout (plugin) ---- */
 .container { padding: 16px; }
 .header {

@@ -130,13 +130,14 @@
     }
 
     // ---- Render results via shared renderReportBody() ----
-    function showResults(file, result, scores) {
+    function showResults(file, result, scores, skipped) {
       document.getElementById('empty-state').style.display = 'none';
       document.getElementById('loading').style.display = 'none';
       document.getElementById('error').style.display = 'none';
 
       var el = document.getElementById('results');
-      el.innerHTML = CanICode.renderReportBody({
+      var bannerHtml = renderSkippedBanner(skipped);
+      el.innerHTML = bannerHtml + CanICode.renderReportBody({
         fileName: file.name,
         fileKey: file.fileKey,
         scores: scores,
@@ -146,6 +147,22 @@
       });
       el.className = 'visible';
       CanICode.initReportInteractions(el);
+    }
+
+    // ---- Render banner for nodes skipped during plugin-side extraction ----
+    // (Component sets with errors in Figma cause certain getters to throw —
+    // we surface the count + names so users know related rule scores may
+    // be incomplete and can fix the source set in Figma.)
+    function renderSkippedBanner(skipped) {
+      if (!skipped || skipped.length === 0) return '';
+      var esc = CanICode.escapeHtml;
+      var items = skipped.map(function (s) {
+        return '<li><a href="#" data-node-id="' + esc(s.id) + '">' + esc(s.name) + '</a> <span style="opacity:0.7">(' + esc(s.reason) + ')</span></li>';
+      }).join('');
+      return '<div class="warning-msg">' +
+        '<strong>' + skipped.length + ' node(s) skipped</strong> — their parent component sets have errors in Figma. Related rule scores may be incomplete.' +
+        '<details><summary>Show list</summary><ul>' + items + '</ul></details>' +
+        '</div>';
     }
 
     // ---- Focus node in Figma — intercept all [data-node-id] clicks ----
@@ -176,13 +193,14 @@
           var file = msg.data;
           var result = CanICode.analyzeFile(file);
           var scores = CanICode.calculateScores(result);
-          showResults(file, result, scores);
+          showResults(file, result, scores, msg.skipped);
 
           window._trackEvent('cic_analysis_completed', {
             nodeCount: result.nodeCount,
             issueCount: result.issues.length,
             grade: scores.overall.grade,
             percentage: scores.overall.percentage,
+            skippedCount: (msg.skipped && msg.skipped.length) || 0,
             duration: Date.now() - analysisStart
           });
 
