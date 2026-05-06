@@ -6,6 +6,30 @@
 
 figma.showUI(__html__, { width: 420, height: 600 });
 
+// ---- Skipped-node tracking ----
+// Some Figma getters throw when the underlying node is healthy but its
+// parent component set has structural errors. We swallow the throw so the
+// rest of the analysis can run, but we record the skip so the UI can
+// surface it — silent skips would make scores look mysterious.
+
+type SkippedNodeInfo = {
+  id: string;
+  name: string;
+  reason:
+    | "componentProperties"
+    | "componentPropertyDefinitions"
+    | "getMainComponent";
+};
+
+let skippedNodes: SkippedNodeInfo[] = [];
+
+function recordSkip(
+  node: SceneNode,
+  reason: SkippedNodeInfo["reason"],
+): void {
+  skippedNodes.push({ id: node.id, name: node.name, reason });
+}
+
 // ---- Type guards ----
 
 function hasAutoLayout(
@@ -320,19 +344,33 @@ async function transformPluginNode(node: SceneNode): Promise<AnalysisNode> {
     };
   }
 
-  // Component properties
+  // Component properties — every Figma getter touched here can throw when
+  // the underlying component set has structural errors (duplicate variants,
+  // missing axes). Failures must not abort the whole analysis pass —
+  // skip the field, keep the node, and record the skip so the UI can
+  // surface it (`recordSkip`).
   if (node.type === "INSTANCE") {
-    const mainComp = await (node as InstanceNode).getMainComponentAsync();
-    if (mainComp) {
-      result.componentId = mainComp.id;
+    try {
+      const mainComp = await (node as InstanceNode).getMainComponentAsync();
+      if (mainComp) {
+        result.componentId = mainComp.id;
+      }
+    } catch {
+      recordSkip(node, "getMainComponent");
     }
-    if (
-      "componentProperties" in node &&
-      node.componentProperties
-    ) {
-      result.componentProperties = JSON.parse(
-        JSON.stringify(node.componentProperties)
-      ) as Record<string, unknown>;
+    try {
+      if (
+        "componentProperties" in node &&
+        node.componentProperties
+      ) {
+        result.componentProperties = JSON.parse(
+          JSON.stringify(node.componentProperties)
+        ) as Record<string, unknown>;
+      }
+    } catch {
+      // Figma throws "Component set for node has existing errors" on
+      // `componentProperties` access when the parent set is malformed.
+      recordSkip(node, "componentProperties");
     }
   }
   if (node.type === "COMPONENT" || node.type === "COMPONENT_SET") {
@@ -345,7 +383,8 @@ async function transformPluginNode(node: SceneNode): Promise<AnalysisNode> {
         ) as Record<string, unknown>;
       }
     } catch {
-      // Variant components throw when accessing componentPropertyDefinitions
+      // Variant components throw when accessing componentPropertyDefinitions.
+      recordSkip(node, "componentPropertyDefinitions");
     }
   }
 
@@ -375,6 +414,8 @@ async function buildAnalysisFile(
   rootNode: SceneNode,
   pageName: string
 ): Promise<AnalysisFile> {
+  // Reset per-run accumulator so previous skips don't leak into this run.
+  skippedNodes = [];
   const doc = await transformPluginNode(rootNode);
 
   // Collect component metadata
@@ -449,6 +490,7 @@ figma.ui.onmessage = async (msg: { type: string }) => {
       type: "result",
       data: file,
       nodeCount,
+      skipped: skippedNodes,
     });
   }
 
