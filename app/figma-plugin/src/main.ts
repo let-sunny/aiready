@@ -320,19 +320,31 @@ async function transformPluginNode(node: SceneNode): Promise<AnalysisNode> {
     };
   }
 
-  // Component properties
+  // Component properties — every Figma getter touched here can throw when
+  // the underlying component set has structural errors (duplicate variants,
+  // missing axes). Failures must not abort the whole analysis pass —
+  // skip the field and keep the node.
   if (node.type === "INSTANCE") {
-    const mainComp = await (node as InstanceNode).getMainComponentAsync();
-    if (mainComp) {
-      result.componentId = mainComp.id;
+    try {
+      const mainComp = await (node as InstanceNode).getMainComponentAsync();
+      if (mainComp) {
+        result.componentId = mainComp.id;
+      }
+    } catch {
+      // Main component lookup failed (deleted / malformed set).
     }
-    if (
-      "componentProperties" in node &&
-      node.componentProperties
-    ) {
-      result.componentProperties = JSON.parse(
-        JSON.stringify(node.componentProperties)
-      ) as Record<string, unknown>;
+    try {
+      if (
+        "componentProperties" in node &&
+        node.componentProperties
+      ) {
+        result.componentProperties = JSON.parse(
+          JSON.stringify(node.componentProperties)
+        ) as Record<string, unknown>;
+      }
+    } catch {
+      // Figma throws "Component set for node has existing errors" on
+      // `componentProperties` access when the parent set is malformed.
     }
   }
   if (node.type === "COMPONENT" || node.type === "COMPONENT_SET") {
